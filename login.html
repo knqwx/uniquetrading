@@ -20,17 +20,93 @@
         /* Вертикальный прямоугольник по центру */
         .login-box {
             width: 380px;
-            height: 480px;
             background-color: #262626;
             border-radius: 12px;
+            padding: 40px 30px;
+            box-sizing: border-box;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .login-box h2 {
+            color: #ffffff;
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        /* Группа полей ввода */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            color: #b0b0b0;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .input-group input {
+            background-color: #1a1a1a;
+            border: 1px solid #383838;
+            border-radius: 8px;
+            padding: 12px 15px;
+            color: #ffffff;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: #ff7300;
+        }
+
+        /* Кнопка отправки */
+        .submit-btn {
+            background-color: #ff7300;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
         }
     </style>
 </head>
 <body>
 
     <div class="login-box">
-        <!-- Сюда можно добавить поля ввода (инпуты) и кнопку входа -->
+        <h2>Log in</h2>
+        
+        <div class="input-group">
+            <label>Username or email</label>
+            <input type="text" placeholder="Enter your username or email">
+        </div>
+
+        <div class="input-group">
+            <label>Password</label>
+            <input type="password" placeholder="Enter your password">
+        </div>
+
+        <button class="submit-btn">Log in</button>
     </div>
 
 </body>
