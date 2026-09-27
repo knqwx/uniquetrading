@@ -9,10 +9,47 @@
             background-color: #1a1a1a;
             margin: 0;
             height: 100vh;
+            font-family: sans-serif;
+            position: relative;
+        }
+
+        .auth-buttons {
+            position: absolute;
+            top: 25px;
+            right: 40px;
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .btn {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+        }
+
+        .btn-signup {
+            background-color: #ffffff;
+            color: #1a1a1a;
         }
     </style>
 </head>
 <body>
+
+    <div class="auth-buttons">
+        <button class="btn btn-login">Log in</button>
+        <button class="btn btn-signup">Sign up</button>
+    </div>
 
 </body>
 </html>
