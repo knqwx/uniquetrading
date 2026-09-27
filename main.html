@@ -86,37 +86,56 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
+            gap: 25px;
             text-align: center;
         }
 
         .center-content h1 {
             color: #ffffff;
             font-size: 28px;
-            margin-bottom: 10px;
+            margin: 0;
             font-weight: 600;
         }
 
         .game-cards {
             display: flex;
-            gap: 20px;
+            gap: 25px;
         }
 
+        /* Карточка игры */
         .game-card {
             background-color: #262626;
             color: #ffffff;
             text-decoration: none;
-            padding: 20px 30px;
-            border-radius: 10px;
-            font-weight: 500;
-            font-size: 16px;
+            padding: 20px;
+            border-radius: 12px;
+            width: 160px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
             transition: background-color 0.2s, transform 0.2s;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
         .game-card:hover {
-            background-color: #333333;
-            transform: translateY(-3px);
+            background-color: #313131;
+            transform: translateY(-4px);
+        }
+
+        /* Иконка игры */
+        .game-card img {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        /* Название игры */
+        .game-card span {
+            font-weight: 500;
+            font-size: 14px;
+            line-height: 1.3;
         }
     </style>
 </head>
@@ -131,13 +150,27 @@
         </div>
     </header>
 
-    <!-- Разделы по центру экрана -->
+    <!-- Разделы по центру экрана с иконками -->
     <main class="center-content">
         <h1>Select a Game</h1>
         <div class="game-cards">
-            <a href="#" class="game-card">Murder Mystery 2</a>
-            <a href="#" class="game-card">Blade Ball</a>
-            <a href="#" class="game-card">Adopt Me</a>
+            <!-- Murder Mystery 2 -->
+            <a href="https://murdermystery.fandom.com/wiki/Murder_Mystery_2" target="_blank" class="game-card">
+                <img src="https://tr.rbxcdn.com/1831c9a623f95e54ae8896bbec2b81e4/150/150/Image/Png" alt="Murder Mystery 2">
+                <span>Murder Mystery 2</span>
+            </a>
+            
+            <!-- Blade Ball -->
+            <a href="#" class="game-card">
+                <img src="https://tr.rbxcdn.com/1d06ff377e8a93e390c2b2961d7b32c6/150/150/Image/Png" alt="Blade Ball">
+                <span>Blade Ball</span>
+            </a>
+            
+            <!-- Adopt Me -->
+            <a href="#" class="game-card">
+                <img src="https://tr.rbxcdn.com/9f2b866c1f1ec78b0561c28c8bc68524/150/150/Image/Png" alt="Adopt Me">
+                <span>Adopt Me</span>
+            </a>
         </div>
     </main>
 
