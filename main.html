@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unique Trading</title>
     <!-- Подключаем современный шрифт Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             background-color: #1a1a1a;
@@ -418,7 +418,7 @@
             box-sizing: border-box;
         }
 
-        /* Полноэкранная детальная страница товара */
+        /* Полноэкранная детальная страница товара (без общего внешнего бокса) */
         .item-detail-page {
             position: fixed;
             top: 70px;
@@ -429,7 +429,7 @@
             z-index: 20;
             display: none;
             box-sizing: border-box;
-            padding: 40px;
+            padding: 40px 60px;
             overflow-y: auto;
         }
 
@@ -438,43 +438,47 @@
             flex-direction: column;
         }
 
+        /* Увеличенная кнопка Back */
         .detail-back-btn {
             background: none;
             border: none;
             color: #ff7300;
             font-family: 'Inter', sans-serif;
-            font-size: 14px;
-            font-weight: 600;
+            font-size: 18px;
+            font-weight: 700;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-bottom: 25px;
+            gap: 10px;
+            margin-bottom: 30px;
             padding: 0;
             width: fit-content;
+            transition: opacity 0.2s;
         }
 
         .detail-back-btn:hover {
             opacity: 0.8;
         }
 
-        .detail-content-wrapper {
-            max-width: 900px;
+        /* Основной контейнер сетки товара (без общего фона/бокса) */
+        .detail-main-layout {
+            max-width: 1000px;
             width: 100%;
             margin: 0 auto;
-            background-color: #262626;
-            border: 1px solid #383838;
-            border-radius: 14px;
-            padding: 40px;
-            display: flex;
-            gap: 40px;
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 50px;
             box-sizing: border-box;
         }
 
-        .detail-left-col {
-            width: 350px;
-            display: flex;
-            flex-direction: column;
+        /* Левая колонка — изображение в СВОЕМ отдельном боксе */
+        .detail-left-box {
+            background-color: #262626;
+            border: 1px solid #383838;
+            border-radius: 14px;
+            padding: 20px;
+            box-sizing: border-box;
+            height: fit-content;
         }
 
         .detail-main-img {
@@ -490,8 +494,8 @@
             font-size: 14px;
         }
 
+        /* Правая колонка — информация НЕ в боксе, увеличенный текст и элементы */
         .detail-right-col {
-            flex: 1;
             display: flex;
             flex-direction: column;
         }
@@ -499,73 +503,68 @@
         .detail-game-badge {
             background-color: rgba(255, 115, 0, 0.15);
             color: #ff7300;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 600;
-            padding: 4px 10px;
+            padding: 6px 14px;
             border-radius: 6px;
             width: fit-content;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             text-transform: uppercase;
         }
 
         .detail-item-title {
             color: #ffffff;
-            font-size: 26px;
-            font-weight: 600;
-            margin-bottom: 15px;
+            font-size: 34px;
+            font-weight: 700;
+            margin-bottom: 20px;
             word-break: break-all;
         }
 
-        .detail-item-price-box {
-            font-size: 22px;
+        /* Убран текст Price, только доллары (или Offers) */
+        .detail-item-price-val {
+            font-size: 28px;
             font-weight: 700;
             color: #ff7300;
-            margin-bottom: 20px;
-            background-color: #1f1f1f;
-            padding: 12px 16px;
-            border-radius: 8px;
-            border: 1px solid #383838;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .detail-section-title {
-            color: #888888;
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            letter-spacing: 0.5px;
-        }
-
-        .detail-item-desc {
-            color: #cccccc;
-            font-size: 14px;
-            line-height: 1.5;
-            background-color: #1f1f1f;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #383838;
             margin-bottom: 25px;
-            min-height: 80px;
-            box-sizing: border-box;
-            white-space: pre-wrap;
-            word-break: break-all;
+        }
+
+        .buy-item-action-btn {
+            background-color: #ff7300;
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            width: 100%;
+            margin-bottom: 25px;
+        }
+
+        .buy-item-action-btn:hover {
+            opacity: 0.9;
         }
 
         .detail-seller-info {
             display: flex;
             align-items: center;
-            gap: 12px;
-            margin-top: auto;
+            gap: 14px;
             padding-top: 20px;
             border-top: 1px solid #383838;
+            cursor: pointer;
+            width: fit-content;
+            transition: opacity 0.2s;
+        }
+
+        .detail-seller-info:hover {
+            opacity: 0.85;
         }
 
         .detail-seller-avatar {
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
             background-color: #ff7300;
             display: flex;
@@ -573,37 +572,50 @@
             justify-content: center;
             color: #fff;
             font-weight: 600;
+            font-size: 18px;
             object-fit: cover;
         }
 
         .detail-seller-name {
             color: #ffffff;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
         }
 
         .detail-seller-sub {
             color: #888888;
-            font-size: 12px;
+            font-size: 13px;
         }
 
-        .buy-item-action-btn {
-            background-color: #ff7300;
-            color: #ffffff;
-            border: none;
-            border-radius: 8px;
-            padding: 12px;
-            font-size: 15px;
-            font-weight: 600;
-            font-family: 'Inter', sans-serif;
-            cursor: pointer;
-            transition: opacity 0.2s;
+        /* Секция описания перенесена вниз под фото и текст */
+        .detail-bottom-section {
+            max-width: 1000px;
             width: 100%;
-            margin-top: 10px;
+            margin: 40px auto 0 auto;
+            box-sizing: border-box;
         }
 
-        .buy-item-action-btn:hover {
-            opacity: 0.9;
+        .detail-section-title {
+            color: #888888;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-item-desc {
+            color: #cccccc;
+            font-size: 16px;
+            line-height: 1.6;
+            background-color: #262626;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #383838;
+            min-height: 80px;
+            box-sizing: border-box;
+            white-space: pre-wrap;
+            word-break: break-all;
         }
 
         /* Окно настроек */
@@ -1186,24 +1198,22 @@
     <!-- Полноэкранная детальная страница товара -->
     <div class="item-detail-page" id="item-detail-page">
         <button class="detail-back-btn" id="detail-back-btn">&larr; Back</button>
-        <div class="detail-content-wrapper">
-            <div class="detail-left-col">
+        
+        <div class="detail-main-layout">
+            <!-- Левая колонка: изображение в отдельном боксе -->
+            <div class="detail-left-box">
                 <div class="detail-main-img" id="detail-main-img">No image</div>
             </div>
+
+            <!-- Правая колонка: текст и кнопки НЕ в боксе, увеличены -->
             <div class="detail-right-col">
                 <div class="detail-game-badge" id="detail-game-badge">Murder Mystery 2</div>
                 <div class="detail-item-title" id="detail-item-title">Item Name</div>
-                <div class="detail-item-price-box">
-                    <span id="detail-price-label">Price</span>
-                    <span id="detail-price-val" style="color: #ff7300;">$0.10</span>
-                </div>
+                <div class="detail-item-price-val" id="detail-price-val">$0.10</div>
                 
-                <div class="detail-section-title">Description</div>
-                <div class="detail-item-desc" id="detail-item-desc">No description provided.</div>
-
                 <button class="buy-item-action-btn" id="buy-item-action-btn">Contact Seller</button>
 
-                <div class="detail-seller-info">
+                <div class="detail-seller-info" id="detail-seller-box" title="View Profile">
                     <div class="detail-seller-avatar" id="detail-seller-avatar">U</div>
                     <div>
                         <div class="detail-seller-name" id="detail-seller-name">Username</div>
@@ -1211,6 +1221,12 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Секция описания перенесена вниз под фото и текст -->
+        <div class="detail-bottom-section">
+            <div class="detail-section-title">Description</div>
+            <div class="detail-item-desc" id="detail-item-desc">No description provided.</div>
         </div>
     </div>
 
@@ -1501,9 +1517,9 @@
         const detailMainImg = document.getElementById('detail-main-img');
         const detailGameBadge = document.getElementById('detail-game-badge');
         const detailItemTitle = document.getElementById('detail-item-title');
-        const detailPriceLabel = document.getElementById('detail-price-label');
         const detailPriceVal = document.getElementById('detail-price-val');
         const detailItemDesc = document.getElementById('detail-item-desc');
+        const detailSellerBox = document.getElementById('detail-seller-box');
         const detailSellerAvatar = document.getElementById('detail-seller-avatar');
         const detailSellerName = document.getElementById('detail-seller-name');
         const buyItemActionBtn = document.getElementById('buy-item-action-btn');
@@ -1511,6 +1527,7 @@
         let userToDelete = null;
         let uploadedAvatarData = null; 
         let uploadedItemPhotoData = null;
+        let currentSellerUsername = null; // Сохраняем имя текущего продавца для перехода в профиль
 
         if (currentUser) {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -1528,6 +1545,49 @@
 
         detailBackBtn.addEventListener('click', () => {
             itemDetailPage.classList.remove('active');
+        });
+
+        // Клик по профилю продавца на странице товара — открывает его профиль
+        detailSellerBox.addEventListener('click', () => {
+            if (!currentSellerUsername) return;
+            let allUsers = JSON.parse(localStorage.getItem('users')) || [];
+            let sellerData = allUsers.find(u => u.username === currentSellerUsername);
+            if (!sellerData) return;
+
+            // Заполняем модальное окно данными продавца
+            const displayId = sellerData.customId || '1';
+            const displayName = sellerData.displayName || sellerData.username;
+            const firstLetter = sellerData.username.charAt(0).toUpperCase();
+            const avatarColor = getColorFromName(sellerData.username);
+
+            if (sellerData.avatar) {
+                modalAvatarBox.innerHTML = `<img src="${sellerData.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
+                modalAvatarBox.style.backgroundColor = 'transparent';
+            } else {
+                modalAvatarBox.style.backgroundColor = avatarColor;
+                modalAvatarBox.textContent = firstLetter;
+                modalAvatarBox.innerHTML = firstLetter;
+            }
+            modalUsernameText.textContent = displayName;
+            modalUserIdText.textContent = `ID: ${displayId}`;
+
+            // Скрываем или показываем кнопку БД админа (только если это вошедший админ и это его профиль)
+            if (displayId === 'knqw' && currentUser === sellerData.username) {
+                openDbBtn.style.display = 'block';
+            } else {
+                openDbBtn.style.display = 'none';
+            }
+
+            // Скрываем кнопку Add Item если это чужой профиль
+            if (currentUser !== sellerData.username) {
+                openSelectGameBtn.style.display = 'none';
+            } else {
+                openSelectGameBtn.style.display = 'block';
+            }
+
+            renderUserItems(sellerData);
+            itemDetailPage.classList.remove('active');
+            profileModal.classList.add('active');
         });
 
         function updateItemPreview() {
@@ -1582,15 +1642,14 @@
                 card.addEventListener('click', () => {
                     profileModal.classList.remove('active');
                     
+                    currentSellerUsername = userData.username;
                     detailGameBadge.textContent = item.game || 'Murder Mystery 2';
                     detailItemTitle.textContent = item.name;
                     detailItemDesc.textContent = item.description || 'No description provided.';
                     
                     if (item.tag === 'selling') {
-                        detailPriceLabel.textContent = 'Price';
                         detailPriceVal.textContent = `$${item.price}`;
                     } else {
-                        detailPriceLabel.textContent = 'Status';
                         detailPriceVal.textContent = 'Looking for Offers';
                     }
 
@@ -1775,6 +1834,8 @@
             menuProfileBtn.addEventListener('click', () => {
                 profileDropdown.classList.remove('active');
                 itemDetailPage.classList.remove('active');
+                openSelectGameBtn.style.display = 'block';
+                renderUserItems(userData);
                 profileModal.classList.add('active');
             });
 
