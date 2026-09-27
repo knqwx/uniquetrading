@@ -209,7 +209,7 @@
             transform: translateY(0);
         }
 
-        /* Увеличенный крестик закрытия */
+        /* Крестик закрытия */
         .close-modal {
             position: absolute;
             top: 18px;
@@ -228,7 +228,7 @@
             color: #ffffff;
         }
 
-        /* Увеличенное прямоугольное окно профиля (2 колонки) */
+        /* Прямоугольное окно профиля (2 колонки) */
         .profile-modal-content {
             width: 860px;
             height: 520px;
@@ -240,7 +240,6 @@
             gap: 35px;
         }
 
-        /* Левая колонка */
         .profile-left-col {
             width: 280px;
             display: flex;
@@ -308,7 +307,6 @@
             background-color: #3d3d3d;
         }
 
-        /* Правая колонка: Your Items */
         .profile-right-col {
             flex: 1;
             display: flex;
@@ -390,7 +388,7 @@
             margin-bottom: 6px;
         }
 
-        .setting-input {
+        .setting-input, .setting-select, .setting-textarea {
             width: 100%;
             background-color: #1f1f1f;
             border: 1px solid #383838;
@@ -404,14 +402,44 @@
             transition: border-color 0.2s;
         }
 
-        .setting-input:focus {
+        .setting-input:focus, .setting-select:focus, .setting-textarea:focus {
             border-color: #ff7300;
+        }
+
+        .setting-textarea {
+            resize: vertical;
+            min-height: 80px;
         }
 
         .setting-hint {
             font-size: 11px;
             color: #777777;
             margin-top: 4px;
+        }
+
+        /* Превью аватарки в настройках */
+        .settings-avatar-preview-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .settings-avatar-preview {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 18px;
+            text-transform: uppercase;
+            object-fit: cover;
+            overflow: hidden;
+            background-color: #383838;
+            border: 1px solid #444;
         }
 
         .avatar-buttons-row {
@@ -470,7 +498,7 @@
             opacity: 0.9;
         }
 
-        /* Стильное тост-уведомление в стиле сайта */
+        /* Тост-уведомление */
         .toast-notification {
             position: fixed;
             bottom: 30px;
@@ -499,51 +527,85 @@
         /* Окно Select Game */
         .select-game-modal-content {
             width: 380px;
-            height: 220px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .select-game-text {
-            color: #ffffff;
-            font-size: 20px;
-            font-weight: 600;
-        }
-
-        /* Остальные модальные окна */
-        .db-modal-content {
-            width: 80vw;
-            max-width: 900px;
-            display: flex;
-            flex-direction: column;
             text-align: left;
         }
 
+        .select-game-title {
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .game-card-item {
+            background-color: #1f1f1f;
+            border: 1px solid #383838;
+            border-radius: 8px;
+            padding: 14px 16px;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .game-card-item:hover {
+            background-color: #2a2a2a;
+            border-color: #ff7300;
+        }
+
+        /* Окно создания предмета */
+        .create-item-modal-content {
+            width: 480px;
+            max-height: 85vh;
+            overflow-y: auto;
+            text-align: left;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ffffff;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+
+        .checkbox-label input {
+            accent-color: #ff7300;
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Кнопка All Games без текста */
+        .all-games-btn {
+            background-color: #262626;
+            color: #ffffff;
+            text-decoration: none;
+            width: 160px;
+            height: 56px;
+            border-radius: 12px;
+            transition: background-color 0.2s, transform 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: none;
+            cursor: pointer;
+        }
+
+        .all-games-btn:hover {
+            background-color: #313131;
+            transform: translateY(-2px);
+        }
+
+        /* Остальные модалки (переключение аккаунтов, база данных, подтверждение) */
         .accounts-modal-content {
             width: 450px;
             max-height: 80vh;
             display: flex;
             flex-direction: column;
-        }
-
-        .admin-db-btn {
-            width: 100%;
-            background-color: #383838;
-            color: #ffffff;
-            border: none;
-            border-radius: 8px;
-            padding: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            font-family: 'Inter', sans-serif;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            display: none;
-        }
-
-        .admin-db-btn:hover {
-            background-color: #444444;
         }
 
         .accounts-title {
@@ -649,7 +711,14 @@
             opacity: 0.9;
         }
 
-        /* Таблица базы данных */
+        .db-modal-content {
+            width: 80vw;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
         .db-title {
             color: #ffffff;
             font-size: 20px;
@@ -705,7 +774,6 @@
             pointer-events: none;
         }
 
-        /* Подтверждение удаления */
         .confirm-title {
             color: #ffffff;
             font-size: 18px;
@@ -748,23 +816,23 @@
             font-size: 13px;
         }
 
-        .all-games-btn {
-            background-color: #262626;
+        .admin-db-btn {
+            width: 100%;
+            background-color: #383838;
             color: #ffffff;
-            text-decoration: none;
-            padding: 16px 36px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 18px;
-            transition: background-color 0.2s, transform 0.2s;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
             cursor: pointer;
+            transition: background-color 0.2s;
+            display: none;
         }
 
-        .all-games-btn:hover {
-            background-color: #313131;
-            transform: translateY(-2px);
+        .admin-db-btn:hover {
+            background-color: #444444;
         }
     </style>
 </head>
@@ -779,17 +847,16 @@
         </div>
     </header>
 
-    <!-- Кнопка All Games по центру -->
+    <!-- Кнопка All Games без текста по центру -->
     <main>
-        <button class="all-games-btn">All Games</button>
+        <button class="all-games-btn"></button>
     </main>
 
-    <!-- Большое прямоугольное модальное окно профиля (2 колонки) -->
+    <!-- Модальное окно профиля -->
     <div class="modal-overlay" id="profile-modal">
         <div class="modal-content profile-modal-content">
             <button class="close-modal" id="close-modal-btn">&times;</button>
             
-            <!-- Левая колонка: аватар, ник, ID, кнопки управления -->
             <div class="profile-left-col">
                 <div class="modal-avatar" id="modal-avatar-box">U</div>
                 <div class="modal-username" id="modal-username-text">Username</div>
@@ -801,13 +868,12 @@
                 </div>
             </div>
 
-            <!-- Правая колонка: Your Items -->
             <div class="profile-right-col">
                 <div class="your-items-header">
                     <span class="your-items-title">Your Items</span>
                     <button class="add-item-btn" id="open-select-game-btn">+ Add Item</button>
                 </div>
-                <div class="items-container">
+                <div class="items-container" id="items-container-box">
                     <div class="no-items-text">You don't have any items listed at the moment</div>
                 </div>
             </div>
@@ -822,10 +888,13 @@
             
             <div class="setting-group">
                 <label class="setting-label">Avatar</label>
-                <div class="avatar-buttons-row">
-                    <label class="upload-file-btn" for="avatar-file-input">Upload Image</label>
-                    <input type="file" id="avatar-file-input" accept="image/*" style="display: none;">
-                    <button class="reset-avatar-btn" id="reset-avatar-btn" type="button">Reset to default</button>
+                <div class="settings-avatar-preview-row">
+                    <div class="settings-avatar-preview" id="settings-avatar-preview">U</div>
+                    <div class="avatar-buttons-row">
+                        <label class="upload-file-btn" for="avatar-file-input">Upload Image</label>
+                        <input type="file" id="avatar-file-input" accept="image/*" style="display: none;">
+                        <button class="reset-avatar-btn" id="reset-avatar-btn" type="button">Reset</button>
+                    </div>
                 </div>
                 <div class="setting-hint">Upload an image for your avatar.</div>
             </div>
@@ -856,16 +925,70 @@
         </div>
     </div>
 
-    <!-- Тост-уведомление в стиле сайта -->
-    <div class="toast-notification" id="toast-notification">Settings saved successfully!</div>
-
     <!-- Модальное окно Select Game -->
     <div class="modal-overlay" id="select-game-modal">
         <div class="modal-content select-game-modal-content">
             <button class="close-modal" id="close-select-game-btn">&times;</button>
-            <div class="select-game-text">Select Game</div>
+            <div class="select-game-title">Select Game</div>
+            <div class="game-card-item" id="select-mm2-btn">
+                <span>Murder Mystery 2</span>
+                <span>&rarr;</span>
+            </div>
         </div>
     </div>
+
+    <!-- Модальное окно создания предмета -->
+    <div class="modal-overlay" id="create-item-modal">
+        <div class="modal-content create-item-modal-content">
+            <button class="close-modal" id="close-create-item-btn">&times;</button>
+            <div class="settings-title" id="create-item-modal-title">Create Item (Murder Mystery 2)</div>
+
+            <div class="setting-group">
+                <label class="setting-label">Item Photo</label>
+                <input type="file" id="item-photo-input" accept="image/*" class="setting-input">
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Item Name</label>
+                <input type="text" class="setting-input" id="item-name-input" placeholder="e.g. Chroma Luger">
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Description</label>
+                <textarea class="setting-textarea" id="item-desc-input" placeholder="Describe your item..."></textarea>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Tag</label>
+                <select class="setting-select" id="item-tag-select">
+                    <option value="selling">Selling</option>
+                    <option value="offers">Looking for Offers</option>
+                </select>
+            </div>
+
+            <!-- Динамическое поле для Selling -->
+            <div class="setting-group" id="selling-price-group">
+                <label class="setting-label">Price ($)</label>
+                <input type="number" step="0.01" class="setting-input" id="item-price-input" placeholder="0.10">
+            </div>
+
+            <!-- Динамическое поле для Looking for Offers -->
+            <div class="setting-group" id="offers-options-group" style="display: none;">
+                <label class="setting-label">Availability Scope</label>
+                <label class="checkbox-label">
+                    <input type="radio" name="offer-scope" value="all" checked> All games
+                </label>
+                <label class="checkbox-label">
+                    <input type="radio" name="offer-scope" value="mm2"> Only Murder Mystery 2
+                </label>
+            </div>
+
+            <button class="save-settings-btn" id="save-item-btn">List Item</button>
+        </div>
+    </div>
+
+    <!-- Тост-уведомление -->
+    <div class="toast-notification" id="toast-notification">Notification</div>
 
     <!-- Модальное окно смены аккаунта -->
     <div class="modal-overlay" id="switch-modal">
@@ -947,6 +1070,7 @@
         
         const avatarFileInput = document.getElementById('avatar-file-input');
         const resetAvatarBtn = document.getElementById('reset-avatar-btn');
+        const settingsAvatarPreview = document.getElementById('settings-avatar-preview');
 
         const settingUsernameInput = document.getElementById('setting-username-input');
         const settingDisplaynameInput = document.getElementById('setting-displayname-input');
@@ -959,6 +1083,15 @@
         const selectGameModal = document.getElementById('select-game-modal');
         const openSelectGameBtn = document.getElementById('open-select-game-btn');
         const closeSelectGameBtn = document.getElementById('close-select-game-btn');
+        const selectMm2Btn = document.getElementById('select-mm2-btn');
+
+        const createItemModal = document.getElementById('create-item-modal');
+        const closeCreateItemBtn = document.getElementById('close-create-item-btn');
+        const itemTagSelect = document.getElementById('item-tag-select');
+        const sellingPriceGroup = document.getElementById('selling-price-group');
+        const offersOptionsGroup = document.getElementById('offers-options-group');
+        const saveItemBtn = document.getElementById('save-item-btn');
+        const itemsContainerBox = document.getElementById('items-container-box');
 
         const switchModal = document.getElementById('switch-modal');
         const closeSwitchModalBtn = document.getElementById('close-switch-modal-btn');
@@ -976,7 +1109,7 @@
         const confirmNoBtn = document.getElementById('confirm-no-btn');
 
         let userToDelete = null;
-        let uploadedAvatarData = null; // если null или пустая строка — дефолтная аватарка
+        let uploadedAvatarData = null; 
 
         if (currentUser) {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -1129,7 +1262,6 @@
                 profileDropdown.classList.toggle('active');
             });
 
-            // Исправленный баг: меню профиля теперь закрывается строго по клику вне контейнера авторизации, уход мышки его не трогает
             document.addEventListener('click', (e) => {
                 if (!authContainer.contains(e.target)) {
                     profileDropdown.classList.remove('active');
@@ -1147,7 +1279,7 @@
                 switchModal.classList.add('active');
             });
 
-            // Открытие настроек
+            // Открытие настроек и обновление превью аватарки
             openSettingsBtn.addEventListener('click', () => {
                 profileModal.classList.remove('active');
                 settingUsernameInput.value = userData.username;
@@ -1156,8 +1288,8 @@
                 settingPasswordInput.value = userData.password || '';
 
                 uploadedAvatarData = userData.avatar || null;
+                updateSettingsAvatarPreview();
 
-                // Проверка кулдаунов (username - 2 недели, display name - 1 неделя)
                 const now = new Date().getTime();
                 const twoWeeks = 14 * 24 * 60 * 60 * 1000;
                 const oneWeek = 7 * 24 * 60 * 60 * 1000;
@@ -1187,24 +1319,36 @@
                 settingsModal.classList.add('active');
             });
 
-            // Моментальная установка выбранной картинки без кадрирования
+            function updateSettingsAvatarPreview() {
+                if (uploadedAvatarData) {
+                    settingsAvatarPreview.innerHTML = `<img src="${uploadedAvatarData}" style="width:100%; height:100%; object-fit:cover;" alt="Avatar">`;
+                    settingsAvatarPreview.style.backgroundColor = 'transparent';
+                } else {
+                    settingsAvatarPreview.innerHTML = firstLetter;
+                    settingsAvatarPreview.style.backgroundColor = avatarColor;
+                }
+            }
+
+            // Выбор аватарки
             avatarFileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = function(event) {
                         uploadedAvatarData = event.target.result;
-                        showToast('Avatar image loaded successfully!');
+                        updateSettingsAvatarPreview();
+                        showToast('Avatar image loaded!');
                     }
                     reader.readAsDataURL(file);
                 }
-                avatarFileInput.value = ''; // сброс инпута для возможности повторного выбора
+                avatarFileInput.value = '';
             });
 
-            // Сброс аватарки на дефолтную
+            // Сброс аватарки
             resetAvatarBtn.addEventListener('click', () => {
                 uploadedAvatarData = null;
-                showToast('Avatar reset to default. Click Save Changes to apply.');
+                updateSettingsAvatarPreview();
+                showToast('Avatar reset. Click Save Changes.');
             });
 
             // Сохранение настроек
@@ -1220,7 +1364,6 @@
                     return;
                 }
 
-                // Проверка уникальности username, если он изменился
                 if (newUsername !== userData.username) {
                     const nameExists = users.some(u => u.username === newUsername);
                     if (nameExists) {
@@ -1239,16 +1382,14 @@
 
                 userData.email = newEmail;
                 userData.password = newPassword;
-                userData.avatar = uploadedAvatarData; // сохраняем картинку или null для дефолтной
+                userData.avatar = uploadedAvatarData;
 
-                // Обновляем массив пользователей
                 const userIndex = users.findIndex(u => u.customId === displayId || u.username === currentUser);
                 if (userIndex !== -1) {
                     users[userIndex] = userData;
                     localStorage.setItem('users', JSON.stringify(users));
                 }
 
-                // Обновляем список сохраненных аккаунтов
                 let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
                 savedAccounts = savedAccounts.map(acc => (acc === currentUser ? userData.username : acc));
                 localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
@@ -1259,7 +1400,7 @@
                 }, 1000);
             });
 
-            // Управление модальным окном Select Game
+            // Открытие выбора игры
             openSelectGameBtn.addEventListener('click', () => {
                 profileModal.classList.remove('active');
                 selectGameModal.classList.add('active');
@@ -1269,44 +1410,56 @@
                 selectGameModal.classList.remove('active');
             });
 
-            selectGameModal.addEventListener('click', (e) => {
-                if (e.target === selectGameModal) {
-                    selectGameModal.classList.remove('active');
+            // Клик по Murder Mystery 2 открывает окно создания предмета
+            selectMm2Btn.addEventListener('click', () => {
+                selectGameModal.classList.remove('active');
+                document.getElementById('item-name-input').value = '';
+                document.getElementById('item-desc-input').value = '';
+                document.getElementById('item-photo-input').value = '';
+                document.getElementById('item-price-input').value = '';
+                itemTagSelect.value = 'selling';
+                sellingPriceGroup.style.display = 'block';
+                offersOptionsGroup.style.display = 'none';
+                createItemModal.classList.add('active');
+            });
+
+            closeCreateItemBtn.addEventListener('click', () => {
+                createItemModal.classList.remove('active');
+            });
+
+            // Переключение тегов (Selling / Looking for offers)
+            itemTagSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'selling') {
+                    sellingPriceGroup.style.display = 'block';
+                    offersOptionsGroup.style.display = 'none';
+                } else {
+                    sellingPriceGroup.style.display = 'none';
+                    offersOptionsGroup.style.display = 'block';
                 }
+            });
+
+            // Кнопка сохранения/публикации предмета
+            saveItemBtn.addEventListener('click', () => {
+                const itemName = document.getElementById('item-name-input').value.trim();
+                if (!itemName) {
+                    showToast('Please enter an item name');
+                    return;
+                }
+                showToast('Item successfully created!');
+                createItemModal.classList.remove('active');
+                // Здесь в будущем можно будет рендерить предмет в itemsContainerBox
             });
 
             closeModalBtn.addEventListener('click', () => {
                 profileModal.classList.remove('active');
             });
 
-            profileModal.addEventListener('click', (e) => {
-                if (e.target === profileModal) {
-                    profileModal.classList.remove('active');
-                }
-            });
-
             closeSettingsModalBtn.addEventListener('click', () => {
                 settingsModal.classList.remove('active');
             });
 
-            settingsModal.addEventListener('click', (e) => {
-                if (e.target === settingsModal) {
-                    settingsModal.classList.remove('active');
-                }
-            });
-
             closeSwitchModalBtn.addEventListener('click', () => {
                 switchModal.classList.remove('active');
-            });
-
-            switchModal.addEventListener('click', (e) => {
-                if (e.target === switchModal) {
-                    switchModal.classList.remove('active');
-                }
-            });
-
-            closeConfirmModalBtn.addEventListener('click', () => {
-                confirmModal.classList.remove('active');
             });
 
             addAccountBtn.addEventListener('click', () => {
@@ -1321,12 +1474,6 @@
 
             closeDbModalBtn.addEventListener('click', () => {
                 dbModal.classList.remove('active');
-            });
-
-            dbModal.addEventListener('click', (e) => {
-                if (e.target === dbModal) {
-                    dbModal.classList.remove('active');
-                }
             });
 
             confirmNoBtn.addEventListener('click', () => {
