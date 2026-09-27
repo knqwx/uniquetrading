@@ -79,7 +79,7 @@
             font-family: 'Inter', sans-serif;
             cursor: pointer;
             transition: opacity 0.2s, transform 0.1s;
-            margin-top: 10px;
+            margin-top: 5px;
         }
 
         .submit-btn:hover {
@@ -88,6 +88,26 @@
 
         .submit-btn:active {
             transform: scale(0.98);
+        }
+
+        /* Текст внизу для перехода на регистрацию */
+        .auth-footer {
+            text-align: center;
+            color: #888888;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+
+        .auth-footer a {
+            color: #ff7300;
+            text-decoration: none;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .auth-footer a:hover {
+            opacity: 0.8;
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -107,6 +127,10 @@
         </div>
 
         <button class="submit-btn">Log in</button>
+
+        <div class="auth-footer">
+            Don't have an account? <a href="#">Sign up</a>
+        </div>
     </div>
 
 </body>
