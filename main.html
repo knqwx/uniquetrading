@@ -3,15 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dark Gray Background</title>
+    <title>Unique Trading</title>
     <style>
         body {
             background-color: #262626;
             margin: 0;
             height: 100vh;
+            /* Выстраиваем элементы по центру по вертикали, а по горизонтали оставляем слева */
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding-left: 50px; /* Отступ от левого края экрана */
+        }
+        
+        .rectangle {
+            width: 200px;
+            height: 100px;
+            background-color: #4CAF50; /* Зеленый цвет прямоугольника для примера */
+            border-radius: 4px;       /* Слегка скругленные углы (по желанию) */
         }
     </style>
 </head>
 <body>
+    <div class="rectangle"></div>
 </body>
 </html>
