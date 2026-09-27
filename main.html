@@ -84,29 +84,139 @@
             color: #ffffff;
         }
 
-        /* Стиль для отображения никнейма авторизованного пользователя */
-        .user-profile {
+        /* Кликабельный бокс профиля с аватаркой */
+        .user-profile-box {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
+            background-color: #262626;
+            padding: 6px 14px 6px 6px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border: 1px solid #383838;
+        }
+
+        .user-profile-box:hover {
+            background-color: #313131;
+        }
+
+        .user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 15px;
+            text-transform: uppercase;
+        }
+
+        .user-name {
             color: #ffffff;
             font-size: 14px;
             font-weight: 500;
         }
 
-        .logout-btn {
+        /* Модальное окно профиля */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            z-index: 100;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            width: 340px;
+            background-color: #262626;
+            border-radius: 12px;
+            padding: 30px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+            transform: translateY(20px);
+            transition: transform 0.25s ease;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 28px;
+            text-transform: uppercase;
+            margin: 0 auto 15px auto;
+        }
+
+        .modal-username {
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .modal-email {
+            color: #888888;
+            font-size: 13px;
+            margin-bottom: 25px;
+        }
+
+        .logout-modal-btn {
+            width: 100%;
+            background-color: #383838;
+            color: #ff4d4d;
+            border: none;
+            border-radius: 8px;
+            padding: 11px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .logout-modal-btn:hover {
+            background-color: #444444;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
             background: none;
             border: none;
             color: #888888;
-            font-family: 'Inter', sans-serif;
-            font-size: 13px;
+            font-size: 18px;
             cursor: pointer;
-            transition: color 0.2s;
-            padding: 0;
         }
 
-        .logout-btn:hover {
-            color: #ff7300;
+        .close-modal:hover {
+            color: #ffffff;
         }
 
         /* Центральная кнопка All Games */
@@ -136,7 +246,7 @@
     <header class="top-bar">
         <a href="#" class="nav-home">Home</a>
         <div class="auth-buttons" id="auth-container">
-            <!-- Динамически заменяется скриптом, если пользователь вошел -->
+            <!-- Динамически заменяется скриптом -->
             <a href="login.html" class="btn btn-login">Log in</a>
             <a href="login.html?mode=signup" class="btn btn-signup">Sign up</a>
         </div>
@@ -147,24 +257,80 @@
         <button class="all-games-btn">All Games</button>
     </main>
 
+    <!-- Модальное окно профиля -->
+    <div class="modal-overlay" id="profile-modal">
+        <div class="modal-content">
+            <button class="close-modal" id="close-modal-btn">&times;</button>
+            <div class="modal-avatar" id="modal-avatar-box">U</div>
+            <div class="modal-username" id="modal-username-text">Username</div>
+            <div class="modal-email" id="modal-email-text">email@example.com</div>
+            <button class="logout-modal-btn" id="logout-btn">Log out</button>
+        </div>
+    </div>
+
     <script>
-        // Проверяем, вошел ли пользователь в аккаунт
+        // Функция генерации случайного цвета на основе строки (чтобы у каждого ника был свой стабильный цвет)
+        function getColorFromName(name) {
+            const colors = ['#ff7300', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#009688', '#4caf50', '#ff9800'];
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
         const currentUser = localStorage.getItem('currentUser');
         const authContainer = document.getElementById('auth-container');
+        const profileModal = document.getElementById('profile-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const modalAvatarBox = document.getElementById('modal-avatar-box');
+        const modalUsernameText = document.getElementById('modal-username-text');
+        const modalEmailText = document.getElementById('modal-email-text');
+        const logoutBtn = document.getElementById('logout-btn');
 
         if (currentUser) {
-            // Если вошел — показываем ник и кнопку выхода
+            // Ищем данные пользователя в массиве зарегистрированных
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const userData = users.find(u => u.username === currentUser) || { username: currentUser, email: 'No email' };
+
+            const firstLetter = currentUser.charAt(0).toUpperCase();
+            const avatarColor = getColorFromName(currentUser);
+
+            // Отображаем кликабельный бокс профиля в шапке
             authContainer.innerHTML = `
-                <div class="user-profile">
-                    <span>👤 ${currentUser}</span>
-                    <button class="logout-btn" id="logout-btn">Log out</button>
+                <div class="user-profile-box" id="open-profile-btn">
+                    <div class="user-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>
+                    <span class="user-name">${currentUser}</span>
                 </div>
             `;
 
-            // Обработчик выхода из аккаунта
-            document.getElementById('logout-btn').addEventListener('click', () => {
+            // Заполняем модальное окно данными
+            modalAvatarBox.style.backgroundColor = avatarColor;
+            modalAvatarBox.textContent = firstLetter;
+            modalUsernameText.textContent = userData.username;
+            modalEmailText.textContent = userData.email;
+
+            // Открытие модального окна по клику на бокс профиля
+            document.getElementById('open-profile-btn').addEventListener('click', () => {
+                profileModal.classList.add('active');
+            });
+
+            // Закрытие модального окна
+            closeModalBtn.addEventListener('click', () => {
+                profileModal.classList.remove('active');
+            });
+
+            // Закрытие по клику вне окна
+            profileModal.addEventListener('click', (e) => {
+                if (e.target === profileModal) {
+                    profileModal.classList.remove('active');
+                }
+            });
+
+            // Выход из аккаунта
+            logoutBtn.addEventListener('click', () => {
                 localStorage.removeItem('currentUser');
-                window.location.reload(); // Перезагружаем страницу для сброса интерфейса
+                window.location.reload();
             });
         }
     </script>
