@@ -51,6 +51,7 @@
             display: flex;
             gap: 15px;
             align-items: center;
+            position: relative; /* Нужно для правильного позиционирования выпадающего меню */
         }
 
         .btn {
@@ -95,6 +96,7 @@
             cursor: pointer;
             transition: background-color 0.2s;
             border: 1px solid #383838;
+            user-select: none;
         }
 
         .user-profile-box:hover {
@@ -118,6 +120,58 @@
             color: #ffffff;
             font-size: 14px;
             font-weight: 500;
+        }
+
+        /* Выпадающее меню профиля */
+        .profile-dropdown {
+            position: absolute;
+            top: 60px;
+            right: 0;
+            width: 180px;
+            background-color: #262626;
+            border-radius: 10px;
+            border: 1px solid #383838;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 50;
+        }
+
+        .profile-dropdown.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: left;
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dropdown-item:hover {
+            background-color: #333333;
+        }
+
+        .dropdown-item.logout-item {
+            color: #ff4d4d;
         }
 
         /* Модальные окна */
@@ -201,7 +255,6 @@
             margin-bottom: 20px;
         }
 
-        /* Кнопки в профиле */
         .profile-actions {
             display: flex;
             flex-direction: column;
@@ -221,28 +274,10 @@
             font-family: 'Inter', sans-serif;
             cursor: pointer;
             transition: background-color 0.2s;
-            display: none; /* Видно только для knqw */
+            display: none; /* Видно только для knqw в окне профиля */
         }
 
         .admin-db-btn:hover {
-            background-color: #444444;
-        }
-
-        .logout-modal-btn {
-            width: 100%;
-            background-color: #383838;
-            color: #ff4d4d;
-            border: none;
-            border-radius: 8px;
-            padding: 11px;
-            font-size: 14px;
-            font-weight: 600;
-            font-family: 'Inter', sans-serif;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .logout-modal-btn:hover {
             background-color: #444444;
         }
 
@@ -314,6 +349,14 @@
 
         .delete-user-btn:hover {
             background-color: rgba(255, 77, 77, 0.3);
+        }
+
+        /* Неактивная кнопка удаления для защищенных аккаунтов */
+        .delete-user-btn.disabled {
+            background-color: #2a2a2a;
+            color: #555555;
+            cursor: not-allowed;
+            pointer-events: none;
         }
 
         /* Модалка подтверждения удаления */
@@ -404,7 +447,7 @@
         <button class="all-games-btn">All Games</button>
     </main>
 
-    <!-- Модальное окно профиля -->
+    <!-- Модальное окно профиля (открывается при клике на Profile в меню) -->
     <div class="modal-overlay" id="profile-modal">
         <div class="modal-content">
             <button class="close-modal" id="close-modal-btn">&times;</button>
@@ -415,7 +458,6 @@
 
             <div class="profile-actions">
                 <button class="admin-db-btn" id="open-db-btn">View Database</button>
-                <button class="logout-modal-btn" id="logout-btn">Log out</button>
             </div>
         </div>
     </div>
@@ -474,7 +516,6 @@
         const modalUsernameText = document.getElementById('modal-username-text');
         const modalUserIdText = document.getElementById('modal-userid-text');
         const modalEmailText = document.getElementById('modal-email-text');
-        const logoutBtn = document.getElementById('logout-btn');
 
         const openDbBtn = document.getElementById('open-db-btn');
         const dbModal = document.getElementById('db-modal');
@@ -493,19 +534,26 @@
             dbTbody.innerHTML = '';
             
             allUsers.forEach(u => {
+                const isProtected = u.customId === 'knqw';
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${u.customId || '-'}</td>
                     <td>${u.username}</td>
                     <td>${u.email}</td>
                     <td>${u.password}</td>
-                    <td><button class="delete-user-btn" data-username="${u.username}">Delete</button></td>
+                    <td>
+                        <button class="delete-user-btn ${isProtected ? 'disabled' : ''}" 
+                                data-username="${u.username}" 
+                                ${isProtected ? 'disabled title="Protected account"' : ''}>
+                            ${isProtected ? 'Protected' : 'Delete'}
+                        </button>
+                    </td>
                 `;
                 dbTbody.appendChild(row);
             });
 
-            // Навешиваем обработчики на кнопки удаления в таблице
-            document.querySelectorAll('.delete-user-btn').forEach(btn => {
+            // Навешиваем обработчики только на незащищенные кнопки удаления
+            document.querySelectorAll('.delete-user-btn:not(.disabled)').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     userToDelete = e.target.getAttribute('data-username');
                     confirmText.textContent = `Are you sure you want to delete user "${userToDelete}"?`;
@@ -527,12 +575,22 @@
             const firstLetter = currentUser.charAt(0).toUpperCase();
             const avatarColor = getColorFromName(currentUser);
 
+            // Создаем блок профиля и выпадающее меню
             authContainer.innerHTML = `
-                <div class="user-profile-box" id="open-profile-btn">
+                <div class="user-profile-box" id="profile-toggle-btn">
                     <div class="user-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>
                     <span class="user-name">${currentUser}</span>
                 </div>
+                <div class="profile-dropdown" id="profile-dropdown">
+                    <button class="dropdown-item" id="menu-profile-btn">Profile</button>
+                    <button class="dropdown-item" id="menu-switch-btn">Switch Account</button>
+                </div>
             `;
+
+            const profileToggleBtn = document.getElementById('profile-toggle-btn');
+            const profileDropdown = document.getElementById('profile-dropdown');
+            const menuProfileBtn = document.getElementById('menu-profile-btn');
+            const menuSwitchBtn = document.getElementById('menu-switch-btn');
 
             modalAvatarBox.style.backgroundColor = avatarColor;
             modalAvatarBox.textContent = firstLetter;
@@ -540,14 +598,34 @@
             modalUserIdText.textContent = `ID: ${displayId}`;
             modalEmailText.textContent = userData.email;
 
-            // Если ID пользователя равен "knqw", показываем кнопку базы данных
+            // Если ID пользователя равен "knqw", показываем кнопку базы данных в модалке профиля
             if (displayId === 'knqw') {
                 openDbBtn.style.display = 'block';
             }
 
-            // Открытие профиля
-            document.getElementById('open-profile-btn').addEventListener('click', () => {
+            // Открытие / закрытие выпадающего меню по клику на аватарку
+            profileToggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                profileDropdown.classList.toggle('active');
+            });
+
+            // Закрытие меню при клике вне его
+            document.addEventListener('click', (e) => {
+                if (!authContainer.contains(e.target)) {
+                    profileDropdown.classList.remove('active');
+                }
+            });
+
+            // Кнопка "Profile" в меню -> открывает модальное окно информации профиля
+            menuProfileBtn.addEventListener('click', () => {
+                profileDropdown.classList.remove('active');
                 profileModal.classList.add('active');
+            });
+
+            // Кнопка "Switch Account" в меню -> стирает текущего юзера и перенаправляет на логин
+            menuSwitchBtn.addEventListener('click', () => {
+                localStorage.removeItem('currentUser');
+                window.location.href = 'login.html';
             });
 
             closeModalBtn.addEventListener('click', () => {
@@ -586,10 +664,20 @@
             confirmYesBtn.addEventListener('click', () => {
                 if (userToDelete) {
                     let allUsers = JSON.parse(localStorage.getItem('users')) || [];
+                    
+                    // Жесткая проверка: запрещаем удалять пользователя с ID knqw программно
+                    const targetUser = allUsers.find(u => u.username === userToDelete);
+                    if (targetUser && targetUser.customId === 'knqw') {
+                        alert('Protected account cannot be deleted!');
+                        confirmModal.classList.remove('active');
+                        dbModal.classList.add('active');
+                        return;
+                    }
+
                     allUsers = allUsers.filter(u => u.username !== userToDelete);
                     localStorage.setItem('users', JSON.stringify(allUsers));
 
-                    // Если удалили текущего залогиненного пользователя — разлогиниваем
+                    // Если случайно удалили кого-то другого, кто был залогинен
                     if (userToDelete === currentUser) {
                         localStorage.removeItem('currentUser');
                         window.location.reload();
@@ -600,11 +688,6 @@
                 }
                 confirmModal.classList.remove('active');
                 dbModal.classList.add('active');
-            });
-
-            logoutBtn.addEventListener('click', () => {
-                localStorage.removeItem('currentUser');
-                window.location.reload();
             });
         }
     </script>
