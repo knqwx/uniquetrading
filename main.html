@@ -114,6 +114,7 @@
             font-weight: 600;
             font-size: 15px;
             text-transform: uppercase;
+            object-fit: cover;
         }
 
         .user-name {
@@ -208,6 +209,24 @@
             transform: translateY(0);
         }
 
+        /* Увеличенный крестик закрытия */
+        .close-modal {
+            position: absolute;
+            top: 18px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: #888888;
+            font-size: 28px;
+            cursor: pointer;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+
+        .close-modal:hover {
+            color: #ffffff;
+        }
+
         /* Увеличенное прямоугольное окно профиля (2 колонки) */
         .profile-modal-content {
             width: 860px;
@@ -243,6 +262,7 @@
             font-size: 44px;
             text-transform: uppercase;
             margin-bottom: 15px;
+            object-fit: cover;
         }
 
         .profile-modal-content .modal-username {
@@ -268,7 +288,7 @@
             margin-top: auto;
         }
 
-        .edit-profile-btn {
+        .settings-btn {
             width: 100%;
             background-color: #313131;
             color: #ffffff;
@@ -282,7 +302,7 @@
             transition: background-color 0.2s;
         }
 
-        .edit-profile-btn:hover {
+        .settings-btn:hover {
             background-color: #3d3d3d;
         }
 
@@ -293,16 +313,20 @@
             flex-direction: column;
         }
 
+        .your-items-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
         .your-items-title {
             font-size: 18px;
             font-weight: 600;
             color: #ffffff;
-            margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
+        /* Кнопка Add Item сдвинута левее (в шапку) */
         .add-item-btn {
             background-color: #383838;
             color: #ffffff;
@@ -338,6 +362,74 @@
             font-weight: 500;
         }
 
+        /* Окно настроек */
+        .settings-modal-content {
+            width: 480px;
+            text-align: left;
+        }
+
+        .settings-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        .setting-group {
+            margin-bottom: 16px;
+        }
+
+        .setting-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #aaaaaa;
+            margin-bottom: 6px;
+        }
+
+        .setting-input {
+            width: 100%;
+            background-color: #1f1f1f;
+            border: 1px solid #383838;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .setting-input:focus {
+            border-color: #ff7300;
+        }
+
+        .setting-hint {
+            font-size: 11px;
+            color: #777777;
+            margin-top: 4px;
+        }
+
+        .save-settings-btn {
+            width: 100%;
+            background-color: #ff7300;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: opacity 0.2s;
+        }
+
+        .save-settings-btn:hover {
+            opacity: 0.9;
+        }
+
         /* Остальные модальные окна */
         .db-modal-content {
             width: 80vw;
@@ -352,21 +444,6 @@
             max-height: 80vh;
             display: flex;
             flex-direction: column;
-        }
-
-        .close-modal {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: none;
-            border: none;
-            color: #888888;
-            font-size: 22px;
-            cursor: pointer;
-        }
-
-        .close-modal:hover {
-            color: #ffffff;
         }
 
         .admin-db-btn {
@@ -446,6 +523,7 @@
             font-weight: 600;
             font-size: 13px;
             text-transform: uppercase;
+            object-fit: cover;
         }
 
         .account-details .acc-name {
@@ -463,7 +541,7 @@
             background: none;
             border: none;
             color: #888888;
-            font-size: 16px;
+            font-size: 18px;
             cursor: pointer;
             padding: 5px;
             transition: color 0.2s;
@@ -638,21 +716,48 @@
                 <div class="modal-userid" id="modal-userid-text">ID: 1</div>
                 
                 <div class="profile-left-buttons">
-                    <button class="edit-profile-btn" id="edit-profile-btn">Edit Profile</button>
+                    <button class="settings-btn" id="open-settings-btn">Settings</button>
                     <button class="admin-db-btn" id="open-db-btn">View Database</button>
                 </div>
             </div>
 
             <!-- Правая колонка: Your Items -->
             <div class="profile-right-col">
-                <div class="your-items-title">
-                    <span>Your Items</span>
+                <div class="your-items-header">
+                    <span class="your-items-title">Your Items</span>
                     <button class="add-item-btn">+ Add Item</button>
                 </div>
                 <div class="items-container">
                     <div class="no-items-text">You don't have any items listed at the moment</div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно настроек -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-content settings-modal-content">
+            <button class="close-modal" id="close-settings-modal-btn">&times;</button>
+            <div class="settings-title">Profile Settings</div>
+            
+            <div class="setting-group">
+                <label class="setting-label">Avatar (Image URL)</label>
+                <input type="text" class="setting-input" id="setting-avatar-input" placeholder="https://example.com/avatar.jpg">
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Username</label>
+                <input type="text" class="setting-input" id="setting-username-input">
+                <div class="setting-hint" id="username-hint">Can be changed once every 2 weeks.</div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Display Name</label>
+                <input type="text" class="setting-input" id="setting-displayname-input">
+                <div class="setting-hint" id="displayname-hint">Can be changed once a week.</div>
+            </div>
+
+            <button class="save-settings-btn" id="save-settings-btn">Save Changes</button>
         </div>
     </div>
 
@@ -691,6 +796,7 @@
     <!-- Модальное окно подтверждения удаления -->
     <div class="modal-overlay" id="confirm-modal">
         <div class="modal-content">
+            <button class="close-modal" id="close-confirm-modal-btn">&times;</button>
             <div class="confirm-title">Delete Account</div>
             <div class="confirm-text" id="confirm-text">Are you sure you want to delete this account?</div>
             <div class="confirm-actions">
@@ -720,6 +826,16 @@
         const modalUserIdText = document.getElementById('modal-userid-text');
         const openDbBtn = document.getElementById('open-db-btn');
 
+        const settingsModal = document.getElementById('settings-modal');
+        const openSettingsBtn = document.getElementById('open-settings-btn');
+        const closeSettingsModalBtn = document.getElementById('close-settings-modal-btn');
+        const settingAvatarInput = document.getElementById('setting-avatar-input');
+        const settingUsernameInput = document.getElementById('setting-username-input');
+        const settingDisplaynameInput = document.getElementById('setting-displayname-input');
+        const usernameHint = document.getElementById('username-hint');
+        const displaynameHint = document.getElementById('displayname-hint');
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+
         const switchModal = document.getElementById('switch-modal');
         const closeSwitchModalBtn = document.getElementById('close-switch-modal-btn');
         const accountsList = document.getElementById('accounts-list');
@@ -730,6 +846,7 @@
         const dbTbody = document.getElementById('db-tbody');
 
         const confirmModal = document.getElementById('confirm-modal');
+        const closeConfirmModalBtn = document.getElementById('close-confirm-modal-btn');
         const confirmText = document.getElementById('confirm-text');
         const confirmYesBtn = document.getElementById('confirm-yes-btn');
         const confirmNoBtn = document.getElementById('confirm-no-btn');
@@ -795,11 +912,17 @@
 
                 const item = document.createElement('div');
                 item.className = `account-item ${isCurrent ? 'current' : ''}`;
+                
+                let avatarHtml = `<div class="account-mini-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>`;
+                if (userData.avatar) {
+                    avatarHtml = `<img class="account-mini-avatar" src="${userData.avatar}" alt="Avatar">`;
+                }
+
                 item.innerHTML = `
                     <div class="account-info" style="flex: 1; cursor: pointer;">
-                        <div class="account-mini-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>
+                        ${avatarHtml}
                         <div class="account-details">
-                            <div class="acc-name">${accName} ${isCurrent ? '<span style="color: #ff7300; font-size: 11px; margin-left: 5px;">(Current)</span>' : ''}</div>
+                            <div class="acc-name">${userData.displayName || accName} ${isCurrent ? '<span style="color: #ff7300; font-size: 11px; margin-left: 5px;">(Current)</span>' : ''}</div>
                             <div class="acc-email">${userData.email}</div>
                         </div>
                     </div>
@@ -838,13 +961,19 @@
             }
 
             const displayId = userData.customId || '1';
+            const displayName = userData.displayName || userData.username;
             const firstLetter = currentUser.charAt(0).toUpperCase();
             const avatarColor = getColorFromName(currentUser);
 
+            let profileAvatarHtml = `<div class="user-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>`;
+            if (userData.avatar) {
+                profileAvatarHtml = `<img class="user-avatar" src="${userData.avatar}" alt="Avatar">`;
+            }
+
             authContainer.innerHTML = `
                 <div class="user-profile-box" id="profile-toggle-btn">
-                    <div class="user-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>
-                    <span class="user-name">${currentUser}</span>
+                    ${profileAvatarHtml}
+                    <span class="user-name">${displayName}</span>
                 </div>
                 <div class="profile-dropdown" id="profile-dropdown">
                     <button class="dropdown-item" id="menu-profile-btn">Profile</button>
@@ -857,9 +986,13 @@
             const menuProfileBtn = document.getElementById('menu-profile-btn');
             const menuSwitchBtn = document.getElementById('menu-switch-btn');
 
-            modalAvatarBox.style.backgroundColor = avatarColor;
-            modalAvatarBox.textContent = firstLetter;
-            modalUsernameText.textContent = userData.username;
+            if (userData.avatar) {
+                modalAvatarBox.innerHTML = `<img src="${userData.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
+            } else {
+                modalAvatarBox.style.backgroundColor = avatarColor;
+                modalAvatarBox.textContent = firstLetter;
+            }
+            modalUsernameText.textContent = displayName;
             modalUserIdText.textContent = `ID: ${displayId}`;
 
             if (displayId === 'knqw') {
@@ -888,6 +1021,90 @@
                 switchModal.classList.add('active');
             });
 
+            // Открытие настроек
+            openSettingsBtn.addEventListener('click', () => {
+                profileModal.classList.remove('active');
+                settingAvatarInput.value = userData.avatar || '';
+                settingUsernameInput.value = userData.username;
+                settingDisplaynameInput.value = userData.displayName || userData.username;
+
+                // Проверка кулдаунов (username - 2 недели, display name - 1 неделя)
+                const now = new Date().getTime();
+                const twoWeeks = 14 * 24 * 60 * 60 * 1000;
+                const oneWeek = 7 * 24 * 60 * 60 * 1000;
+
+                if (userData.lastUsernameChange && (now - userData.lastUsernameChange < twoWeeks)) {
+                    const daysLeft = Math.ceil((twoWeeks - (now - userData.lastUsernameChange)) / (1000 * 60 * 60 * 24));
+                    settingUsernameInput.disabled = true;
+                    usernameHint.textContent = `You can change username in ${daysLeft} days.`;
+                    usernameHint.style.color = '#ff4d4d';
+                } else {
+                    settingUsernameInput.disabled = false;
+                    usernameHint.textContent = 'Can be changed once every 2 weeks.';
+                    usernameHint.style.color = '#777777';
+                }
+
+                if (userData.lastDisplayNameChange && (now - userData.lastDisplayNameChange < oneWeek)) {
+                    const daysLeft = Math.ceil((oneWeek - (now - userData.lastDisplayNameChange)) / (1000 * 60 * 60 * 24));
+                    settingDisplaynameInput.disabled = true;
+                    displaynameHint.textContent = `You can change display name in ${daysLeft} days.`;
+                    displaynameHint.style.color = '#ff4d4d';
+                } else {
+                    settingDisplaynameInput.disabled = false;
+                    displaynameHint.textContent = 'Can be changed once a week.';
+                    displaynameHint.style.color = '#777777';
+                }
+
+                settingsModal.classList.add('active');
+            });
+
+            // Сохранение настроек
+            saveSettingsBtn.addEventListener('click', () => {
+                const newAvatar = settingAvatarInput.value.trim();
+                const newUsername = settingUsernameInput.value.trim();
+                const newDisplayName = settingDisplaynameInput.value.trim();
+                const now = new Date().getTime();
+
+                if (!newUsername) {
+                    alert('Username cannot be empty');
+                    return;
+                }
+
+                // Проверка уникальности username, если он изменился
+                if (newUsername !== userData.username) {
+                    const nameExists = users.some(u => u.username === newUsername);
+                    if (nameExists) {
+                        alert('This username is already taken!');
+                        return;
+                    }
+                    userData.username = newUsername;
+                    userData.lastUsernameChange = now;
+                    localStorage.setItem('currentUser', newUsername);
+                }
+
+                if (newDisplayName !== (userData.displayName || userData.username)) {
+                    userData.displayName = newDisplayName;
+                    userData.lastDisplayNameChange = now;
+                }
+
+                userData.avatar = newAvatar;
+
+                // Обновляем массив пользователей
+                const userIndex = users.findIndex(u => u.customId === displayId || u.username === currentUser);
+                if (userIndex !== -1) {
+                    users[userIndex] = userData;
+                    localStorage.setItem('users', JSON.stringify(users));
+                }
+
+                // Обновляем список сохраненных аккаунтов
+                let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+                savedAccounts = savedAccounts.map(acc => (acc === currentUser ? userData.username : acc));
+                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
+
+                alert('Settings saved successfully!');
+                window.location.reload();
+            });
+
             closeModalBtn.addEventListener('click', () => {
                 profileModal.classList.remove('active');
             });
@@ -895,6 +1112,16 @@
             profileModal.addEventListener('click', (e) => {
                 if (e.target === profileModal) {
                     profileModal.classList.remove('active');
+                }
+            });
+
+            closeSettingsModalBtn.addEventListener('click', () => {
+                settingsModal.classList.remove('active');
+            });
+
+            settingsModal.addEventListener('click', (e) => {
+                if (e.target === settingsModal) {
+                    settingsModal.classList.remove('active');
                 }
             });
 
@@ -906,6 +1133,10 @@
                 if (e.target === switchModal) {
                     switchModal.classList.remove('active');
                 }
+            });
+
+            closeConfirmModalBtn.addEventListener('click', () => {
+                confirmModal.classList.remove('active');
             });
 
             addAccountBtn.addEventListener('click', () => {
