@@ -161,7 +161,7 @@
 
         /* Модальное окно базы данных (шире) */
         .db-modal-content {
-            width: 550px;
+            width: 620px;
             max-height: 80vh;
             display: flex;
             flex-direction: column;
@@ -299,6 +299,74 @@
             border-top: 1px solid #383838;
         }
 
+        /* Кнопка удаления в таблице */
+        .delete-user-btn {
+            background-color: rgba(255, 77, 77, 0.15);
+            color: #ff4d4d;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .delete-user-btn:hover {
+            background-color: rgba(255, 77, 77, 0.3);
+        }
+
+        /* Модалка подтверждения удаления */
+        .confirm-title {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .confirm-text {
+            color: #b0b0b0;
+            font-size: 13px;
+            margin-bottom: 25px;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-confirm-delete {
+            flex: 1;
+            background-color: #ff4d4d;
+            color: #ffffff;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-confirm-delete:hover {
+            opacity: 0.9;
+        }
+
+        .btn-cancel-delete {
+            flex: 1;
+            background-color: #383838;
+            color: #ffffff;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-cancel-delete:hover {
+            background-color: #444444;
+        }
+
         /* Центральная кнопка All Games */
         .all-games-btn {
             background-color: #262626;
@@ -365,12 +433,25 @@
                             <th>Username</th>
                             <th>Email</th>
                             <th>Password</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="db-tbody">
                         <!-- Заполняется динамически -->
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно подтверждения удаления -->
+    <div class="modal-overlay" id="confirm-modal">
+        <div class="modal-content">
+            <div class="confirm-title">Delete Account</div>
+            <div class="confirm-text" id="confirm-text">Are you sure you want to delete this account?</div>
+            <div class="confirm-actions">
+                <button class="btn-confirm-delete" id="confirm-yes-btn">Delete</button>
+                <button class="btn-cancel-delete" id="confirm-no-btn">Cancel</button>
             </div>
         </div>
     </div>
@@ -399,6 +480,40 @@
         const dbModal = document.getElementById('db-modal');
         const closeDbModalBtn = document.getElementById('close-db-modal-btn');
         const dbTbody = document.getElementById('db-tbody');
+
+        const confirmModal = document.getElementById('confirm-modal');
+        const confirmText = document.getElementById('confirm-text');
+        const confirmYesBtn = document.getElementById('confirm-yes-btn');
+        const confirmNoBtn = document.getElementById('confirm-no-btn');
+
+        let userToDelete = null;
+
+        function renderDatabaseTable() {
+            const allUsers = JSON.parse(localStorage.getItem('users')) || [];
+            dbTbody.innerHTML = '';
+            
+            allUsers.forEach(u => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${u.customId || '-'}</td>
+                    <td>${u.username}</td>
+                    <td>${u.email}</td>
+                    <td>${u.password}</td>
+                    <td><button class="delete-user-btn" data-username="${u.username}">Delete</button></td>
+                `;
+                dbTbody.appendChild(row);
+            });
+
+            // Навешиваем обработчики на кнопки удаления в таблице
+            document.querySelectorAll('.delete-user-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    userToDelete = e.target.getAttribute('data-username');
+                    confirmText.textContent = `Are you sure you want to delete user "${userToDelete}"?`;
+                    dbModal.classList.remove('active');
+                    confirmModal.classList.add('active');
+                });
+            });
+        }
 
         if (currentUser) {
             let users = JSON.parse(localStorage.getItem('users')) || [];
@@ -447,21 +562,7 @@
 
             // Открытие базы данных (только для knqw)
             openDbBtn.addEventListener('click', () => {
-                // Заполняем таблицу свежими данными
-                const allUsers = JSON.parse(localStorage.getItem('users')) || [];
-                dbTbody.innerHTML = '';
-                
-                allUsers.forEach(u => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${u.customId || '-'}</td>
-                        <td>${u.username}</td>
-                        <td>${u.email}</td>
-                        <td>${u.password}</td>
-                    `;
-                    dbTbody.appendChild(row);
-                });
-
+                renderDatabaseTable();
                 profileModal.classList.remove('active');
                 dbModal.classList.add('active');
             });
@@ -474,6 +575,31 @@
                 if (e.target === dbModal) {
                     dbModal.classList.remove('active');
                 }
+            });
+
+            // Логика подтверждения удаления
+            confirmNoBtn.addEventListener('click', () => {
+                confirmModal.classList.remove('active');
+                dbModal.classList.add('active');
+            });
+
+            confirmYesBtn.addEventListener('click', () => {
+                if (userToDelete) {
+                    let allUsers = JSON.parse(localStorage.getItem('users')) || [];
+                    allUsers = allUsers.filter(u => u.username !== userToDelete);
+                    localStorage.setItem('users', JSON.stringify(allUsers));
+
+                    // Если удалили текущего залогиненного пользователя — разлогиниваем
+                    if (userToDelete === currentUser) {
+                        localStorage.removeItem('currentUser');
+                        window.location.reload();
+                        return;
+                    }
+
+                    renderDatabaseTable();
+                }
+                confirmModal.classList.remove('active');
+                dbModal.classList.add('active');
             });
 
             logoutBtn.addEventListener('click', () => {
