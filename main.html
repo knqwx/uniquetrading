@@ -209,53 +209,75 @@
             transform: translateY(0);
         }
 
-        /* Модальные окна с таблицами/списками (шире) */
-        .db-modal-content, .accounts-modal-content {
+        /* Большое прямоугольное окно профиля (почти на весь экран) */
+        .profile-modal-content {
+            width: 80vw;
+            max-width: 850px;
+            height: 75vh;
+            max-height: 600px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .profile-modal-content .modal-avatar {
+            width: 100px;
+            height: 100px;
+            font-size: 40px;
+            margin-bottom: 20px;
+        }
+
+        .profile-modal-content .modal-username {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .profile-modal-content .modal-userid {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .profile-modal-content .modal-email {
+            font-size: 15px;
+            margin-bottom: 30px;
+        }
+
+        .profile-modal-content .profile-actions {
+            width: 280px;
+        }
+
+        /* Окно базы данных (без скролла, полное отображение) */
+        .db-modal-content {
+            width: 80vw;
+            max-width: 900px;
+            max-height: none;
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .accounts-modal-content {
             width: 450px;
             max-height: 80vh;
             display: flex;
             flex-direction: column;
         }
 
-        .modal-avatar {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 28px;
-            text-transform: uppercase;
-            margin: 0 auto 15px auto;
-        }
-
-        .modal-username {
-            color: #ffffff;
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 3px;
-        }
-
-        .modal-userid {
-            color: #ff7300;
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 5px;
-        }
-
-        .modal-email {
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
             color: #888888;
-            font-size: 13px;
-            margin-bottom: 20px;
+            font-size: 22px;
+            cursor: pointer;
         }
 
-        .profile-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 10px;
+        .close-modal:hover {
+            color: #ffffff;
         }
 
         .admin-db-btn {
@@ -264,8 +286,8 @@
             color: #ffffff;
             border: none;
             border-radius: 8px;
-            padding: 11px;
-            font-size: 14px;
+            padding: 13px;
+            font-size: 15px;
             font-weight: 600;
             font-family: 'Inter', sans-serif;
             cursor: pointer;
@@ -275,21 +297,6 @@
 
         .admin-db-btn:hover {
             background-color: #444444;
-        }
-
-        .close-modal {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: none;
-            border: none;
-            color: #888888;
-            font-size: 18px;
-            cursor: pointer;
-        }
-
-        .close-modal:hover {
-            color: #ffffff;
         }
 
         /* Список аккаунтов для смены */
@@ -395,18 +402,17 @@
             opacity: 0.9;
         }
 
-        /* Таблица базы данных */
+        /* Таблица базы данных (полное отображение без листания) */
         .db-title {
             color: #ffffff;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 600;
-            margin-bottom: 15px;
-            text-align: left;
+            margin-bottom: 20px;
         }
 
         .db-table-container {
-            overflow-y: auto;
-            max-height: 350px;
+            overflow-y: visible; /* Убрано листание */
+            max-height: none;
             border: 1px solid #383838;
             border-radius: 8px;
         }
@@ -415,20 +421,18 @@
             width: 100%;
             border-collapse: collapse;
             text-align: left;
-            font-size: 13px;
+            font-size: 14px;
         }
 
         .db-table th {
             background-color: #1a1a1a;
             color: #888888;
-            padding: 10px 12px;
+            padding: 12px 15px;
             font-weight: 500;
-            position: sticky;
-            top: 0;
         }
 
         .db-table td {
-            padding: 10px 12px;
+            padding: 12px 15px;
             color: #ffffff;
             border-top: 1px solid #383838;
         }
@@ -437,10 +441,10 @@
             background-color: rgba(255, 77, 77, 0.15);
             color: #ff4d4d;
             border: none;
-            padding: 5px 10px;
+            padding: 6px 12px;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 500;
             transition: background-color 0.2s;
         }
@@ -544,9 +548,9 @@
         <button class="all-games-btn">All Games</button>
     </main>
 
-    <!-- Модальное окно профиля -->
+    <!-- Большое прямоугольное модальное окно профиля -->
     <div class="modal-overlay" id="profile-modal">
-        <div class="modal-content">
+        <div class="modal-content profile-modal-content">
             <button class="close-modal" id="close-modal-btn">&times;</button>
             <div class="modal-avatar" id="modal-avatar-box">U</div>
             <div class="modal-username" id="modal-username-text">Username</div>
@@ -559,7 +563,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно смены аккаунта (список всех входов) -->
+    <!-- Модальное окно смены аккаунта -->
     <div class="modal-overlay" id="switch-modal">
         <div class="modal-content accounts-modal-content">
             <button class="close-modal" id="close-switch-modal-btn">&times;</button>
@@ -571,7 +575,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно базы данных (для knqw) -->
+    <!-- Модальное окно базы данных (без скролла) -->
     <div class="modal-overlay" id="db-modal">
         <div class="modal-content db-modal-content">
             <button class="close-modal" id="close-db-modal-btn">&times;</button>
@@ -620,7 +624,6 @@
         const currentUser = localStorage.getItem('currentUser');
         const authContainer = document.getElementById('auth-container');
         
-        // Модалки
         const profileModal = document.getElementById('profile-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
         const modalAvatarBox = document.getElementById('modal-avatar-box');
@@ -645,7 +648,6 @@
 
         let userToDelete = null;
 
-        // Автоматически добавляем текущего пользователя в историю входов (savedAccounts)
         if (currentUser) {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
             if (!savedAccounts.includes(currentUser)) {
@@ -687,7 +689,6 @@
             });
         }
 
-        // Рендер списка аккаунтов для смены
         function renderSwitchAccountsList() {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
             let allUsers = JSON.parse(localStorage.getItem('users')) || [];
@@ -717,19 +718,16 @@
                     <button class="remove-saved-acc" data-username="${accName}" title="Remove from list">&times;</button>
                 `;
 
-                // Клик по информации аккаунта -> переключение на него
                 item.querySelector('.account-info').addEventListener('click', () => {
                     localStorage.setItem('currentUser', accName);
                     window.location.reload();
                 });
 
-                // Клик по крестику -> удаление из истории входов
                 item.querySelector('.remove-saved-acc').addEventListener('click', (e) => {
                     e.stopPropagation();
                     let updatedSaved = savedAccounts.filter(name => name !== accName);
                     localStorage.setItem('savedAccounts', JSON.stringify(updatedSaved));
 
-                    // Если удалили текущего из списка истории, но он остался в базе
                     if (accName === currentUser) {
                         localStorage.removeItem('currentUser');
                         window.location.reload();
@@ -781,7 +779,6 @@
                 openDbBtn.style.display = 'block';
             }
 
-            // Открытие / закрытие выпадающего меню
             profileToggleBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 profileDropdown.classList.toggle('active');
@@ -793,13 +790,11 @@
                 }
             });
 
-            // Кнопка "Profile"
             menuProfileBtn.addEventListener('click', () => {
                 profileDropdown.classList.remove('active');
                 profileModal.classList.add('active');
             });
 
-            // Кнопка "Switch Account" -> открывает модалку со списком аккаунтов
             menuSwitchBtn.addEventListener('click', () => {
                 profileDropdown.classList.remove('active');
                 renderSwitchAccountsList();
@@ -816,7 +811,6 @@
                 }
             });
 
-            // Закрытие модалки Switch Account
             closeSwitchModalBtn.addEventListener('click', () => {
                 switchModal.classList.remove('active');
             });
@@ -827,12 +821,10 @@
                 }
             });
 
-            // Кнопка "+ Add Account" внутри модалки смены аккаунта
             addAccountBtn.addEventListener('click', () => {
                 window.location.href = 'login.html';
             });
 
-            // База данных
             openDbBtn.addEventListener('click', () => {
                 renderDatabaseTable();
                 profileModal.classList.remove('active');
@@ -849,7 +841,6 @@
                 }
             });
 
-            // Подтверждение удаления
             confirmNoBtn.addEventListener('click', () => {
                 confirmModal.classList.remove('active');
                 dbModal.classList.add('active');
@@ -869,7 +860,6 @@
                     allUsers = allUsers.filter(u => u.username !== userToDelete);
                     localStorage.setItem('users', JSON.stringify(allUsers));
 
-                    // Также удаляем из истории сохраненных аккаунтов
                     let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
                     savedAccounts = savedAccounts.filter(name => name !== userToDelete);
                     localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
