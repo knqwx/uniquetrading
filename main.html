@@ -451,104 +451,6 @@
             opacity: 0.8;
         }
 
-        /* Полноэкранное модальное окно кадрирования аватарки */
-        .crop-fullscreen-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.85);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.25s ease;
-            z-index: 200;
-        }
-
-        .crop-fullscreen-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .crop-fullscreen-box {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: grab;
-        }
-
-        .crop-fullscreen-box:active {
-            cursor: grabbing;
-        }
-
-        .crop-image {
-            position: absolute;
-            user-select: none;
-            pointer-events: none;
-        }
-
-        /* Маска круга поверх картинки */
-        .crop-mask {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 180px;
-            height: 180px;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
-            border-radius: 50%;
-            pointer-events: none;
-            border: 2px dashed #ff7300;
-        }
-
-        .crop-actions {
-            position: absolute;
-            bottom: 40px;
-            display: flex;
-            gap: 15px;
-            z-index: 210;
-        }
-
-        .crop-btn-confirm {
-            background-color: #ff7300;
-            color: #ffffff;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        .crop-btn-confirm:hover {
-            opacity: 0.9;
-        }
-
-        .crop-btn-cancel {
-            background-color: #383838;
-            color: #ffffff;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .crop-btn-cancel:hover {
-            background-color: #444444;
-        }
-
         .save-settings-btn {
             width: 100%;
             background-color: #ff7300;
@@ -925,7 +827,7 @@
                     <input type="file" id="avatar-file-input" accept="image/*" style="display: none;">
                     <button class="reset-avatar-btn" id="reset-avatar-btn" type="button">Reset to default</button>
                 </div>
-                <div class="setting-hint">Upload and crop an image for your avatar.</div>
+                <div class="setting-hint">Upload an image for your avatar.</div>
             </div>
 
             <div class="setting-group">
@@ -951,18 +853,6 @@
             </div>
 
             <button class="save-settings-btn" id="save-settings-btn">Save Changes</button>
-        </div>
-    </div>
-
-    <!-- Полноэкранное окно кадрирования аватарки -->
-    <div class="crop-fullscreen-overlay" id="crop-fullscreen-overlay">
-        <div class="crop-fullscreen-box" id="crop-fullscreen-box">
-            <img class="crop-image" id="crop-image" src="" alt="Crop Preview">
-            <div class="crop-mask"></div>
-        </div>
-        <div class="crop-actions">
-            <button class="crop-btn-confirm" id="crop-confirm-btn">Apply</button>
-            <button class="crop-btn-cancel" id="crop-cancel-btn">Cancel</button>
         </div>
     </div>
 
@@ -1057,11 +947,6 @@
         
         const avatarFileInput = document.getElementById('avatar-file-input');
         const resetAvatarBtn = document.getElementById('reset-avatar-btn');
-        const cropFullscreenOverlay = document.getElementById('crop-fullscreen-overlay');
-        const cropFullscreenBox = document.getElementById('crop-fullscreen-box');
-        const cropImage = document.getElementById('crop-image');
-        const cropConfirmBtn = document.getElementById('crop-confirm-btn');
-        const cropCancelBtn = document.getElementById('crop-cancel-btn');
 
         const settingUsernameInput = document.getElementById('setting-username-input');
         const settingDisplaynameInput = document.getElementById('setting-displayname-input');
@@ -1091,11 +976,6 @@
         const confirmNoBtn = document.getElementById('confirm-no-btn');
 
         let userToDelete = null;
-
-        // Переменные для перетаскивания аватарки
-        let isDragging = false;
-        let startX, startY;
-        let imgX = 0, imgY = 0;
         let uploadedAvatarData = null; // если null или пустая строка — дефолтная аватарка
 
         if (currentUser) {
@@ -1249,6 +1129,7 @@
                 profileDropdown.classList.toggle('active');
             });
 
+            // Исправленный баг: меню профиля теперь закрывается строго по клику вне контейнера авторизации, уход мышки его не трогает
             document.addEventListener('click', (e) => {
                 if (!authContainer.contains(e.target)) {
                     profileDropdown.classList.remove('active');
@@ -1306,24 +1187,18 @@
                 settingsModal.classList.add('active');
             });
 
-            // Обработка загрузки файла картинки и открытие полноэкранного редактора
-            let tempFileSrc = null;
+            // Моментальная установка выбранной картинки без кадрирования
             avatarFileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = function(event) {
-                        tempFileSrc = event.target.result;
-                        cropImage.src = tempFileSrc;
-                        imgX = 0;
-                        imgY = 0;
-                        cropImage.style.left = '0px';
-                        cropImage.style.top = '0px';
-                        cropFullscreenOverlay.classList.add('active');
+                        uploadedAvatarData = event.target.result;
+                        showToast('Avatar image loaded successfully!');
                     }
                     reader.readAsDataURL(file);
                 }
-                avatarFileInput.value = ''; // сброс инпута чтобы можно было выбрать тот же файл повторно
+                avatarFileInput.value = ''; // сброс инпута для возможности повторного выбора
             });
 
             // Сброс аватарки на дефолтную
@@ -1331,55 +1206,6 @@
                 uploadedAvatarData = null;
                 showToast('Avatar reset to default. Click Save Changes to apply.');
             });
-
-            // Логика перемещения картинки внутри полноэкранного кадрирования
-            cropFullscreenBox.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                startX = e.clientX - imgX;
-                startY = e.clientY - imgY;
-            });
-
-            window.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
-                imgX = e.clientX - startX;
-                imgY = e.clientY - startY;
-                cropImage.style.left = imgX + 'px';
-                cropImage.style.top = imgY + 'px';
-            });
-
-            window.addEventListener('mouseup', () => {
-                isDragging = false;
-            });
-
-            cropCancelBtn.addEventListener('click', () => {
-                cropFullscreenOverlay.classList.remove('active');
-            });
-
-            cropConfirmBtn.addEventListener('click', () => {
-                uploadedAvatarData = getCroppedImageFullscreen();
-                cropFullscreenOverlay.classList.remove('active');
-                showToast('Avatar cropped successfully!');
-            });
-
-            // Функция получения вырезанной области из круга на весь экран
-            function getCroppedImageFullscreen() {
-                if (!cropImage.src) return null;
-                const canvas = document.createElement('canvas');
-                canvas.width = 180;
-                canvas.height = 180;
-                const ctx = canvas.getContext('2d');
-
-                ctx.beginPath();
-                ctx.arc(90, 90, 90, 0, Math.PI * 2);
-                ctx.clip();
-
-                const radius = 90;
-                const renderX = imgX + (window.innerWidth / 2) - radius;
-                const renderY = imgY + (window.innerHeight / 2) - radius;
-
-                ctx.drawImage(cropImage, renderX - (window.innerWidth / 2) + 90, renderY - (window.innerHeight / 2) + 90, cropImage.naturalWidth || 300, cropImage.naturalHeight || 300);
-                return canvas.toDataURL('image/jpeg');
-            }
 
             // Сохранение настроек
             saveSettingsBtn.addEventListener('click', () => {
@@ -1463,7 +1289,6 @@
                 settingsModal.classList.remove('active');
             });
 
-            // Фикс бага: закрываем настройки только при клике строго на фон (overlay), а не при выделении текста внутри
             settingsModal.addEventListener('click', (e) => {
                 if (e.target === settingsModal) {
                     settingsModal.classList.remove('active');
