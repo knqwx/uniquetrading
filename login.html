@@ -145,7 +145,7 @@
             </div>
 
             <div class="input-group">
-                <label>Username or email</label>
+                <label id="main-label">Username or email</label>
                 <input type="text" id="main-input" placeholder="Enter your username or email">
             </div>
 
@@ -157,7 +157,7 @@
             <button type="submit" class="submit-btn" id="submit-btn">Log in</button>
 
             <div class="auth-footer" id="auth-footer-text">
-                Don't have an account? <button type="button" id="toggle-btn">Sign up</button>
+                <span id="footer-text">Don't have an account?</span> <button type="button" id="toggle-btn">Sign up</button>
             </div>
         </form>
     </div>
@@ -165,35 +165,35 @@
     <script>
         const formTitle = document.getElementById('form-title');
         const usernameGroup = document.getElementById('username-group');
+        const mainLabel = document.getElementById('main-label');
         const mainInput = document.getElementById('main-input');
         const submitBtn = document.getElementById('submit-btn');
-        const authFooterText = document.getElementById('auth-footer-text');
+        const footerText = document.getElementById('footer-text');
+        const toggleBtn = document.getElementById('toggle-btn');
 
         let isLoginMode = true;
 
-        // Используем делегирование событий или вешаем обработчик на контейнер футера, 
-        // чтобы кнопка не теряла клик при изменении innerHTML
-        authFooterText.addEventListener('click', (e) => {
-            if (e.target && e.target.id === 'toggle-btn') {
-                isLoginMode = !isLoginMode;
+        toggleBtn.addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
 
-                if (!isLoginMode) {
-                    // Переходим в режим Sign Up
-                    formTitle.textContent = 'Sign up';
-                    usernameGroup.classList.remove('collapsed');
-                    mainInput.placeholder = 'Enter your email';
-                    mainInput.previousElementSibling.textContent = 'Email';
-                    submitBtn.textContent = 'Sign up';
-                    authFooterText.innerHTML = 'Already have an account? <button type="button" id="toggle-btn">Log in</button>';
-                } else {
-                    // Переходим в режим Log In
-                    formTitle.textContent = 'Log in';
-                    usernameGroup.classList.add('collapsed');
-                    mainInput.placeholder = 'Enter your username or email';
-                    mainInput.previousElementSibling.textContent = 'Username or email';
-                    submitBtn.textContent = 'Log in';
-                    authFooterText.innerHTML = "Don't have an account? <button type="button" id="toggle-btn">Sign up</button>";
-                }
+            if (!isLoginMode) {
+                // Переходим в режим Sign Up
+                formTitle.textContent = 'Sign up';
+                usernameGroup.classList.remove('collapsed');
+                mainLabel.textContent = 'Email';
+                mainInput.placeholder = 'Enter your email';
+                submitBtn.textContent = 'Sign up';
+                footerText.textContent = 'Already have an account?';
+                toggleBtn.textContent = 'Log in';
+            } else {
+                // Переходим в режим Log In
+                formTitle.textContent = 'Log in';
+                usernameGroup.classList.add('collapsed');
+                mainLabel.textContent = 'Username or email';
+                mainInput.placeholder = 'Enter your username or email';
+                submitBtn.textContent = 'Log in';
+                footerText.textContent = "Don't have an account?";
+                toggleBtn.textContent = 'Sign up';
             }
         });
     </script>
