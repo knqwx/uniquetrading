@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+                    <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -14,6 +14,7 @@
             align-items: center;
             justify-content: flex-start;
             padding-left: 50px; /* Отступ от левого края экрана */
+            position: relative;
         }
         
         .rectangle {
@@ -22,9 +23,21 @@
             background-color: #4CAF50; /* Зеленый цвет прямоугольника для примера */
             border-radius: 4px;       /* Слегка скругленные углы (по желанию) */
         }
+
+        /* Треугольник из второго файла */
+        .triangle {
+            position: absolute;
+            top: 40px;
+            left: 50px;
+            width: 120px;
+            height: 100px;
+            background-color: #4CAF50;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
     </style>
 </head>
 <body>
     <div class="rectangle"></div>
+    <div class="triangle"></div>
 </body>
 </html>
