@@ -31,17 +31,23 @@
             z-index: 10;
         }
 
-        /* Ссылка/текст Home вместо кнопки */
-        .nav-home {
-            color: #888888; /* Серый цвет текста */
+        /* Меню навигации слева */
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .nav-item {
+            color: #888888;
             text-decoration: none;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 500;
             transition: color 0.2s;
         }
 
-        .nav-home:hover {
-            color: #ffffff; /* При наведении становится белым */
+        .nav-item:hover, .nav-item.active {
+            color: #ffffff;
         }
 
         .auth-buttons {
@@ -81,9 +87,14 @@
 </head>
 <body>
 
-    <!-- Верхняя линия с навигацией -->
+    <!-- Верхняя линия с навигацией и разделами -->
     <header class="top-bar">
-        <a href="#" class="nav-home">Home</a>
+        <nav class="nav-links">
+            <a href="#" class="nav-item active">Home</a>
+            <a href="#" class="nav-item">Murder Mystery 2</a>
+            <a href="#" class="nav-item">Blade Ball</a>
+            <a href="#" class="nav-item">Adopt Me</a>
+        </nav>
         <div class="auth-buttons">
             <button class="btn btn-login">Log in</button>
             <button class="btn btn-signup">Sign up</button>
