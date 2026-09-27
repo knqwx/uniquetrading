@@ -173,11 +173,12 @@
 
         let isLoginMode = true;
 
-        toggleBtn.addEventListener('click', () => {
-            isLoginMode = !isLoginMode;
+        // Функция переключения режимов
+        function setMode(loginMode) {
+            isLoginMode = loginMode;
 
             if (!isLoginMode) {
-                // Переходим в режим Sign Up
+                // Режим Sign Up
                 formTitle.textContent = 'Sign up';
                 usernameGroup.classList.remove('collapsed');
                 mainLabel.textContent = 'Email';
@@ -186,7 +187,7 @@
                 footerText.textContent = 'Already have an account?';
                 toggleBtn.textContent = 'Log in';
             } else {
-                // Переходим в режим Log In
+                // Режим Log In
                 formTitle.textContent = 'Log in';
                 usernameGroup.classList.add('collapsed');
                 mainLabel.textContent = 'Username or email';
@@ -195,6 +196,17 @@
                 footerText.textContent = "Don't have an account?";
                 toggleBtn.textContent = 'Sign up';
             }
+        }
+
+        // Автоматически открываем Sign up, если в URL передан параметр ?mode=signup
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('mode') === 'signup') {
+            setMode(false);
+        }
+
+        // Переключение по кнопке внутри формы
+        toggleBtn.addEventListener('click', () => {
+            setMode(!isLoginMode);
         });
     </script>
 
