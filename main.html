@@ -50,6 +50,7 @@
         .auth-buttons {
             display: flex;
             gap: 15px;
+            align-items: center;
         }
 
         .btn {
@@ -83,6 +84,31 @@
             color: #ffffff;
         }
 
+        /* Стиль для отображения никнейма авторизованного пользователя */
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: #888888;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            cursor: pointer;
+            transition: color 0.2s;
+            padding: 0;
+        }
+
+        .logout-btn:hover {
+            color: #ff7300;
+        }
+
         /* Центральная кнопка All Games */
         .all-games-btn {
             background-color: #262626;
@@ -109,7 +135,8 @@
     <!-- Верхняя линия -->
     <header class="top-bar">
         <a href="#" class="nav-home">Home</a>
-        <div class="auth-buttons">
+        <div class="auth-buttons" id="auth-container">
+            <!-- Динамически заменяется скриптом, если пользователь вошел -->
             <a href="login.html" class="btn btn-login">Log in</a>
             <a href="login.html?mode=signup" class="btn btn-signup">Sign up</a>
         </div>
@@ -119,6 +146,28 @@
     <main>
         <button class="all-games-btn">All Games</button>
     </main>
+
+    <script>
+        // Проверяем, вошел ли пользователь в аккаунт
+        const currentUser = localStorage.getItem('currentUser');
+        const authContainer = document.getElementById('auth-container');
+
+        if (currentUser) {
+            // Если вошел — показываем ник и кнопку выхода
+            authContainer.innerHTML = `
+                <div class="user-profile">
+                    <span>👤 ${currentUser}</span>
+                    <button class="logout-btn" id="logout-btn">Log out</button>
+                </div>
+            `;
+
+            // Обработчик выхода из аккаунта
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                localStorage.removeItem('currentUser');
+                window.location.reload(); // Перезагружаем страницу для сброса интерфейса
+            });
+        }
+    </script>
 
 </body>
 </html>
