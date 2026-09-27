@@ -240,7 +240,10 @@
                     return;
                 }
 
-                users.push({ username, email, password });
+                // Автоматически назначаем числовой ID по порядку (например, 1, 2, 3...)
+                const newCustomId = String(users.length + 1);
+
+                users.push({ username, email, password, customId: newCustomId });
                 localStorage.setItem('users', JSON.stringify(users));
                 localStorage.setItem('currentUser', username);
 
