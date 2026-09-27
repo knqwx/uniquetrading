@@ -263,6 +263,7 @@
             text-transform: uppercase;
             margin-bottom: 15px;
             object-fit: cover;
+            overflow: hidden;
         }
 
         .profile-modal-content .modal-username {
@@ -326,7 +327,6 @@
             color: #ffffff;
         }
 
-        /* Кнопка Add Item сдвинута левее (в шапку) */
         .add-item-btn {
             background-color: #383838;
             color: #ffffff;
@@ -365,6 +365,8 @@
         /* Окно настроек */
         .settings-modal-content {
             width: 480px;
+            max-height: 85vh;
+            overflow-y: auto;
             text-align: left;
         }
 
@@ -376,7 +378,7 @@
         }
 
         .setting-group {
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .setting-label {
@@ -411,6 +413,64 @@
             margin-top: 4px;
         }
 
+        /* Область кадрирования аватарки */
+        .crop-container {
+            width: 100%;
+            height: 200px;
+            background-color: #1b1b1b;
+            border: 1px solid #383838;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            display: none;
+            cursor: grab;
+            margin-top: 8px;
+        }
+
+        .crop-container:active {
+            cursor: grabbing;
+        }
+
+        .crop-image {
+            position: absolute;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        /* Маска круга поверх картинки */
+        .crop-mask {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-60px, -60px);
+            pointer-events: none;
+            border: 2px dashed #ff7300;
+        }
+
+        .upload-file-btn {
+            display: inline-block;
+            background-color: #383838;
+            color: #ffffff;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .upload-file-btn:hover {
+            background-color: #444444;
+        }
+
         .save-settings-btn {
             width: 100%;
             background-color: #ff7300;
@@ -422,12 +482,27 @@
             font-weight: 600;
             font-family: 'Inter', sans-serif;
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: 15px;
             transition: opacity 0.2s;
         }
 
         .save-settings-btn:hover {
             opacity: 0.9;
+        }
+
+        /* Окно Select Game */
+        .select-game-modal-content {
+            width: 380px;
+            height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .select-game-text {
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 600;
         }
 
         /* Остальные модальные окна */
@@ -465,7 +540,6 @@
             background-color: #444444;
         }
 
-        /* Список аккаунтов для смены */
         .accounts-title {
             color: #ffffff;
             font-size: 18px;
@@ -725,7 +799,7 @@
             <div class="profile-right-col">
                 <div class="your-items-header">
                     <span class="your-items-title">Your Items</span>
-                    <button class="add-item-btn">+ Add Item</button>
+                    <button class="add-item-btn" id="open-select-game-btn">+ Add Item</button>
                 </div>
                 <div class="items-container">
                     <div class="no-items-text">You don't have any items listed at the moment</div>
@@ -741,8 +815,15 @@
             <div class="settings-title">Profile Settings</div>
             
             <div class="setting-group">
-                <label class="setting-label">Avatar (Image URL)</label>
-                <input type="text" class="setting-input" id="setting-avatar-input" placeholder="https://example.com/avatar.jpg">
+                <label class="setting-label">Avatar</label>
+                <label class="upload-file-btn" for="avatar-file-input">Upload Image</label>
+                <input type="file" id="avatar-file-input" accept="image/*" style="display: none;">
+                
+                <div class="crop-container" id="crop-container">
+                    <img class="crop-image" id="crop-image" src="" alt="Crop Preview">
+                    <div class="crop-mask"></div>
+                </div>
+                <div class="setting-hint">Drag image inside circle to adjust position.</div>
             </div>
 
             <div class="setting-group">
@@ -757,7 +838,25 @@
                 <div class="setting-hint" id="displayname-hint">Can be changed once a week.</div>
             </div>
 
+            <div class="setting-group">
+                <label class="setting-label">Email</label>
+                <input type="email" class="setting-input" id="setting-email-input">
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Password</label>
+                <input type="password" class="setting-input" id="setting-password-input" placeholder="New password">
+            </div>
+
             <button class="save-settings-btn" id="save-settings-btn">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно Select Game -->
+    <div class="modal-overlay" id="select-game-modal">
+        <div class="modal-content select-game-modal-content">
+            <button class="close-modal" id="close-select-game-btn">&times;</button>
+            <div class="select-game-text">Select Game</div>
         </div>
     </div>
 
@@ -829,12 +928,22 @@
         const settingsModal = document.getElementById('settings-modal');
         const openSettingsBtn = document.getElementById('open-settings-btn');
         const closeSettingsModalBtn = document.getElementById('close-settings-modal-btn');
-        const settingAvatarInput = document.getElementById('setting-avatar-input');
+        
+        const avatarFileInput = document.getElementById('avatar-file-input');
+        const cropContainer = document.getElementById('crop-container');
+        const cropImage = document.getElementById('crop-image');
+
         const settingUsernameInput = document.getElementById('setting-username-input');
         const settingDisplaynameInput = document.getElementById('setting-displayname-input');
+        const settingEmailInput = document.getElementById('setting-email-input');
+        const settingPasswordInput = document.getElementById('setting-password-input');
         const usernameHint = document.getElementById('username-hint');
         const displaynameHint = document.getElementById('displayname-hint');
         const saveSettingsBtn = document.getElementById('save-settings-btn');
+
+        const selectGameModal = document.getElementById('select-game-modal');
+        const openSelectGameBtn = document.getElementById('open-select-game-btn');
+        const closeSelectGameBtn = document.getElementById('close-select-game-btn');
 
         const switchModal = document.getElementById('switch-modal');
         const closeSwitchModalBtn = document.getElementById('close-switch-modal-btn');
@@ -852,6 +961,12 @@
         const confirmNoBtn = document.getElementById('confirm-no-btn');
 
         let userToDelete = null;
+
+        // Переменные для перетаскивания аватарки
+        let isDragging = false;
+        let startX, startY;
+        let imgX = 0, imgY = 0;
+        let uploadedAvatarData = null;
 
         if (currentUser) {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -1024,9 +1139,22 @@
             // Открытие настроек
             openSettingsBtn.addEventListener('click', () => {
                 profileModal.classList.remove('active');
-                settingAvatarInput.value = userData.avatar || '';
                 settingUsernameInput.value = userData.username;
                 settingDisplaynameInput.value = userData.displayName || userData.username;
+                settingEmailInput.value = userData.email || '';
+                settingPasswordInput.value = userData.password || '';
+
+                uploadedAvatarData = userData.avatar || null;
+                if (userData.avatar) {
+                    cropImage.src = userData.avatar;
+                    cropContainer.style.display = 'block';
+                    imgX = 0;
+                    imgY = 0;
+                    cropImage.style.left = '0px';
+                    cropImage.style.top = '0px';
+                } else {
+                    cropContainer.style.display = 'none';
+                }
 
                 // Проверка кулдаунов (username - 2 недели, display name - 1 неделя)
                 const now = new Date().getTime();
@@ -1058,16 +1186,85 @@
                 settingsModal.classList.add('active');
             });
 
+            // Обработка загрузки файла картинки
+            avatarFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        cropImage.src = event.target.result;
+                        cropContainer.style.display = 'block';
+                        imgX = 0;
+                        imgY = 0;
+                        cropImage.style.left = '0px';
+                        cropImage.style.top = '0px';
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Логика перемещения картинки внутри кадрирования
+            cropContainer.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.clientX - imgX;
+                startY = e.clientY - imgY;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                imgX = e.clientX - startX;
+                imgY = e.clientY - startY;
+                cropImage.style.left = imgX + 'px';
+                cropImage.style.top = imgY + 'px';
+            });
+
+            window.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            // Функция получения вырезанной области из круга в виде DataURL
+            function getCroppedImage() {
+                if (!cropImage.src) return null;
+                const canvas = document.createElement('canvas');
+                canvas.width = 120;
+                canvas.height = 120;
+                const ctx = canvas.getContext('2d');
+
+                ctx.beginPath();
+                ctx.arc(60, 60, 60, 0, Math.PI * 2);
+                ctx.clip();
+
+                // Смещения относительно центра маски (которая находится по центру контейнера 200x200, то есть на 100, 100)
+                const maskCenterX = 100;
+                const maskCenterY = 100;
+                const radius = 60;
+
+                const drawX = imgX + (cropContainer.clientWidth / 2) - radius;
+                const drawY = imgY + (cropContainer.clientHeight / 2) - radius;
+
+                // Для правильного отображения берем позицию изображения внутри canvas
+                const renderX = imgX + 100 - radius;
+                const renderY = imgY + 100 - radius;
+
+                ctx.drawImage(cropImage, renderX, renderY, cropImage.naturalWidth || 200, cropImage.naturalHeight || 200);
+                return canvas.toDataURL('image/jpeg');
+            }
+
             // Сохранение настроек
             saveSettingsBtn.addEventListener('click', () => {
-                const newAvatar = settingAvatarInput.value.trim();
                 const newUsername = settingUsernameInput.value.trim();
                 const newDisplayName = settingDisplaynameInput.value.trim();
+                const newEmail = settingEmailInput.value.trim();
+                const newPassword = settingPasswordInput.value.trim();
                 const now = new Date().getTime();
 
                 if (!newUsername) {
                     alert('Username cannot be empty');
                     return;
+                }
+
+                if (cropImage.src) {
+                    uploadedAvatarData = getCroppedImage();
                 }
 
                 // Проверка уникальности username, если он изменился
@@ -1087,7 +1284,9 @@
                     userData.lastDisplayNameChange = now;
                 }
 
-                userData.avatar = newAvatar;
+                userData.email = newEmail;
+                userData.password = newPassword;
+                userData.avatar = uploadedAvatarData;
 
                 // Обновляем массив пользователей
                 const userIndex = users.findIndex(u => u.customId === displayId || u.username === currentUser);
@@ -1103,6 +1302,22 @@
 
                 alert('Settings saved successfully!');
                 window.location.reload();
+            });
+
+            // Управление модальным окном Select Game
+            openSelectGameBtn.addEventListener('click', () => {
+                profileModal.classList.remove('active');
+                selectGameModal.classList.add('active');
+            });
+
+            closeSelectGameBtn.addEventListener('click', () => {
+                selectGameModal.classList.remove('active');
+            });
+
+            selectGameModal.addEventListener('click', (e) => {
+                if (e.target === selectGameModal) {
+                    selectGameModal.classList.remove('active');
+                }
             });
 
             closeModalBtn.addEventListener('click', () => {
