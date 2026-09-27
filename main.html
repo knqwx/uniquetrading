@@ -25,10 +25,23 @@
             background-color: #171717;
             display: flex;
             align-items: center;
-            justify-content: space-between; /* Распределяем элементы по краям */
+            justify-content: space-between;
             padding: 0 40px;
             box-sizing: border-box;
             z-index: 10;
+        }
+
+        /* Ссылка/текст Home вместо кнопки */
+        .nav-home {
+            color: #888888; /* Серый цвет текста */
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-home:hover {
+            color: #ffffff; /* При наведении становится белым */
         }
 
         .auth-buttons {
@@ -55,11 +68,6 @@
             transform: scale(0.98);
         }
 
-        .btn-home {
-            background-color: #383838; /* Серый цвет для Home */
-            color: #ffffff;
-        }
-
         .btn-login {
             background-color: #262626;
             color: #ffffff;
@@ -73,9 +81,9 @@
 </head>
 <body>
 
-    <!-- Верхняя линия с кнопками -->
+    <!-- Верхняя линия с навигацией -->
     <header class="top-bar">
-        <button class="btn btn-home">Home</button>
+        <a href="#" class="nav-home">Home</a>
         <div class="auth-buttons">
             <button class="btn btn-login">Log in</button>
             <button class="btn btn-signup">Sign up</button>
