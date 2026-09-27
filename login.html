@@ -15,6 +15,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
         }
 
         /* Общий контейнер для форм */
@@ -25,18 +26,25 @@
             padding: 40px 30px;
             box-sizing: border-box;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
         }
 
-        /* Формы (скрыты по умолчанию) */
+        /* Общие стили форм с анимацией */
         .form-box {
             display: none;
             flex-direction: column;
             gap: 20px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
         }
 
-        /* Активная форма отображается */
+        /* Активная форма с плавной анимацией */
         .form-box.active {
             display: flex;
+            opacity: 1;
+            transform: translateY(0);
         }
 
         h2 {
@@ -116,7 +124,6 @@
             font-weight: 500;
             cursor: pointer;
             padding: 0;
-            text-decoration: none;
             transition: opacity 0.2s;
         }
 
@@ -180,14 +187,36 @@
     </div>
 
     <script>
-        // Функция для мгновенного переключения между формами внутри контейнера
         function switchForm(formId) {
             const forms = document.querySelectorAll('.form-box');
+            
+            // Сначала плавно скрываем активную форму
             forms.forEach(form => {
                 form.classList.remove('active');
             });
-            document.getElementById(formId).classList.add('active');
+
+            // Небольшая задержка, чтобы анимация исчезновения успела отработать, затем показываем новую
+            setTimeout(() => {
+                forms.forEach(form => {
+                    form.style.display = 'none';
+                });
+                
+                const targetForm = document.getElementById(formId);
+                targetForm.style.display = 'flex';
+                
+                // Провоцируем перерисовку для корректного запуска анимации появления
+                setTimeout(() => {
+                    targetForm.classList.add('active');
+                }, 10);
+            }, 200);
         }
+
+        // Устанавливаем начальное отображение для неактивных форм
+        document.querySelectorAll('.form-box').forEach(form => {
+            if (!form.classList.contains('active')) {
+                form.style.display = 'none';
+            }
+        });
     </script>
 
 </body>
