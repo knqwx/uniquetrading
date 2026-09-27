@@ -230,8 +230,8 @@
 
         /* Прямоугольное окно профиля (2 колонки) */
         .profile-modal-content {
-            width: 860px;
-            height: 520px;
+            width: 900px;
+            height: 560px;
             display: flex;
             flex-direction: row;
             padding: 40px;
@@ -311,6 +311,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
         .your-items-header {
@@ -349,12 +350,12 @@
             border-radius: 10px;
             padding: 15px;
             display: flex;
-            flex-direction: column;
-            gap: 12px;
-            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-start;
             justify-content: flex-start;
-            text-align: center;
             overflow-y: auto;
+            box-sizing: border-box;
         }
 
         .no-items-text {
@@ -364,57 +365,49 @@
             margin: auto;
         }
 
-        /* Карточка товара в профиле */
+        /* Квадратная карточка товара в профиле */
         .item-card {
-            width: 100%;
+            width: 150px;
             background-color: #262626;
             border: 1px solid #383838;
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 12px;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 15px;
             box-sizing: border-box;
-            text-align: left;
+            text-align: center;
         }
 
         .item-card-img {
-            width: 50px;
-            height: 50px;
-            border-radius: 6px;
+            width: 100%;
+            height: 120px;
+            border-radius: 8px;
             object-fit: cover;
             background-color: #333;
-            flex-shrink: 0;
-        }
-
-        .item-card-info {
-            flex: 1;
-            overflow: hidden;
+            margin-bottom: 10px;
         }
 
         .item-card-name {
             color: #ffffff;
             font-size: 14px;
             font-weight: 600;
-            margin-bottom: 3px;
+            margin-bottom: 6px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            width: 100%;
         }
 
-        .item-card-details {
-            color: #888888;
-            font-size: 12px;
-        }
-
-        .item-card-tag {
+        .item-card-price {
             background-color: rgba(255, 115, 0, 0.15);
             color: #ff7300;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
             font-weight: 600;
-            flex-shrink: 0;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         /* Окно настроек */
@@ -483,35 +476,22 @@
             margin-top: 4px;
         }
 
-        /* Большой прямоугольный бокс-превью для загрузки фото предмета */
-        .item-photo-upload-box {
-            width: 100%;
-            height: 140px;
-            background-color: #1f1f1f;
-            border: 2px dashed #383838;
+        /* Кнопка «Choose File» для выбора файла */
+        .choose-file-btn-wrapper {
+            display: inline-block;
+            background-color: #383838;
+            color: #ffffff;
+            padding: 10px 18px;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #777777;
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            overflow: hidden;
-            transition: border-color 0.2s, background-color 0.2s;
-            position: relative;
-            box-sizing: border-box;
+            transition: background-color 0.2s;
+            text-align: center;
         }
 
-        .item-photo-upload-box:hover {
-            border-color: #ff7300;
-            background-color: #242424;
-        }
-
-        .item-photo-upload-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+        .choose-file-btn-wrapper:hover {
+            background-color: #444444;
         }
 
         /* Превью аватарки в настройках */
@@ -654,12 +634,91 @@
             border-color: #ff7300;
         }
 
-        /* Окно создания предмета */
+        /* Окно создания предмета с боковым превью */
         .create-item-modal-content {
-            width: 480px;
+            width: 740px;
             max-height: 85vh;
             overflow-y: auto;
             text-align: left;
+            display: flex;
+            flex-direction: row;
+            gap: 30px;
+            box-sizing: border-box;
+        }
+
+        .create-item-left-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .create-item-right-col {
+            width: 240px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-left: 1px solid #383838;
+            padding-left: 25px;
+            box-sizing: border-box;
+        }
+
+        .preview-pane-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #888888;
+            margin-bottom: 15px;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Карточка превью товара */
+        .preview-item-card {
+            width: 160px;
+            background-color: #1f1f1f;
+            border: 1px solid #383838;
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .preview-item-img {
+            width: 100%;
+            height: 130px;
+            border-radius: 8px;
+            object-fit: cover;
+            background-color: #2b2b2b;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 11px;
+        }
+
+        .preview-item-name {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        .preview-item-price {
+            background-color: rgba(255, 115, 0, 0.15);
+            color: #ff7300;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .checkbox-label {
@@ -967,7 +1026,7 @@
                 <div class="settings-avatar-preview-row">
                     <div class="settings-avatar-preview" id="settings-avatar-preview">U</div>
                     <div class="avatar-buttons-row">
-                        <label class="upload-file-btn" for="avatar-file-input">Upload Image</label>
+                        <label class="upload-file-btn" for="avatar-file-input">Choose File</label>
                         <input type="file" id="avatar-file-input" accept="image/*" style="display: none;">
                         <button class="reset-avatar-btn" id="reset-avatar-btn" type="button">Reset</button>
                     </div>
@@ -1013,56 +1072,66 @@
         </div>
     </div>
 
-    <!-- Модальное окно создания предмета -->
+    <!-- Модальное окно создания предмета (с боковым превью) -->
     <div class="modal-overlay" id="create-item-modal">
         <div class="modal-content create-item-modal-content">
             <button class="close-modal" id="close-create-item-btn">&times;</button>
-            <div class="settings-title" id="create-item-modal-title">Create Item (Murder Mystery 2)</div>
+            
+            <div class="create-item-left-col">
+                <div class="settings-title" id="create-item-modal-title" style="font-size: 18px; margin-bottom: 15px;">Create Item (Murder Mystery 2)</div>
 
-            <div class="setting-group">
-                <label class="setting-label">Item Photo</label>
-                <div class="item-photo-upload-box" id="item-photo-upload-box">
-                    <span>Preview</span>
+                <div class="setting-group">
+                    <label class="setting-label">Item Photo</label>
+                    <label class="choose-file-btn-wrapper" for="item-photo-file-input">Choose File</label>
+                    <input type="file" id="item-photo-file-input" accept="image/*" style="display: none;">
                 </div>
-                <input type="file" id="item-photo-file-input" accept="image/*" style="display: none;">
+
+                <div class="setting-group">
+                    <label class="setting-label">Item Name</label>
+                    <input type="text" class="setting-input" id="item-name-input" placeholder="e.g. Chroma Luger">
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">Description</label>
+                    <textarea class="setting-textarea" id="item-desc-input" placeholder="Describe your item..."></textarea>
+                </div>
+
+                <div class="setting-group">
+                    <label class="setting-label">Tag</label>
+                    <select class="setting-select" id="item-tag-select">
+                        <option value="selling">Selling</option>
+                        <option value="offers">Looking for Offers</option>
+                    </select>
+                </div>
+
+                <!-- Динамическое поле для Selling -->
+                <div class="setting-group" id="selling-price-group">
+                    <label class="setting-label">Price ($)</label>
+                    <input type="number" step="0.01" class="setting-input" id="item-price-input" placeholder="0.10">
+                </div>
+
+                <!-- Динамическое поле для Looking for Offers (с чекбоксами) -->
+                <div class="setting-group" id="offers-options-group" style="display: none;">
+                    <label class="setting-label">Availability Scope</label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="scope-all-games"> All games
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="mm2" checked> Murder Mystery 2
+                    </label>
+                </div>
+
+                <button class="save-settings-btn" id="save-item-btn">List Item</button>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-label">Item Name</label>
-                <input type="text" class="setting-input" id="item-name-input" placeholder="e.g. Chroma Luger">
+            <div class="create-item-right-col">
+                <div class="preview-pane-title">Preview</div>
+                <div class="preview-item-card">
+                    <div class="preview-item-img" id="preview-card-img">No image</div>
+                    <div class="preview-item-name" id="preview-card-name">Item Name</div>
+                    <div class="preview-item-price" id="preview-card-price">$0.10</div>
+                </div>
             </div>
-
-            <div class="setting-group">
-                <label class="setting-label">Description</label>
-                <textarea class="setting-textarea" id="item-desc-input" placeholder="Describe your item..."></textarea>
-            </div>
-
-            <div class="setting-group">
-                <label class="setting-label">Tag</label>
-                <select class="setting-select" id="item-tag-select">
-                    <option value="selling">Selling</option>
-                    <option value="offers">Looking for Offers</option>
-                </select>
-            </div>
-
-            <!-- Динамическое поле для Selling -->
-            <div class="setting-group" id="selling-price-group">
-                <label class="setting-label">Price ($)</label>
-                <input type="number" step="0.01" class="setting-input" id="item-price-input" placeholder="0.10">
-            </div>
-
-            <!-- Динамическое поле для Looking for Offers (с чекбоксами) -->
-            <div class="setting-group" id="offers-options-group" style="display: none;">
-                <label class="setting-label">Availability Scope</label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="scope-all-games"> All games
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" class="game-checkbox" value="mm2" checked> Murder Mystery 2
-                </label>
-            </div>
-
-            <button class="save-settings-btn" id="save-item-btn">List Item</button>
         </div>
     </div>
 
@@ -1172,8 +1241,14 @@
         const saveItemBtn = document.getElementById('save-item-btn');
         const itemsContainerBox = document.getElementById('items-container-box');
 
-        const itemPhotoUploadBox = document.getElementById('item-photo-upload-box');
+        const itemNameInput = document.getElementById('item-name-input');
+        const itemPriceInput = document.getElementById('item-price-input');
         const itemPhotoFileInput = document.getElementById('item-photo-file-input');
+        
+        const previewCardImg = document.getElementById('preview-card-img');
+        const previewCardName = document.getElementById('preview-card-name');
+        const previewCardPrice = document.getElementById('preview-card-price');
+
         const scopeAllGames = document.getElementById('scope-all-games');
         const gameCheckboxes = document.querySelectorAll('.game-checkbox');
 
@@ -1204,7 +1279,31 @@
             }
         }
 
-        // Функция рендеринга товаров в профиле
+        // Обновление превью в реальном времени
+        function updateItemPreview() {
+            const nameVal = itemNameInput.value.trim();
+            previewCardName.textContent = nameVal ? nameVal : 'Item Name';
+
+            const tagVal = itemTagSelect.value;
+            if (tagVal === 'selling') {
+                const priceVal = itemPriceInput.value.trim();
+                previewCardPrice.textContent = priceVal ? `$${priceVal}` : '$0.10';
+            } else {
+                previewCardPrice.textContent = 'Offers';
+            }
+
+            if (uploadedItemPhotoData) {
+                previewCardImg.innerHTML = `<img src="${uploadedItemPhotoData}" style="width:100%; height:100%; border-radius:8px; object-fit:cover;" alt="Preview">`;
+            } else {
+                previewCardImg.innerHTML = 'No image';
+            }
+        }
+
+        itemNameInput.addEventListener('input', updateItemPreview);
+        itemPriceInput.addEventListener('input', updateItemPreview);
+        itemTagSelect.addEventListener('change', updateItemPreview);
+
+        // Функция рендеринга товаров в профиле (квадратные карточки)
         function renderUserItems(userData) {
             if (!userData.items || userData.items.length === 0) {
                 itemsContainerBox.innerHTML = '<div class="no-items-text">You don\'t have any items listed at the moment</div>';
@@ -1216,20 +1315,17 @@
                 const card = document.createElement('div');
                 card.className = 'item-card';
                 
-                let imgHtml = `<div class="item-card-img" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:10px;">No img</div>`;
+                let imgHtml = `<div class="item-card-img" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:11px;">No image</div>`;
                 if (item.photo) {
                     imgHtml = `<img class="item-card-img" src="${item.photo}" alt="Item">`;
                 }
 
-                let tagText = item.tag === 'selling' ? `$${item.price}` : 'Offers';
+                let priceText = item.tag === 'selling' ? `$${item.price}` : 'Offers';
 
                 card.innerHTML = `
                     ${imgHtml}
-                    <div class="item-card-info">
-                        <div class="item-card-name">${item.name}</div>
-                        <div class="item-card-details">${item.game} &bull; ${item.description ? item.description.substring(0, 30) + '...' : 'No description'}</div>
-                    </div>
-                    <div class="item-card-tag">${tagText}</div>
+                    <div class="item-card-name">${item.name}</div>
+                    <div class="item-card-price">${priceText}</div>
                 `;
                 itemsContainerBox.appendChild(card);
             });
@@ -1529,12 +1625,12 @@
             // Клик по Murder Mystery 2
             selectMm2Btn.addEventListener('click', () => {
                 selectGameModal.classList.remove('active');
-                document.getElementById('item-name-input').value = '';
+                itemNameInput.value = '';
                 document.getElementById('item-desc-input').value = '';
-                document.getElementById('item-price-input').value = '';
+                itemPriceInput.value = '';
                 
                 uploadedItemPhotoData = null;
-                itemPhotoUploadBox.innerHTML = '<span>Preview</span>';
+                updateItemPreview();
 
                 itemTagSelect.value = 'selling';
                 sellingPriceGroup.style.display = 'block';
@@ -1550,18 +1646,13 @@
                 createItemModal.classList.remove('active');
             });
 
-            // Клик по прямоугольнику превью открывает выбор файла
-            itemPhotoUploadBox.addEventListener('click', () => {
-                itemPhotoFileInput.click();
-            });
-
             itemPhotoFileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = function(event) {
                         uploadedItemPhotoData = event.target.result;
-                        itemPhotoUploadBox.innerHTML = `<img src="${uploadedItemPhotoData}" alt="Item Preview">`;
+                        updateItemPreview();
                         showToast('Photo loaded successfully!');
                     }
                     reader.readAsDataURL(file);
@@ -1597,10 +1688,10 @@
 
             // Сохранение (публикация) предмета
             saveItemBtn.addEventListener('click', () => {
-                const itemName = document.getElementById('item-name-input').value.trim();
+                const itemName = itemNameInput.value.trim();
                 const itemDesc = document.getElementById('item-desc-input').value.trim();
                 const itemTag = itemTagSelect.value;
-                const itemPrice = document.getElementById('item-price-input').value.trim();
+                const itemPrice = itemPriceInput.value.trim();
 
                 if (!itemName) {
                     showToast('Please enter an item name');
