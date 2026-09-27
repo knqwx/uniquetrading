@@ -120,7 +120,7 @@
             font-weight: 500;
         }
 
-        /* Модальное окно профиля */
+        /* Модальные окна */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -159,6 +159,14 @@
             transform: translateY(0);
         }
 
+        /* Модальное окно базы данных (шире) */
+        .db-modal-content {
+            width: 550px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
         .modal-avatar {
             width: 70px;
             height: 70px;
@@ -180,98 +188,44 @@
             margin-bottom: 3px;
         }
 
-        .modal-id-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            margin-bottom: 5px;
-        }
-
         .modal-userid {
             color: #ff7300;
             font-size: 13px;
             font-weight: 500;
-        }
-
-        .edit-id-btn {
-            background: none;
-            border: none;
-            color: #888888;
-            font-size: 12px;
-            cursor: pointer;
-            padding: 0;
-            text-decoration: underline;
-        }
-
-        .edit-id-btn:hover {
-            color: #ffffff;
+            margin-bottom: 5px;
         }
 
         .modal-email {
             color: #888888;
             font-size: 13px;
-            margin-bottom: 25px;
-        }
-
-        /* Поле ввода для смены ID (скрыто по умолчанию) */
-        .edit-id-section {
             margin-bottom: 20px;
-            display: none;
-            text-align: left;
         }
 
-        .edit-id-section.active {
-            display: block;
-        }
-
-        .edit-id-section input {
-            width: 100%;
-            background-color: #1a1a1a;
-            border: 1px solid #383838;
-            border-radius: 6px;
-            padding: 8px 12px;
-            color: #ffffff;
-            font-size: 13px;
-            box-sizing: border-box;
-            outline: none;
-            margin-bottom: 8px;
-        }
-
-        .edit-id-section input:focus {
-            border-color: #ff7300;
-        }
-
-        .edit-id-actions {
+        /* Кнопки в профиле */
+        .profile-actions {
             display: flex;
-            gap: 8px;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
         }
 
-        .save-id-btn, .cancel-id-btn {
-            flex: 1;
-            padding: 7px;
-            border: none;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .save-id-btn {
-            background-color: #ff7300;
-            color: #ffffff;
-        }
-
-        .cancel-id-btn {
+        .admin-db-btn {
+            width: 100%;
             background-color: #383838;
             color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 11px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: none; /* Видно только для knqw */
         }
 
-        .modal-error {
-            color: #ff4d4d;
-            font-size: 11px;
-            margin-bottom: 10px;
-            display: none;
+        .admin-db-btn:hover {
+            background-color: #444444;
         }
 
         .logout-modal-btn {
@@ -305,6 +259,44 @@
 
         .close-modal:hover {
             color: #ffffff;
+        }
+
+        /* Таблица базы данных */
+        .db-title {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .db-table-container {
+            overflow-y: auto;
+            max-height: 350px;
+            border: 1px solid #383838;
+            border-radius: 8px;
+        }
+
+        .db-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .db-table th {
+            background-color: #1a1a1a;
+            color: #888888;
+            padding: 10px 12px;
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+        }
+
+        .db-table td {
+            padding: 10px 12px;
+            color: #ffffff;
+            border-top: 1px solid #383838;
         }
 
         /* Центральная кнопка All Games */
@@ -350,25 +342,36 @@
             <button class="close-modal" id="close-modal-btn">&times;</button>
             <div class="modal-avatar" id="modal-avatar-box">U</div>
             <div class="modal-username" id="modal-username-text">Username</div>
-            
-            <div class="modal-id-container">
-                <span class="modal-userid" id="modal-userid-text">ID: #1</span>
-                <button class="edit-id-btn" id="open-edit-id-btn">Edit ID</button>
-            </div>
-
+            <div class="modal-userid" id="modal-userid-text">ID: 1</div>
             <div class="modal-email" id="modal-email-text">email@example.com</div>
 
-            <!-- Блок изменения ID -->
-            <div class="edit-id-section" id="edit-id-section">
-                <div class="modal-error" id="id-error-msg"></div>
-                <input type="text" id="new-id-input" placeholder="Enter new ID">
-                <div class="edit-id-actions">
-                    <button class="save-id-btn" id="save-id-btn">Save</button>
-                    <button class="cancel-id-btn" id="cancel-id-btn">Cancel</button>
-                </div>
+            <div class="profile-actions">
+                <button class="admin-db-btn" id="open-db-btn">View Database</button>
+                <button class="logout-modal-btn" id="logout-btn">Log out</button>
             </div>
+        </div>
+    </div>
 
-            <button class="logout-modal-btn" id="logout-btn">Log out</button>
+    <!-- Модальное окно базы данных (для knqw) -->
+    <div class="modal-overlay" id="db-modal">
+        <div class="modal-content db-modal-content">
+            <button class="close-modal" id="close-db-modal-btn">&times;</button>
+            <div class="db-title">Database Accounts</div>
+            <div class="db-table-container">
+                <table class="db-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Password</th>
+                        </tr>
+                    </thead>
+                    <tbody id="db-tbody">
+                        <!-- Заполняется динамически -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -392,12 +395,10 @@
         const modalEmailText = document.getElementById('modal-email-text');
         const logoutBtn = document.getElementById('logout-btn');
 
-        const openEditIdBtn = document.getElementById('open-edit-id-btn');
-        const editIdSection = document.getElementById('edit-id-section');
-        const newIdInput = document.getElementById('new-id-input');
-        const saveIdBtn = document.getElementById('save-id-btn');
-        const cancelIdBtn = document.getElementById('cancel-id-btn');
-        const idErrorMsg = document.getElementById('id-error-msg');
+        const openDbBtn = document.getElementById('open-db-btn');
+        const dbModal = document.getElementById('db-modal');
+        const closeDbModalBtn = document.getElementById('close-db-modal-btn');
+        const dbTbody = document.getElementById('db-tbody');
 
         if (currentUser) {
             let users = JSON.parse(localStorage.getItem('users')) || [];
@@ -421,66 +422,58 @@
             modalAvatarBox.style.backgroundColor = avatarColor;
             modalAvatarBox.textContent = firstLetter;
             modalUsernameText.textContent = userData.username;
-            modalUserIdText.textContent = `ID: #${displayId}`;
+            modalUserIdText.textContent = `ID: ${displayId}`;
             modalEmailText.textContent = userData.email;
 
-            // Открытие модального окна
+            // Если ID пользователя равен "knqw", показываем кнопку базы данных
+            if (displayId === 'knqw') {
+                openDbBtn.style.display = 'block';
+            }
+
+            // Открытие профиля
             document.getElementById('open-profile-btn').addEventListener('click', () => {
                 profileModal.classList.add('active');
             });
 
             closeModalBtn.addEventListener('click', () => {
                 profileModal.classList.remove('active');
-                editIdSection.classList.remove('active');
-                idErrorMsg.style.display = 'none';
             });
 
             profileModal.addEventListener('click', (e) => {
                 if (e.target === profileModal) {
                     profileModal.classList.remove('active');
-                    editIdSection.classList.remove('active');
-                    idErrorMsg.style.display = 'none';
                 }
             });
 
-            // Логика открытия поля смены ID
-            openEditIdBtn.addEventListener('click', () => {
-                newIdInput.value = displayId;
-                editIdSection.classList.add('active');
-                idErrorMsg.style.display = 'none';
+            // Открытие базы данных (только для knqw)
+            openDbBtn.addEventListener('click', () => {
+                // Заполняем таблицу свежими данными
+                const allUsers = JSON.parse(localStorage.getItem('users')) || [];
+                dbTbody.innerHTML = '';
+                
+                allUsers.forEach(u => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${u.customId || '-'}</td>
+                        <td>${u.username}</td>
+                        <td>${u.email}</td>
+                        <td>${u.password}</td>
+                    `;
+                    dbTbody.appendChild(row);
+                });
+
+                profileModal.classList.remove('active');
+                dbModal.classList.add('active');
             });
 
-            cancelIdBtn.addEventListener('click', () => {
-                editIdSection.classList.remove('active');
-                idErrorMsg.style.display = 'none';
+            closeDbModalBtn.addEventListener('click', () => {
+                dbModal.classList.remove('active');
             });
 
-            // Сохранение нового ID
-            saveIdBtn.addEventListener('click', () => {
-                const newId = newIdInput.value.trim();
-                idErrorMsg.style.display = 'none';
-
-                if (!newId) {
-                    idErrorMsg.textContent = 'ID cannot be empty.';
-                    idErrorMsg.style.display = 'block';
-                    return;
+            dbModal.addEventListener('click', (e) => {
+                if (e.target === dbModal) {
+                    dbModal.classList.remove('active');
                 }
-
-                // Проверяем, не занят ли этот ID другим пользователем
-                const idExists = users.some(u => u.customId === newId && u.username !== currentUser);
-                if (idExists) {
-                    idErrorMsg.textContent = 'This ID is already taken.';
-                    idErrorMsg.style.display = 'block';
-                    return;
-                }
-
-                // Обновляем ID в массиве пользователей
-                userData.customId = newId;
-                localStorage.setItem('users', JSON.stringify(users));
-
-                // Обновляем отображение
-                modalUserIdText.textContent = `ID: #${newId}`;
-                editIdSection.classList.remove('active');
             });
 
             logoutBtn.addEventListener('click', () => {
