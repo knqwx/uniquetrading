@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign up - Unique Trading</title>
+    <title>Unique Trading</title>
     <!-- Подключаем современный шрифт Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -12,131 +12,117 @@
             margin: 0;
             height: 100vh;
             font-family: 'Inter', sans-serif;
+            position: relative;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
         }
 
-        /* Вертикальный прямоугольник по центру для регистрации */
-        .signup-box {
-            width: 380px;
-            background-color: #262626;
-            border-radius: 12px;
-            padding: 40px 30px;
+        /* Верхняя линия (панель) */
+        .top-bar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background-color: #171717;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
             box-sizing: border-box;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
+            z-index: 10;
         }
 
-        .signup-box h2 {
-            color: #ffffff;
-            margin: 0 0 5px 0;
-            font-size: 24px;
-            font-weight: 600;
-            text-align: center;
-        }
-
-        /* Группа полей ввода */
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .input-group label {
-            color: #b0b0b0;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .input-group input {
-            background-color: #1a1a1a;
-            border: 1px solid #383838;
-            border-radius: 8px;
-            padding: 12px 15px;
-            color: #ffffff;
-            font-size: 14px;
-            font-family: 'Inter', sans-serif;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .input-group input:focus {
-            border-color: #ff7300;
-        }
-
-        /* Кнопка отправки */
-        .submit-btn {
-            background-color: #ff7300;
-            color: #ffffff;
-            border: none;
-            border-radius: 8px;
-            padding: 12px;
+        .nav-home {
+            color: #888888;
+            text-decoration: none;
             font-size: 15px;
-            font-weight: 600;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-home:hover {
+            color: #ffffff;
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 15px;
+        }
+
+        /* Стилизуем кнопки под ссылки, чтобы они работали как переходы */
+        .btn {
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
             font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
+            padding: 10px 22px;
+            border-radius: 6px;
             transition: opacity 0.2s, transform 0.1s;
-            margin-top: 5px;
         }
 
-        .submit-btn:hover {
-            opacity: 0.9;
+        .btn:hover {
+            opacity: 0.85;
         }
 
-        .submit-btn:active {
+        .btn:active {
             transform: scale(0.98);
         }
 
-        /* Текст внизу для перехода на логин */
-        .auth-footer {
-            text-align: center;
-            color: #888888;
-            font-size: 13px;
-            margin-top: 5px;
+        .btn-login {
+            background-color: #262626;
+            color: #ffffff;
         }
 
-        .auth-footer a {
-            color: #ff7300;
+        .btn-signup {
+            background-color: #ff7300;
+            color: #ffffff;
+        }
+
+        /* Центральная кнопка All Games */
+        .all-games-btn {
+            background-color: #262626;
+            color: #ffffff;
             text-decoration: none;
-            font-weight: 500;
-            transition: opacity 0.2s;
+            padding: 16px 36px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 18px;
+            transition: background-color 0.2s, transform 0.2s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: none;
+            cursor: pointer;
         }
 
-        .auth-footer a:hover {
-            opacity: 0.8;
-            text-decoration: underline;
+        .all-games-btn:hover {
+            background-color: #313131;
+            transform: translateY(-2px);
         }
     </style>
 </head>
 <body>
 
-    <div class="signup-box">
-        <h2>Sign up</h2>
-        
-        <div class="input-group">
-            <label>Username</label>
-            <input type="text" placeholder="Choose a username">
+    <!-- Верхняя линия -->
+    <header class="top-bar">
+        <a href="index.html" class="nav-home">Home</a>
+        <div class="auth-buttons">
+            <!-- Ссылки ведут на страницы входа и регистрации -->
+            <a href="login.html" class="btn btn-login">Log in</a>
+            <a href="signup.html" class="btn btn-signup">Sign up</a>
         </div>
+    </header>
 
-        <div class="input-group">
-            <label>Email</label>
-            <input type="email" placeholder="Enter your email">
-        </div>
-
-        <div class="input-group">
-            <label>Password</label>
-            <input type="password" placeholder="Create a password">
-        </div>
-
-        <button class="submit-btn">Sign up</button>
-
-        <div class="auth-footer">
-            Already have an account? <a href="#">Log in</a>
-        </div>
-    </div>
+    <!-- Кнопка All Games по центру -->
+    <main>
+        <button class="all-games-btn">All Games</button>
+    </main>
 
 </body>
 </html>
