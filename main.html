@@ -1,4 +1,4 @@
-                    <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,38 +6,36 @@
     <title>Unique Trading</title>
     <style>
         body {
-            background-color: #262626;
+            background-color: #1a1a1a; /* Сделал фон страницы чуть темнее, чтобы секция выделялась */
             margin: 0;
             height: 100vh;
-            /* Выстраиваем элементы по центру по вертикали, а по горизонтали оставляем слева */
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            padding-left: 50px; /* Отступ от левого края экрана */
             position: relative;
-        }
-        
-        .rectangle {
-            width: 200px;
-            height: 100px;
-            background-color: #4CAF50; /* Зеленый цвет прямоугольника для примера */
-            border-radius: 4px;       /* Слегка скругленные углы (по желанию) */
+            overflow: hidden;
         }
 
-        /* Треугольник из второго файла */
-        .triangle {
+        .dark-section {
             position: absolute;
-            top: 40px;
-            left: 50px;
-            width: 120px;
-            height: 100px;
-            background-color: #4CAF50;
-            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            top: 0;
+            left: 0;
+            width: 48vw;
+            height: 100vh;
+            background: #262626; /* Цвет #262626 */
+            clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%); /* Диагональный срез */
+            display: flex;
+            align-items: center;
+            padding-left: 6%;
+            z-index: 1;
         }
     </style>
 </head>
 <body>
-    <div class="rectangle"></div>
-    <div class="triangle"></div>
+
+    <div class="dark-section">
+        <!-- Сюда можно закинуть твой контент -->
+    </div>
+
 </body>
 </html>
