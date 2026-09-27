@@ -13,6 +13,10 @@
             height: 100vh;
             font-family: 'Inter', sans-serif;
             position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
         /* Верхняя линия (панель) */
@@ -31,22 +35,15 @@
             z-index: 10;
         }
 
-        /* Меню навигации слева */
-        .nav-links {
-            display: flex;
-            align-items: center;
-            gap: 25px;
-        }
-
-        .nav-item {
+        .nav-home {
             color: #888888;
             text-decoration: none;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 500;
             transition: color 0.2s;
         }
 
-        .nav-item:hover, .nav-item.active {
+        .nav-home:hover {
             color: #ffffff;
         }
 
@@ -83,23 +80,66 @@
             background-color: #ff7300;
             color: #ffffff;
         }
+
+        /* Контент по центру экрана */
+        .center-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            text-align: center;
+        }
+
+        .center-content h1 {
+            color: #ffffff;
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .game-cards {
+            display: flex;
+            gap: 20px;
+        }
+
+        .game-card {
+            background-color: #262626;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 16px;
+            transition: background-color 0.2s, transform 0.2s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-card:hover {
+            background-color: #333333;
+            transform: translateY(-3px);
+        }
     </style>
 </head>
 <body>
 
-    <!-- Верхняя линия с навигацией и разделами -->
+    <!-- Верхняя линия -->
     <header class="top-bar">
-        <nav class="nav-links">
-            <a href="#" class="nav-item active">Home</a>
-            <a href="#" class="nav-item">Murder Mystery 2</a>
-            <a href="#" class="nav-item">Blade Ball</a>
-            <a href="#" class="nav-item">Adopt Me</a>
-        </nav>
+        <a href="#" class="nav-home">Home</a>
         <div class="auth-buttons">
             <button class="btn btn-login">Log in</button>
             <button class="btn btn-signup">Sign up</button>
         </div>
     </header>
+
+    <!-- Разделы по центру экрана -->
+    <main class="center-content">
+        <h1>Select a Game</h1>
+        <div class="game-cards">
+            <a href="#" class="game-card">Murder Mystery 2</a>
+            <a href="#" class="game-card">Blade Ball</a>
+            <a href="#" class="game-card">Adopt Me</a>
+        </div>
+    </main>
 
 </body>
 </html>
