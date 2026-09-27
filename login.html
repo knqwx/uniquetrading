@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Log in - Unique Trading</title>
+    <title>Sign up - Unique Trading</title>
     <!-- Подключаем современный шрифт Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -17,8 +17,8 @@
             justify-content: center;
         }
 
-        /* Вертикальный прямоугольник по центру */
-        .login-box {
+        /* Вертикальный прямоугольник по центру для регистрации */
+        .signup-box {
             width: 380px;
             background-color: #262626;
             border-radius: 12px;
@@ -27,12 +27,12 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 18px;
         }
 
-        .login-box h2 {
+        .signup-box h2 {
             color: #ffffff;
-            margin: 0 0 10px 0;
+            margin: 0 0 5px 0;
             font-size: 24px;
             font-weight: 600;
             text-align: center;
@@ -42,7 +42,7 @@
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
 
         .input-group label {
@@ -90,7 +90,7 @@
             transform: scale(0.98);
         }
 
-        /* Текст внизу для перехода на регистрацию */
+        /* Текст внизу для перехода на логин */
         .auth-footer {
             text-align: center;
             color: #888888;
@@ -113,23 +113,28 @@
 </head>
 <body>
 
-    <div class="login-box">
-        <h2>Log in</h2>
+    <div class="signup-box">
+        <h2>Sign up</h2>
         
         <div class="input-group">
-            <label>Username or email</label>
-            <input type="text" placeholder="Enter your username or email">
+            <label>Username</label>
+            <input type="text" placeholder="Choose a username">
+        </div>
+
+        <div class="input-group">
+            <label>Email</label>
+            <input type="email" placeholder="Enter your email">
         </div>
 
         <div class="input-group">
             <label>Password</label>
-            <input type="password" placeholder="Enter your password">
+            <input type="password" placeholder="Create a password">
         </div>
 
-        <button class="submit-btn">Log in</button>
+        <button class="submit-btn">Sign up</button>
 
         <div class="auth-footer">
-            Don't have an account? <a href="#">Sign up</a>
+            Already have an account? <a href="#">Log in</a>
         </div>
     </div>
 
