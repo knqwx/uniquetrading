@@ -18,7 +18,7 @@
             overflow: hidden;
         }
 
-        /* Общий контейнер для форм */
+        /* Общий контейнер (адаптируется по высоте) */
         .auth-container {
             width: 380px;
             background-color: #262626;
@@ -28,23 +28,41 @@
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             position: relative;
             overflow: hidden;
+            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* Общие стили форм с анимацией */
+        /* Общие стили для форм */
         .form-box {
-            display: none;
+            display: flex;
             flex-direction: column;
             gap: 20px;
+            position: absolute;
+            top: 40px;
+            left: 30px;
+            width: calc(100% - 60px);
             opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            visibility: hidden;
+            transform: translateX(50px);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
         }
 
-        /* Активная форма с плавной анимацией */
+        /* Активная форма */
         .form-box.active {
-            display: flex;
             opacity: 1;
-            transform: translateY(0);
+            visibility: visible;
+            transform: translateX(0);
+            position: relative;
+            top: 0;
+            left: 0;
+        }
+
+        /* Форма, которая уходит влево */
+        .form-box.exit-left {
+            opacity: 0;
+            transform: translateX(-50px);
+            position: absolute;
+            top: 40px;
+            left: 30px;
         }
 
         h2 {
@@ -135,7 +153,7 @@
 </head>
 <body>
 
-    <div class="auth-container">
+    <div class="auth-container" id="container">
         
         <!-- Форма Log in -->
         <div id="login-form" class="form-box active">
@@ -154,7 +172,7 @@
             <button class="submit-btn">Log in</button>
 
             <div class="auth-footer">
-                Don't have an account? <button onclick="switchForm('signup-form')">Sign up</button>
+                Don't have an account? <button onclick="switchForm('signup-form', 'right')">Sign up</button>
             </div>
         </div>
 
@@ -180,43 +198,57 @@
             <button class="submit-btn">Sign up</button>
 
             <div class="auth-footer">
-                Already have an account? <button onclick="switchForm('login-form')">Log in</button>
+                Already have an account? <button onclick="switchForm('login-form', 'left')">Log in</button>
             </div>
         </div>
 
     </div>
 
     <script>
-        function switchForm(formId) {
-            const forms = document.querySelectorAll('.form-box');
-            
-            // Сначала плавно скрываем активную форму
-            forms.forEach(form => {
-                form.classList.remove('active');
-            });
+        const container = document.getElementById('container');
 
-            // Небольшая задержка, чтобы анимация исчезновения успела отработать, затем показываем новую
-            setTimeout(() => {
-                forms.forEach(form => {
-                    form.style.display = 'none';
-                });
-                
-                const targetForm = document.getElementById(formId);
-                targetForm.style.display = 'flex';
-                
-                // Провоцируем перерисовку для корректного запуска анимации появления
-                setTimeout(() => {
-                    targetForm.classList.add('active');
-                }, 10);
-            }, 200);
-        }
-
-        // Устанавливаем начальное отображение для неактивных форм
-        document.querySelectorAll('.form-box').forEach(form => {
-            if (!form.classList.contains('active')) {
-                form.style.display = 'none';
-            }
+        // Устанавливаем начальную высоту контейнера под первую форму
+        window.addEventListener('DOMContentLoaded', () => {
+            const activeForm = document.querySelector('.form-box.active');
+            container.style.height = (activeForm.offsetHeight + 80) + 'px';
         });
+
+        function switchForm(targetId, direction) {
+            const currentForm = document.querySelector('.form-box.active');
+            const targetForm = document.getElementById(targetId);
+
+            if (currentForm === targetForm) return;
+
+            // Настраиваем направления вылета/прилета
+            if (direction === 'right') {
+                currentForm.style.transform = 'translateX(-50px)';
+                targetForm.style.transform = 'translateX(50px)';
+            } else {
+                currentForm.style.transform = 'translateX(50px)';
+                targetForm.style.transform = 'translateX(-50px)';
+            }
+
+            // Убираем активный класс у текущей
+            currentForm.classList.remove('active');
+            currentForm.style.opacity = '0';
+
+            // Изменяем высоту контейнера под новую форму
+            container.style.height = (targetForm.offsetHeight + 80) + 'px';
+
+            // Включаем новую форму
+            targetForm.style.display = 'flex';
+            
+            setTimeout(() => {
+                targetForm.style.transform = 'translateX(0)';
+                targetForm.style.opacity = '1';
+                targetForm.classList.add('active');
+            }, 20);
+
+            // Очищаем старую форму после завершения анимации
+            setTimeout(() => {
+                currentForm.style.display = 'none';
+            }, 350);
+        }
     </script>
 
 </body>
