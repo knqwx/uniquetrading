@@ -347,10 +347,12 @@
             background-color: #1f1f1f;
             border: 1px solid #383838;
             border-radius: 10px;
-            padding: 20px;
+            padding: 15px;
             display: flex;
+            flex-direction: column;
+            gap: 12px;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             text-align: center;
             overflow-y: auto;
         }
@@ -359,6 +361,60 @@
             color: #777777;
             font-size: 14px;
             font-weight: 500;
+            margin: auto;
+        }
+
+        /* Карточка товара в профиле */
+        .item-card {
+            width: 100%;
+            background-color: #262626;
+            border: 1px solid #383838;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-sizing: border-box;
+            text-align: left;
+        }
+
+        .item-card-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 6px;
+            object-fit: cover;
+            background-color: #333;
+            flex-shrink: 0;
+        }
+
+        .item-card-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .item-card-name {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-card-details {
+            color: #888888;
+            font-size: 12px;
+        }
+
+        .item-card-tag {
+            background-color: rgba(255, 115, 0, 0.15);
+            color: #ff7300;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            flex-shrink: 0;
         }
 
         /* Окно настроек */
@@ -406,6 +462,16 @@
             border-color: #ff7300;
         }
 
+        /* Убираем стрелочки у input type="number" */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
         .setting-textarea {
             resize: vertical;
             min-height: 80px;
@@ -415,6 +481,37 @@
             font-size: 11px;
             color: #777777;
             margin-top: 4px;
+        }
+
+        /* Большой прямоугольный бокс-превью для загрузки фото предмета */
+        .item-photo-upload-box {
+            width: 100%;
+            height: 140px;
+            background-color: #1f1f1f;
+            border: 2px dashed #383838;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #777777;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            overflow: hidden;
+            transition: border-color 0.2s, background-color 0.2s;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .item-photo-upload-box:hover {
+            border-color: #ff7300;
+            background-color: #242424;
+        }
+
+        .item-photo-upload-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         /* Превью аватарки в настройках */
@@ -579,25 +676,6 @@
             accent-color: #ff7300;
             width: 16px;
             height: 16px;
-        }
-
-        /* Кнопка All Games без текста */
-        .all-games-btn {
-            background-color: #262626;
-            color: #ffffff;
-            text-decoration: none;
-            width: 160px;
-            height: 56px;
-            border-radius: 12px;
-            transition: background-color 0.2s, transform 0.2s;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            border: none;
-            cursor: pointer;
-        }
-
-        .all-games-btn:hover {
-            background-color: #313131;
-            transform: translateY(-2px);
         }
 
         /* Остальные модалки (переключение аккаунтов, база данных, подтверждение) */
@@ -847,10 +925,8 @@
         </div>
     </header>
 
-    <!-- Кнопка All Games без текста по центру -->
-    <main>
-        <button class="all-games-btn"></button>
-    </main>
+    <!-- Главная страница очищена от мусора -->
+    <main></main>
 
     <!-- Модальное окно профиля -->
     <div class="modal-overlay" id="profile-modal">
@@ -945,7 +1021,10 @@
 
             <div class="setting-group">
                 <label class="setting-label">Item Photo</label>
-                <input type="file" id="item-photo-input" accept="image/*" class="setting-input">
+                <div class="item-photo-upload-box" id="item-photo-upload-box">
+                    <span>Preview</span>
+                </div>
+                <input type="file" id="item-photo-file-input" accept="image/*" style="display: none;">
             </div>
 
             <div class="setting-group">
@@ -972,14 +1051,14 @@
                 <input type="number" step="0.01" class="setting-input" id="item-price-input" placeholder="0.10">
             </div>
 
-            <!-- Динамическое поле для Looking for Offers -->
+            <!-- Динамическое поле для Looking for Offers (с чекбоксами) -->
             <div class="setting-group" id="offers-options-group" style="display: none;">
                 <label class="setting-label">Availability Scope</label>
                 <label class="checkbox-label">
-                    <input type="radio" name="offer-scope" value="all" checked> All games
+                    <input type="checkbox" id="scope-all-games"> All games
                 </label>
                 <label class="checkbox-label">
-                    <input type="radio" name="offer-scope" value="mm2"> Only Murder Mystery 2
+                    <input type="checkbox" class="game-checkbox" value="mm2" checked> Murder Mystery 2
                 </label>
             </div>
 
@@ -1093,6 +1172,11 @@
         const saveItemBtn = document.getElementById('save-item-btn');
         const itemsContainerBox = document.getElementById('items-container-box');
 
+        const itemPhotoUploadBox = document.getElementById('item-photo-upload-box');
+        const itemPhotoFileInput = document.getElementById('item-photo-file-input');
+        const scopeAllGames = document.getElementById('scope-all-games');
+        const gameCheckboxes = document.querySelectorAll('.game-checkbox');
+
         const switchModal = document.getElementById('switch-modal');
         const closeSwitchModalBtn = document.getElementById('close-switch-modal-btn');
         const accountsList = document.getElementById('accounts-list');
@@ -1110,6 +1194,7 @@
 
         let userToDelete = null;
         let uploadedAvatarData = null; 
+        let uploadedItemPhotoData = null;
 
         if (currentUser) {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -1117,6 +1202,37 @@
                 savedAccounts.push(currentUser);
                 localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
             }
+        }
+
+        // Функция рендеринга товаров в профиле
+        function renderUserItems(userData) {
+            if (!userData.items || userData.items.length === 0) {
+                itemsContainerBox.innerHTML = '<div class="no-items-text">You don\'t have any items listed at the moment</div>';
+                return;
+            }
+
+            itemsContainerBox.innerHTML = '';
+            userData.items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                
+                let imgHtml = `<div class="item-card-img" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:10px;">No img</div>`;
+                if (item.photo) {
+                    imgHtml = `<img class="item-card-img" src="${item.photo}" alt="Item">`;
+                }
+
+                let tagText = item.tag === 'selling' ? `$${item.price}` : 'Offers';
+
+                card.innerHTML = `
+                    ${imgHtml}
+                    <div class="item-card-info">
+                        <div class="item-card-name">${item.name}</div>
+                        <div class="item-card-details">${item.game} &bull; ${item.description ? item.description.substring(0, 30) + '...' : 'No description'}</div>
+                    </div>
+                    <div class="item-card-tag">${tagText}</div>
+                `;
+                itemsContainerBox.appendChild(card);
+            });
         }
 
         function renderDatabaseTable() {
@@ -1215,8 +1331,9 @@
             let userData = users.find(u => u.username === currentUser);
 
             if (!userData) {
-                userData = { username: currentUser, customId: '1' };
+                userData = { username: currentUser, customId: '1', items: [] };
             }
+            if (!userData.items) userData.items = [];
 
             const displayId = userData.customId || '1';
             const displayName = userData.displayName || userData.username;
@@ -1257,6 +1374,8 @@
                 openDbBtn.style.display = 'block';
             }
 
+            renderUserItems(userData);
+
             profileToggleBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 profileDropdown.classList.toggle('active');
@@ -1279,7 +1398,7 @@
                 switchModal.classList.add('active');
             });
 
-            // Открытие настроек и обновление превью аватарки
+            // Открытие настроек
             openSettingsBtn.addEventListener('click', () => {
                 profileModal.classList.remove('active');
                 settingUsernameInput.value = userData.username;
@@ -1329,7 +1448,6 @@
                 }
             }
 
-            // Выбор аватарки
             avatarFileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
@@ -1344,14 +1462,12 @@
                 avatarFileInput.value = '';
             });
 
-            // Сброс аватарки
             resetAvatarBtn.addEventListener('click', () => {
                 uploadedAvatarData = null;
                 updateSettingsAvatarPreview();
                 showToast('Avatar reset. Click Save Changes.');
             });
 
-            // Сохранение настроек
             saveSettingsBtn.addEventListener('click', () => {
                 const newUsername = settingUsernameInput.value.trim();
                 const newDisplayName = settingDisplaynameInput.value.trim();
@@ -1410,16 +1526,23 @@
                 selectGameModal.classList.remove('active');
             });
 
-            // Клик по Murder Mystery 2 открывает окно создания предмета
+            // Клик по Murder Mystery 2
             selectMm2Btn.addEventListener('click', () => {
                 selectGameModal.classList.remove('active');
                 document.getElementById('item-name-input').value = '';
                 document.getElementById('item-desc-input').value = '';
-                document.getElementById('item-photo-input').value = '';
                 document.getElementById('item-price-input').value = '';
+                
+                uploadedItemPhotoData = null;
+                itemPhotoUploadBox.innerHTML = '<span>Preview</span>';
+
                 itemTagSelect.value = 'selling';
                 sellingPriceGroup.style.display = 'block';
                 offersOptionsGroup.style.display = 'none';
+
+                scopeAllGames.checked = false;
+                gameCheckboxes.forEach(cb => cb.checked = true);
+
                 createItemModal.classList.add('active');
             });
 
@@ -1427,7 +1550,41 @@
                 createItemModal.classList.remove('active');
             });
 
-            // Переключение тегов (Selling / Looking for offers)
+            // Клик по прямоугольнику превью открывает выбор файла
+            itemPhotoUploadBox.addEventListener('click', () => {
+                itemPhotoFileInput.click();
+            });
+
+            itemPhotoFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        uploadedItemPhotoData = event.target.result;
+                        itemPhotoUploadBox.innerHTML = `<img src="${uploadedItemPhotoData}" alt="Item Preview">`;
+                        showToast('Photo loaded successfully!');
+                    }
+                    reader.readAsDataURL(file);
+                }
+                itemPhotoFileInput.value = '';
+            });
+
+            // Логика галочки "All games"
+            scopeAllGames.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                gameCheckboxes.forEach(cb => {
+                    cb.checked = isChecked;
+                });
+            });
+
+            gameCheckboxes.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const allChecked = Array.from(gameCheckboxes).every(box => box.checked);
+                    scopeAllGames.checked = allChecked;
+                });
+            });
+
+            // Переключение тегов
             itemTagSelect.addEventListener('change', (e) => {
                 if (e.target.value === 'selling') {
                     sellingPriceGroup.style.display = 'block';
@@ -1438,16 +1595,44 @@
                 }
             });
 
-            // Кнопка сохранения/публикации предмета
+            // Сохранение (публикация) предмета
             saveItemBtn.addEventListener('click', () => {
                 const itemName = document.getElementById('item-name-input').value.trim();
+                const itemDesc = document.getElementById('item-desc-input').value.trim();
+                const itemTag = itemTagSelect.value;
+                const itemPrice = document.getElementById('item-price-input').value.trim();
+
                 if (!itemName) {
                     showToast('Please enter an item name');
                     return;
                 }
-                showToast('Item successfully created!');
+
+                if (itemTag === 'selling' && !itemPrice) {
+                    showToast('Please enter a price');
+                    return;
+                }
+
+                const newItem = {
+                    id: Date.now(),
+                    game: 'Murder Mystery 2',
+                    name: itemName,
+                    description: itemDesc,
+                    tag: itemTag,
+                    price: itemTag === 'selling' ? itemPrice : null,
+                    photo: uploadedItemPhotoData
+                };
+
+                userData.items.push(newItem);
+
+                const userIndex = users.findIndex(u => u.customId === displayId || u.username === currentUser);
+                if (userIndex !== -1) {
+                    users[userIndex] = userData;
+                    localStorage.setItem('users', JSON.stringify(users));
+                }
+
+                renderUserItems(userData);
+                showToast('Item listed successfully!');
                 createItemModal.classList.remove('active');
-                // Здесь в будущем можно будет рендерить предмет в itemsContainerBox
             });
 
             closeModalBtn.addEventListener('click', () => {
