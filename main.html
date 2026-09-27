@@ -193,7 +193,6 @@
         }
 
         .modal-content {
-            width: 360px;
             background-color: #262626;
             border-radius: 12px;
             padding: 30px;
@@ -209,12 +208,10 @@
             transform: translateY(0);
         }
 
-        /* Большое прямоугольное окно профиля (почти на весь экран) */
+        /* Большое прямоугольное окно профиля */
         .profile-modal-content {
-            width: 80vw;
-            max-width: 850px;
-            height: 75vh;
-            max-height: 600px;
+            width: 700px;
+            height: 450px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -222,30 +219,43 @@
             text-align: center;
         }
 
+        /* Идеально круглая аватарка в модалке */
         .profile-modal-content .modal-avatar {
-            width: 100px;
-            height: 100px;
-            font-size: 40px;
-            margin-bottom: 20px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50% !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 36px;
+            text-transform: uppercase;
+            margin: 0 auto 15px auto;
         }
 
         .profile-modal-content .modal-username {
-            font-size: 28px;
-            margin-bottom: 8px;
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 5px;
         }
 
         .profile-modal-content .modal-userid {
-            font-size: 16px;
-            margin-bottom: 10px;
+            font-size: 14px;
+            color: #ff7300;
+            font-weight: 500;
+            margin-bottom: 5px;
         }
 
         .profile-modal-content .modal-email {
-            font-size: 15px;
-            margin-bottom: 30px;
+            font-size: 14px;
+            color: #888888;
+            margin-bottom: 25px;
         }
 
         .profile-modal-content .profile-actions {
-            width: 280px;
+            width: 240px;
         }
 
         /* Окно базы данных (без скролла, полное отображение) */
@@ -411,7 +421,7 @@
         }
 
         .db-table-container {
-            overflow-y: visible; /* Убрано листание */
+            overflow-y: visible;
             max-height: none;
             border: 1px solid #383838;
             border-radius: 8px;
@@ -575,7 +585,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно базы данных (без скролла) -->
+    <!-- Модальное окно базы данных (полное, без скролла) -->
     <div class="modal-overlay" id="db-modal">
         <div class="modal-content db-modal-content">
             <button class="close-modal" id="close-db-modal-btn">&times;</button>
