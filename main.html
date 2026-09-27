@@ -123,12 +123,15 @@
             transform: translateY(-4px);
         }
 
-        /* Иконка игры */
-        .game-card img {
-            width: 90px;
-            height: 90px;
-            object-fit: cover;
-            border-radius: 10px;
+        /* Иконка / графический блок игры */
+        .game-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
         }
 
         /* Название игры */
@@ -150,25 +153,25 @@
         </div>
     </header>
 
-    <!-- Разделы по центру экрана с настоящими иконками -->
+    <!-- Разделы по центру экрана -->
     <main class="center-content">
         <h1>Select a Game</h1>
         <div class="game-cards">
             <!-- Murder Mystery 2 -->
             <a href="https://murdermystery.fandom.com/wiki/Murder_Mystery_2" target="_blank" class="game-card">
-                <img src="http://googleusercontent.com/image_collection/image_retrieval/10920694852723529399_0" alt="Murder Mystery 2">
+                <div class="game-icon" style="background: linear-gradient(135deg, #8B0000, #ff4d4d);">🔪</div>
                 <span>Murder Mystery 2</span>
             </a>
             
             <!-- Blade Ball -->
             <a href="#" class="game-card">
-                <img src="http://googleusercontent.com/image_collection/image_retrieval/4327767112989577155_0" alt="Blade Ball">
+                <div class="game-icon" style="background: linear-gradient(135deg, #1e90ff, #00ffff);">⚔️</div>
                 <span>Blade Ball</span>
             </a>
             
             <!-- Adopt Me -->
             <a href="#" class="game-card">
-                <img src="http://googleusercontent.com/image_collection/image_retrieval/14413512824376417920_0" alt="Adopt Me">
+                <div class="game-icon" style="background: linear-gradient(135deg, #ff69b4, #ffa500);">🐾</div>
                 <span>Adopt Me</span>
             </a>
         </div>
