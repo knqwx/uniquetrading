@@ -18,7 +18,7 @@
             align-items: center;
         }
 
-        /* Верхняя линия (панель) */
+        /* Верхняя линия (панель) - увеличен z-index, чтобы меню всегда было сверху */
         .top-bar {
             position: fixed;
             top: 0;
@@ -31,7 +31,8 @@
             justify-content: space-between;
             padding: 0 40px;
             box-sizing: border-box;
-            z-index: 10;
+            z-index: 100;
+            border-bottom: 1px solid #2a2a2a;
         }
 
         .nav-home {
@@ -123,7 +124,7 @@
             font-weight: 500;
         }
 
-        /* Выпадающее меню профиля */
+        /* Выпадающее меню профиля - высокий z-index */
         .profile-dropdown {
             position: absolute;
             top: 60px;
@@ -132,7 +133,7 @@
             background-color: #262626;
             border-radius: 10px;
             border: 1px solid #383838;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
             padding: 6px;
             display: flex;
             flex-direction: column;
@@ -141,7 +142,7 @@
             pointer-events: none;
             transform: translateY(-10px);
             transition: opacity 0.2s ease, transform 0.2s ease;
-            z-index: 50;
+            z-index: 110;
         }
 
         .profile-dropdown.active {
@@ -191,7 +192,7 @@
             margin-bottom: 20px;
         }
 
-        /* Панель фильтров и тегов */
+        /* Панель фильтров и кастомные стили */
         .filters-panel {
             display: flex;
             align-items: center;
@@ -199,9 +200,10 @@
             flex-wrap: wrap;
             gap: 15px;
             background-color: #222222;
-            padding: 15px 20px;
-            border-radius: 12px;
+            padding: 16px 22px;
+            border-radius: 14px;
             border: 1px solid #333333;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
         }
 
         .games-tags-group {
@@ -211,54 +213,92 @@
         }
 
         .game-tag-btn {
-            background-color: #2c2c2c;
+            background-color: #2a2a2a;
             color: #aaaaaa;
-            border: 1px solid #383838;
-            padding: 8px 16px;
+            border: 1px solid #3d3d3d;
+            padding: 9px 18px;
             border-radius: 8px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
         }
 
         .game-tag-btn:hover {
             color: #ffffff;
-            border-color: #555;
+            border-color: #666;
+            background-color: #333;
         }
 
         .game-tag-btn.active {
             background-color: rgba(255, 115, 0, 0.15);
             color: #ff7300;
             border-color: #ff7300;
+            box-shadow: 0 0 10px rgba(255, 115, 0, 0.1);
         }
 
         .sort-select-wrapper {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .sort-label {
             color: #888888;
             font-size: 13px;
-            font-weight: 500;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Кастомизированный селект в стиле сайта */
+        .sort-select-custom {
+            position: relative;
+            display: inline-block;
         }
 
         .sort-select {
-            background-color: #2c2c2c;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-color: #2a2a2a;
             color: #ffffff;
-            border: 1px solid #383838;
-            padding: 8px 14px;
+            border: 1px solid #3d3d3d;
+            padding: 9px 38px 9px 16px;
             border-radius: 8px;
             font-family: 'Inter', sans-serif;
             font-size: 14px;
+            font-weight: 500;
             outline: none;
             cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sort-select:hover {
+            border-color: #555555;
+            background-color: #303030;
         }
 
         .sort-select:focus {
             border-color: #ff7300;
+            box-shadow: 0 0 8px rgba(255, 115, 0, 0.2);
+        }
+
+        .sort-select-custom::after {
+            content: "▾";
+            font-size: 14px;
+            color: #ff7300;
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .sort-select option {
+            background-color: #262626;
+            color: #ffffff;
+            padding: 10px;
         }
 
         /* Сетка товаров на главной */
@@ -345,14 +385,14 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
+            background-color: rgba(0, 0, 0, 0.7);
             display: flex;
             align-items: center;
             justify-content: center;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.25s ease;
-            z-index: 100;
+            z-index: 200;
         }
 
         .modal-overlay.active {
@@ -376,7 +416,6 @@
             transform: translateY(0);
         }
 
-        /* Крестик закрытия */
         .close-modal {
             position: absolute;
             top: 18px;
@@ -395,7 +434,7 @@
             color: #ffffff;
         }
 
-        /* Прямоугольное окно профиля (2 колонки) */
+        /* Прямоугольное окно профиля */
         .profile-modal-content {
             width: 900px;
             height: 560px;
@@ -532,7 +571,6 @@
             margin: auto;
         }
 
-        /* Квадратная карточка товара в профиле */
         .item-card {
             width: 150px;
             background-color: #262626;
@@ -584,7 +622,7 @@
             box-sizing: border-box;
         }
 
-        /* Полноэкранная детальная страница товара */
+        /* Полноэкранная детальная страница товара (z-index под шапкой) */
         .item-detail-page {
             position: fixed;
             top: 70px;
@@ -592,7 +630,7 @@
             width: 100%;
             height: calc(100vh - 70px);
             background-color: #1a1a1a;
-            z-index: 20;
+            z-index: 15;
             display: none;
             box-sizing: border-box;
             padding: 40px 60px;
@@ -689,7 +727,6 @@
             margin-bottom: 15px;
         }
 
-        /* Кликабельное время на детальной странице */
         .detail-time-val {
             color: #888888;
             font-size: 14px;
@@ -793,7 +830,7 @@
             word-break: break-all;
         }
 
-        /* Окно настроек */
+        /* Настройки */
         .settings-modal-content {
             width: 480px;
             max-height: 85vh;
@@ -1370,11 +1407,13 @@
                 </div>
                 <div class="sort-select-wrapper">
                     <span class="sort-label">Sort by:</span>
-                    <select class="sort-select" id="sort-select">
-                        <option value="recently">Recently Listed</option>
-                        <option value="lowest">Lowest Price</option>
-                        <option value="highest">Highest Price</option>
-                    </select>
+                    <div class="sort-select-custom">
+                        <select class="sort-select" id="sort-select">
+                            <option value="recently">Recently Listed</option>
+                            <option value="lowest">Lowest Price</option>
+                            <option value="highest">Highest Price</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1389,12 +1428,10 @@
         <button class="detail-back-btn" id="detail-back-btn">&larr; Back</button>
         
         <div class="detail-main-layout">
-            <!-- Левая колонка: изображение в отдельном боксе -->
             <div class="detail-left-box">
                 <div class="detail-main-img" id="detail-main-img">No image</div>
             </div>
 
-            <!-- Правая колонка: текст и кнопки -->
             <div class="detail-right-col">
                 <div class="detail-game-badge" id="detail-game-badge">Murder Mystery 2</div>
                 <div class="detail-item-title" id="detail-item-title">Item Name</div>
@@ -1413,7 +1450,6 @@
             </div>
         </div>
 
-        <!-- Секция описания -->
         <div class="detail-bottom-section">
             <div class="detail-section-title">Description</div>
             <div class="detail-item-desc" id="detail-item-desc">No description provided.</div>
@@ -1438,7 +1474,7 @@
 
             <div class="profile-right-col">
                 <div class="your-items-header">
-                    <span class="your-items-title">Your Items</span>
+                    <span class="your-items-title" id="your-items-title-text">Your Items</span>
                     <button class="add-item-btn" id="open-select-game-btn">+ Add Item</button>
                 </div>
                 <div class="items-container" id="items-container-box">
@@ -1505,7 +1541,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно создания предмета -->
+    <!-- Модальное окно создания/редактирования предмета -->
     <div class="modal-overlay" id="create-item-modal">
         <div class="modal-content create-item-modal-content">
             <button class="close-modal" id="close-create-item-btn">&times;</button>
@@ -1633,7 +1669,6 @@
             }, 3000);
         }
 
-        // Функция форматирования времени назад
         function getTimeAgo(timestamp) {
             if (!timestamp) return 'Just now';
             const seconds = Math.floor((new Date() - timestamp) / 1000);
@@ -1651,7 +1686,6 @@
             return `${Math.floor(months / 12)} years ago`;
         }
 
-        // Функция точной даты
         function getExactDate(timestamp) {
             if (!timestamp) return 'Unknown date';
             const date = new Date(timestamp);
@@ -1669,6 +1703,7 @@
         const modalUsernameText = document.getElementById('modal-username-text');
         const modalUserIdText = document.getElementById('modal-userid-text');
         const openDbBtn = document.getElementById('open-db-btn');
+        const yourItemsTitleText = document.getElementById('your-items-title-text');
 
         const settingsModal = document.getElementById('settings-modal');
         const openSettingsBtn = document.getElementById('open-settings-btn');
@@ -1698,6 +1733,7 @@
         const offersOptionsGroup = document.getElementById('offers-options-group');
         const saveItemBtn = document.getElementById('save-item-btn');
         const itemsContainerBox = document.getElementById('items-container-box');
+        const createItemModalTitle = document.getElementById('create-item-modal-title');
 
         const itemNameInput = document.getElementById('item-name-input');
         const itemPriceInput = document.getElementById('item-price-input');
@@ -1725,7 +1761,7 @@
         const confirmYesBtn = document.getElementById('confirm-yes-btn');
         const confirmNoBtn = document.getElementById('confirm-no-btn');
 
-        // Элементы детальной страницы товара
+        // Элементы детальной страницы
         const itemDetailPage = document.getElementById('item-detail-page');
         const detailBackBtn = document.getElementById('detail-back-btn');
         const detailMainImg = document.getElementById('detail-main-img');
@@ -1739,7 +1775,7 @@
         const detailSellerName = document.getElementById('detail-seller-name');
         const buyItemActionBtn = document.getElementById('buy-item-action-btn');
 
-        // Элементы главной страницы товаров
+        // Главная страница
         const globalItemsGrid = document.getElementById('global-items-grid');
         const sortSelect = document.getElementById('sort-select');
         const tagsGroup = document.getElementById('tags-group');
@@ -1748,6 +1784,8 @@
         let uploadedAvatarData = null; 
         let uploadedItemPhotoData = null;
         let currentSellerUsername = null;
+        let currentActiveItem = null; // Хранение текущего просмотра предмета
+        let editingItemId = null; // Флаг режима редактирования
         let activeGameTag = 'All';
         let currentItemTimestamp = null;
         let isExactTimeFormat = false;
@@ -1760,7 +1798,7 @@
             }
         }
 
-        // Рендер всех товаров на главной
+        // Рендер карточек на главной
         function renderGlobalItems() {
             let allUsers = JSON.parse(localStorage.getItem('users')) || [];
             let allItems = [];
@@ -1778,12 +1816,10 @@
                 }
             });
 
-            // Фильтрация по тегу игры
             if (activeGameTag !== 'All') {
                 allItems = allItems.filter(item => (item.game || 'Murder Mystery 2') === activeGameTag);
             }
 
-            // Сортировка
             const sortBy = sortSelect.value;
             if (sortBy === 'recently') {
                 allItems.sort((a, b) => (b.id || 0) - (a.id || 0));
@@ -1828,50 +1864,115 @@
                     </div>
                 `;
 
-                // Открытие детальной страницы товара
                 card.addEventListener('click', () => {
-                    currentSellerUsername = item.sellerUsername;
-                    currentItemTimestamp = item.id;
-                    isExactTimeFormat = false;
-
-                    detailGameBadge.textContent = item.game || 'Murder Mystery 2';
-                    detailItemTitle.textContent = item.name;
-                    detailItemDesc.textContent = item.description || 'No description provided.';
-                    
-                    if (item.tag === 'selling') {
-                        detailPriceVal.textContent = `$${item.price}`;
-                    } else {
-                        detailPriceVal.textContent = 'Looking for Offers';
-                    }
-
-                    detailTimeVal.textContent = getTimeAgo(currentItemTimestamp);
-
-                    if (item.photo) {
-                        detailMainImg.innerHTML = `<img src="${item.photo}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;" alt="Item">`;
-                    } else {
-                        detailMainImg.innerHTML = 'No image';
-                    }
-
-                    const firstLetter = item.sellerUsername.charAt(0).toUpperCase();
-                    const avatarColor = getColorFromName(item.sellerUsername);
-
-                    if (item.sellerAvatar) {
-                        detailSellerAvatar.innerHTML = `<img src="${item.sellerAvatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Seller">`;
-                        detailSellerAvatar.style.backgroundColor = 'transparent';
-                    } else {
-                        detailSellerAvatar.innerHTML = firstLetter;
-                        detailSellerAvatar.style.backgroundColor = avatarColor;
-                    }
-                    detailSellerName.textContent = item.sellerDisplayName;
-
-                    itemDetailPage.classList.add('active');
+                    openItemDetailPage(item);
                 });
 
                 globalItemsGrid.appendChild(card);
             });
         }
 
-        // Переключение формата времени при нажатии на него на странице покупки
+        // Функция открытия детальной страницы товара
+        function openItemDetailPage(item) {
+            currentActiveItem = item;
+            currentSellerUsername = item.sellerUsername;
+            currentItemTimestamp = item.id;
+            isExactTimeFormat = false;
+
+            detailGameBadge.textContent = item.game || 'Murder Mystery 2';
+            detailItemTitle.textContent = item.name;
+            detailItemDesc.textContent = item.description || 'No description provided.';
+            
+            if (item.tag === 'selling') {
+                detailPriceVal.textContent = `$${item.price}`;
+            } else {
+                detailPriceVal.textContent = 'Looking for Offers';
+            }
+
+            detailTimeVal.textContent = getTimeAgo(currentItemTimestamp);
+
+            if (item.photo) {
+                detailMainImg.innerHTML = `<img src="${item.photo}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;" alt="Item">`;
+            } else {
+                detailMainImg.innerHTML = 'No image';
+            }
+
+            const firstLetter = item.sellerUsername.charAt(0).toUpperCase();
+            const avatarColor = getColorFromName(item.sellerUsername);
+
+            if (item.sellerAvatar) {
+                detailSellerAvatar.innerHTML = `<img src="${item.sellerAvatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Seller">`;
+                detailSellerAvatar.style.backgroundColor = 'transparent';
+            } else {
+                detailSellerAvatar.innerHTML = firstLetter;
+                detailSellerAvatar.style.backgroundColor = avatarColor;
+            }
+            detailSellerName.textContent = item.sellerDisplayName;
+
+            // Проверка: свой ли продукт
+            if (currentUser && currentUser === item.sellerUsername) {
+                buyItemActionBtn.textContent = 'Edit Item';
+            } else {
+                buyItemActionBtn.textContent = 'Contact Seller';
+            }
+
+            itemDetailPage.classList.add('active');
+        }
+
+        // Действие при клике на основную кнопку товара (Contact Seller / Edit Item)
+        buyItemActionBtn.addEventListener('click', () => {
+            if (!currentActiveItem) return;
+
+            if (currentUser && currentUser === currentActiveItem.sellerUsername) {
+                // Открываем модальное окно редактирования своего товара
+                editingItemId = currentActiveItem.id;
+                createItemModalTitle.textContent = 'Edit Item';
+                saveItemBtn.textContent = 'Save Changes';
+
+                itemNameInput.value = currentActiveItem.name || '';
+                document.getElementById('item-desc-input').value = currentActiveItem.description || '';
+                itemTagSelect.value = currentActiveItem.tag || 'selling';
+                itemPriceInput.value = currentActiveItem.price || '';
+                uploadedItemPhotoData = currentActiveItem.photo || null;
+
+                if (itemTagSelect.value === 'selling') {
+                    sellingPriceGroup.style.display = 'block';
+                    offersOptionsGroup.style.display = 'none';
+                } else {
+                    sellingPriceGroup.style.display = 'none';
+                    offersOptionsGroup.style.display = 'block';
+                }
+
+                updateItemPreview();
+                createItemModal.classList.add('active');
+            } else {
+                showToast(`Contact functionality for ${currentActiveItem.sellerDisplayName} is coming soon!`);
+            }
+        });
+
+        // Кнопка Home -> Переход на главную страницу
+        homeLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Закрываем все модальные окна и детальную страницу
+            itemDetailPage.classList.remove('active');
+            profileModal.classList.remove('active');
+            settingsModal.classList.remove('active');
+            selectGameModal.classList.remove('active');
+            createItemModal.classList.remove('active');
+            switchModal.classList.remove('active');
+            dbModal.classList.remove('active');
+            confirmModal.classList.remove('active');
+
+            // Сбрасываем фильтры на все игры
+            activeGameTag = 'All';
+            document.querySelectorAll('.game-tag-btn').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-tag') === 'All');
+            });
+
+            renderGlobalItems();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
         detailTimeVal.addEventListener('click', () => {
             if (!currentItemTimestamp) return;
             isExactTimeFormat = !isExactTimeFormat;
@@ -1882,7 +1983,6 @@
             }
         });
 
-        // Обработчики фильтров тегов игр
         tagsGroup.addEventListener('click', (e) => {
             const btn = e.target.closest('.game-tag-btn');
             if (!btn) return;
@@ -1896,24 +1996,22 @@
             renderGlobalItems();
         });
 
-        homeLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            itemDetailPage.classList.remove('active');
-            profileModal.classList.remove('active');
-            renderGlobalItems();
-        });
-
         detailBackBtn.addEventListener('click', () => {
             itemDetailPage.classList.remove('active');
         });
 
-        // Клик по профилю продавца на странице товара
+        // Клик по продавцу
         detailSellerBox.addEventListener('click', () => {
             if (!currentSellerUsername) return;
             let allUsers = JSON.parse(localStorage.getItem('users')) || [];
             let sellerData = allUsers.find(u => u.username === currentSellerUsername);
             if (!sellerData) return;
 
+            openProfileModal(sellerData);
+        });
+
+        // Функция открытия профиля любого пользователя
+        function openProfileModal(sellerData) {
             const displayId = sellerData.customId || '1';
             const displayName = sellerData.displayName || sellerData.username;
             const firstLetter = sellerData.username.charAt(0).toUpperCase();
@@ -1929,22 +2027,34 @@
             modalUsernameText.textContent = displayName;
             modalUserIdText.textContent = `ID: ${displayId}`;
 
-            if (displayId === 'knqw' && currentUser === sellerData.username) {
-                openDbBtn.style.display = 'block';
+            const isOwnProfile = (currentUser === sellerData.username);
+
+            // Настройка кнопок слева
+            if (isOwnProfile) {
+                openSettingsBtn.style.display = 'block';
+                if (displayId === 'knqw') {
+                    openDbBtn.style.display = 'block';
+                } else {
+                    openDbBtn.style.display = 'none';
+                }
             } else {
+                openSettingsBtn.style.display = 'none';
                 openDbBtn.style.display = 'none';
             }
 
-            if (currentUser !== sellerData.username) {
-                openSelectGameBtn.style.display = 'none';
-            } else {
+            // Настройка правой колонки и заголовка
+            if (isOwnProfile) {
+                yourItemsTitleText.textContent = 'Your Items';
                 openSelectGameBtn.style.display = 'block';
+            } else {
+                yourItemsTitleText.textContent = 'Their Items';
+                openSelectGameBtn.style.display = 'none';
             }
 
             renderUserItems(sellerData);
             itemDetailPage.classList.remove('active');
             profileModal.classList.add('active');
-        });
+        }
 
         function updateItemPreview() {
             const nameVal = itemNameInput.value.trim();
@@ -1971,7 +2081,8 @@
 
         function renderUserItems(userData) {
             if (!userData.items || userData.items.length === 0) {
-                itemsContainerBox.innerHTML = '<div class="no-items-text">You don\'t have any items listed at the moment</div>';
+                const isOwn = (currentUser === userData.username);
+                itemsContainerBox.innerHTML = `<div class="no-items-text">${isOwn ? "You don't have any items listed at the moment" : "This user doesn't have any items listed."}</div>`;
                 return;
             }
 
@@ -1995,43 +2106,12 @@
 
                 card.addEventListener('click', () => {
                     profileModal.classList.remove('active');
-                    
-                    currentSellerUsername = userData.username;
-                    currentItemTimestamp = item.id;
-                    isExactTimeFormat = false;
-
-                    detailGameBadge.textContent = item.game || 'Murder Mystery 2';
-                    detailItemTitle.textContent = item.name;
-                    detailItemDesc.textContent = item.description || 'No description provided.';
-                    
-                    if (item.tag === 'selling') {
-                        detailPriceVal.textContent = `$${item.price}`;
-                    } else {
-                        detailPriceVal.textContent = 'Looking for Offers';
-                    }
-
-                    detailTimeVal.textContent = getTimeAgo(currentItemTimestamp);
-
-                    if (item.photo) {
-                        detailMainImg.innerHTML = `<img src="${item.photo}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;" alt="Item">`;
-                    } else {
-                        detailMainImg.innerHTML = 'No image';
-                    }
-
-                    const displayName = userData.displayName || userData.username;
-                    const firstLetter = userData.username.charAt(0).toUpperCase();
-                    const avatarColor = getColorFromName(userData.username);
-
-                    if (userData.avatar) {
-                        detailSellerAvatar.innerHTML = `<img src="${userData.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Seller">`;
-                        detailSellerAvatar.style.backgroundColor = 'transparent';
-                    } else {
-                        detailSellerAvatar.innerHTML = firstLetter;
-                        detailSellerAvatar.style.backgroundColor = avatarColor;
-                    }
-                    detailSellerName.textContent = displayName;
-
-                    itemDetailPage.classList.add('active');
+                    openItemDetailPage({
+                        ...item,
+                        sellerUsername: userData.username,
+                        sellerDisplayName: userData.displayName || userData.username,
+                        sellerAvatar: userData.avatar
+                    });
                 });
 
                 itemsContainerBox.appendChild(card);
@@ -2164,21 +2244,6 @@
             const menuProfileBtn = document.getElementById('menu-profile-btn');
             const menuSwitchBtn = document.getElementById('menu-switch-btn');
 
-            if (userData.avatar) {
-                modalAvatarBox.innerHTML = `<img src="${userData.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
-            } else {
-                modalAvatarBox.style.backgroundColor = avatarColor;
-                modalAvatarBox.textContent = firstLetter;
-            }
-            modalUsernameText.textContent = displayName;
-            modalUserIdText.textContent = `ID: ${displayId}`;
-
-            if (displayId === 'knqw') {
-                openDbBtn.style.display = 'block';
-            }
-
-            renderUserItems(userData);
-
             profileToggleBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 profileDropdown.classList.toggle('active');
@@ -2192,10 +2257,7 @@
 
             menuProfileBtn.addEventListener('click', () => {
                 profileDropdown.classList.remove('active');
-                itemDetailPage.classList.remove('active');
-                openSelectGameBtn.style.display = 'block';
-                renderUserItems(userData);
-                profileModal.classList.add('active');
+                openProfileModal(userData);
             });
 
             menuSwitchBtn.addEventListener('click', () => {
@@ -2332,6 +2394,10 @@
 
             selectMm2Btn.addEventListener('click', () => {
                 selectGameModal.classList.remove('active');
+                editingItemId = null; // Создание нового предмета
+                createItemModalTitle.textContent = 'Create Item (Murder Mystery 2)';
+                saveItemBtn.textContent = 'List Item';
+
                 itemNameInput.value = '';
                 document.getElementById('item-desc-input').value = '';
                 itemPriceInput.value = '';
@@ -2391,6 +2457,7 @@
                 }
             });
 
+            // Сохранение или обновление предмета
             saveItemBtn.addEventListener('click', () => {
                 const itemName = itemNameInput.value.trim();
                 const itemDesc = document.getElementById('item-desc-input').value.trim();
@@ -2407,17 +2474,33 @@
                     return;
                 }
 
-                const newItem = {
-                    id: Date.now(),
-                    game: 'Murder Mystery 2',
-                    name: itemName,
-                    description: itemDesc,
-                    tag: itemTag,
-                    price: itemTag === 'selling' ? itemPrice : null,
-                    photo: uploadedItemPhotoData
-                };
-
-                userData.items.push(newItem);
+                if (editingItemId) {
+                    // Режим редактирования существующего товара
+                    const idx = userData.items.findIndex(it => it.id === editingItemId);
+                    if (idx !== -1) {
+                        userData.items[idx].name = itemName;
+                        userData.items[idx].description = itemDesc;
+                        userData.items[idx].tag = itemTag;
+                        userData.items[idx].price = itemTag === 'selling' ? itemPrice : null;
+                        if (uploadedItemPhotoData) {
+                            userData.items[idx].photo = uploadedItemPhotoData;
+                        }
+                    }
+                    showToast('Item updated successfully!');
+                } else {
+                    // Режим создания нового товара
+                    const newItem = {
+                        id: Date.now(),
+                        game: 'Murder Mystery 2',
+                        name: itemName,
+                        description: itemDesc,
+                        tag: itemTag,
+                        price: itemTag === 'selling' ? itemPrice : null,
+                        photo: uploadedItemPhotoData
+                    };
+                    userData.items.push(newItem);
+                    showToast('Item listed successfully!');
+                }
 
                 const userIndex = users.findIndex(u => u.customId === displayId || u.username === currentUser);
                 if (userIndex !== -1) {
@@ -2427,7 +2510,20 @@
 
                 renderUserItems(userData);
                 renderGlobalItems();
-                showToast('Item listed successfully!');
+
+                // Если предмет открыт на детальной странице, обновляем и её
+                if (editingItemId && currentActiveItem && currentActiveItem.id === editingItemId) {
+                    const updated = userData.items.find(it => it.id === editingItemId);
+                    if (updated) {
+                        openItemDetailPage({
+                            ...updated,
+                            sellerUsername: userData.username,
+                            sellerDisplayName: userData.displayName || userData.username,
+                            sellerAvatar: userData.avatar
+                        });
+                    }
+                }
+
                 createItemModal.classList.remove('active');
             });
 
@@ -2494,9 +2590,7 @@
             });
         }
 
-        // Первичный рендер товаров на главной при загрузке страницы
         renderGlobalItems();
     </script>
-
 </body>
 </html>
