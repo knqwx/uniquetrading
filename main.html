@@ -143,7 +143,7 @@
         }
 
         .modal-content {
-            width: 340px;
+            width: 360px;
             background-color: #262626;
             border-radius: 12px;
             padding: 30px;
@@ -177,13 +177,101 @@
             color: #ffffff;
             font-size: 20px;
             font-weight: 600;
+            margin-bottom: 3px;
+        }
+
+        .modal-id-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
             margin-bottom: 5px;
+        }
+
+        .modal-userid {
+            color: #ff7300;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .edit-id-btn {
+            background: none;
+            border: none;
+            color: #888888;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 0;
+            text-decoration: underline;
+        }
+
+        .edit-id-btn:hover {
+            color: #ffffff;
         }
 
         .modal-email {
             color: #888888;
             font-size: 13px;
             margin-bottom: 25px;
+        }
+
+        /* Поле ввода для смены ID (скрыто по умолчанию) */
+        .edit-id-section {
+            margin-bottom: 20px;
+            display: none;
+            text-align: left;
+        }
+
+        .edit-id-section.active {
+            display: block;
+        }
+
+        .edit-id-section input {
+            width: 100%;
+            background-color: #1a1a1a;
+            border: 1px solid #383838;
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #ffffff;
+            font-size: 13px;
+            box-sizing: border-box;
+            outline: none;
+            margin-bottom: 8px;
+        }
+
+        .edit-id-section input:focus {
+            border-color: #ff7300;
+        }
+
+        .edit-id-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .save-id-btn, .cancel-id-btn {
+            flex: 1;
+            padding: 7px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .save-id-btn {
+            background-color: #ff7300;
+            color: #ffffff;
+        }
+
+        .cancel-id-btn {
+            background-color: #383838;
+            color: #ffffff;
+        }
+
+        .modal-error {
+            color: #ff4d4d;
+            font-size: 11px;
+            margin-bottom: 10px;
+            display: none;
         }
 
         .logout-modal-btn {
@@ -246,7 +334,6 @@
     <header class="top-bar">
         <a href="#" class="nav-home">Home</a>
         <div class="auth-buttons" id="auth-container">
-            <!-- Динамически заменяется скриптом -->
             <a href="login.html" class="btn btn-login">Log in</a>
             <a href="login.html?mode=signup" class="btn btn-signup">Sign up</a>
         </div>
@@ -263,13 +350,29 @@
             <button class="close-modal" id="close-modal-btn">&times;</button>
             <div class="modal-avatar" id="modal-avatar-box">U</div>
             <div class="modal-username" id="modal-username-text">Username</div>
+            
+            <div class="modal-id-container">
+                <span class="modal-userid" id="modal-userid-text">ID: #1</span>
+                <button class="edit-id-btn" id="open-edit-id-btn">Edit ID</button>
+            </div>
+
             <div class="modal-email" id="modal-email-text">email@example.com</div>
+
+            <!-- Блок изменения ID -->
+            <div class="edit-id-section" id="edit-id-section">
+                <div class="modal-error" id="id-error-msg"></div>
+                <input type="text" id="new-id-input" placeholder="Enter new ID">
+                <div class="edit-id-actions">
+                    <button class="save-id-btn" id="save-id-btn">Save</button>
+                    <button class="cancel-id-btn" id="cancel-id-btn">Cancel</button>
+                </div>
+            </div>
+
             <button class="logout-modal-btn" id="logout-btn">Log out</button>
         </div>
     </div>
 
     <script>
-        // Функция генерации случайного цвета на основе строки (чтобы у каждого ника был свой стабильный цвет)
         function getColorFromName(name) {
             const colors = ['#ff7300', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#009688', '#4caf50', '#ff9800'];
             let hash = 0;
@@ -285,18 +388,29 @@
         const closeModalBtn = document.getElementById('close-modal-btn');
         const modalAvatarBox = document.getElementById('modal-avatar-box');
         const modalUsernameText = document.getElementById('modal-username-text');
+        const modalUserIdText = document.getElementById('modal-userid-text');
         const modalEmailText = document.getElementById('modal-email-text');
         const logoutBtn = document.getElementById('logout-btn');
 
-        if (currentUser) {
-            // Ищем данные пользователя в массиве зарегистрированных
-            const users = JSON.parse(localStorage.getItem('users')) || [];
-            const userData = users.find(u => u.username === currentUser) || { username: currentUser, email: 'No email' };
+        const openEditIdBtn = document.getElementById('open-edit-id-btn');
+        const editIdSection = document.getElementById('edit-id-section');
+        const newIdInput = document.getElementById('new-id-input');
+        const saveIdBtn = document.getElementById('save-id-btn');
+        const cancelIdBtn = document.getElementById('cancel-id-btn');
+        const idErrorMsg = document.getElementById('id-error-msg');
 
+        if (currentUser) {
+            let users = JSON.parse(localStorage.getItem('users')) || [];
+            let userData = users.find(u => u.username === currentUser);
+
+            if (!userData) {
+                userData = { username: currentUser, email: 'No email', customId: '1' };
+            }
+
+            const displayId = userData.customId || '1';
             const firstLetter = currentUser.charAt(0).toUpperCase();
             const avatarColor = getColorFromName(currentUser);
 
-            // Отображаем кликабельный бокс профиля в шапке
             authContainer.innerHTML = `
                 <div class="user-profile-box" id="open-profile-btn">
                     <div class="user-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>
@@ -304,30 +418,71 @@
                 </div>
             `;
 
-            // Заполняем модальное окно данными
             modalAvatarBox.style.backgroundColor = avatarColor;
             modalAvatarBox.textContent = firstLetter;
             modalUsernameText.textContent = userData.username;
+            modalUserIdText.textContent = `ID: #${displayId}`;
             modalEmailText.textContent = userData.email;
 
-            // Открытие модального окна по клику на бокс профиля
+            // Открытие модального окна
             document.getElementById('open-profile-btn').addEventListener('click', () => {
                 profileModal.classList.add('active');
             });
 
-            // Закрытие модального окна
             closeModalBtn.addEventListener('click', () => {
                 profileModal.classList.remove('active');
+                editIdSection.classList.remove('active');
+                idErrorMsg.style.display = 'none';
             });
 
-            // Закрытие по клику вне окна
             profileModal.addEventListener('click', (e) => {
                 if (e.target === profileModal) {
                     profileModal.classList.remove('active');
+                    editIdSection.classList.remove('active');
+                    idErrorMsg.style.display = 'none';
                 }
             });
 
-            // Выход из аккаунта
+            // Логика открытия поля смены ID
+            openEditIdBtn.addEventListener('click', () => {
+                newIdInput.value = displayId;
+                editIdSection.classList.add('active');
+                idErrorMsg.style.display = 'none';
+            });
+
+            cancelIdBtn.addEventListener('click', () => {
+                editIdSection.classList.remove('active');
+                idErrorMsg.style.display = 'none';
+            });
+
+            // Сохранение нового ID
+            saveIdBtn.addEventListener('click', () => {
+                const newId = newIdInput.value.trim();
+                idErrorMsg.style.display = 'none';
+
+                if (!newId) {
+                    idErrorMsg.textContent = 'ID cannot be empty.';
+                    idErrorMsg.style.display = 'block';
+                    return;
+                }
+
+                // Проверяем, не занят ли этот ID другим пользователем
+                const idExists = users.some(u => u.customId === newId && u.username !== currentUser);
+                if (idExists) {
+                    idErrorMsg.textContent = 'This ID is already taken.';
+                    idErrorMsg.style.display = 'block';
+                    return;
+                }
+
+                // Обновляем ID в массиве пользователей
+                userData.customId = newId;
+                localStorage.setItem('users', JSON.stringify(users));
+
+                // Обновляем отображение
+                modalUserIdText.textContent = `ID: #${newId}`;
+                editIdSection.classList.remove('active');
+            });
+
             logoutBtn.addEventListener('click', () => {
                 localStorage.removeItem('currentUser');
                 window.location.reload();
