@@ -51,7 +51,7 @@
             display: flex;
             gap: 15px;
             align-items: center;
-            position: relative; /* Нужно для правильного позиционирования выпадающего меню */
+            position: relative;
         }
 
         .btn {
@@ -170,10 +170,6 @@
             background-color: #333333;
         }
 
-        .dropdown-item.logout-item {
-            color: #ff4d4d;
-        }
-
         /* Модальные окна */
         .modal-overlay {
             position: fixed;
@@ -213,9 +209,9 @@
             transform: translateY(0);
         }
 
-        /* Модальное окно базы данных (шире) */
-        .db-modal-content {
-            width: 620px;
+        /* Модальные окна с таблицами/списками (шире) */
+        .db-modal-content, .accounts-modal-content {
+            width: 450px;
             max-height: 80vh;
             display: flex;
             flex-direction: column;
@@ -274,7 +270,7 @@
             font-family: 'Inter', sans-serif;
             cursor: pointer;
             transition: background-color 0.2s;
-            display: none; /* Видно только для knqw в окне профиля */
+            display: none;
         }
 
         .admin-db-btn:hover {
@@ -294,6 +290,109 @@
 
         .close-modal:hover {
             color: #ffffff;
+        }
+
+        /* Список аккаунтов для смены */
+        .accounts-title {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .accounts-list-container {
+            overflow-y: auto;
+            max-height: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .account-item {
+            background-color: #1f1f1f;
+            border: 1px solid #383838;
+            border-radius: 8px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: border-color 0.2s, background-color 0.2s;
+            cursor: pointer;
+        }
+
+        .account-item:hover {
+            background-color: #2a2a2a;
+            border-color: #ff7300;
+        }
+
+        .account-item.current {
+            border-color: #ff7300;
+            background-color: #25201d;
+        }
+
+        .account-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .account-mini-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        .account-details .acc-name {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .account-details .acc-email {
+            color: #888888;
+            font-size: 12px;
+        }
+
+        .remove-saved-acc {
+            background: none;
+            border: none;
+            color: #888888;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 5px;
+            transition: color 0.2s;
+        }
+
+        .remove-saved-acc:hover {
+            color: #ff4d4d;
+        }
+
+        .add-account-modal-btn {
+            width: 100%;
+            background-color: #ff7300;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 11px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .add-account-modal-btn:hover {
+            opacity: 0.9;
         }
 
         /* Таблица базы данных */
@@ -334,7 +433,6 @@
             border-top: 1px solid #383838;
         }
 
-        /* Кнопка удаления в таблице */
         .delete-user-btn {
             background-color: rgba(255, 77, 77, 0.15);
             color: #ff4d4d;
@@ -351,7 +449,6 @@
             background-color: rgba(255, 77, 77, 0.3);
         }
 
-        /* Неактивная кнопка удаления для защищенных аккаунтов */
         .delete-user-btn.disabled {
             background-color: #2a2a2a;
             color: #555555;
@@ -447,7 +544,7 @@
         <button class="all-games-btn">All Games</button>
     </main>
 
-    <!-- Модальное окно профиля (открывается при клике на Profile в меню) -->
+    <!-- Модальное окно профиля -->
     <div class="modal-overlay" id="profile-modal">
         <div class="modal-content">
             <button class="close-modal" id="close-modal-btn">&times;</button>
@@ -459,6 +556,18 @@
             <div class="profile-actions">
                 <button class="admin-db-btn" id="open-db-btn">View Database</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно смены аккаунта (список всех входов) -->
+    <div class="modal-overlay" id="switch-modal">
+        <div class="modal-content accounts-modal-content">
+            <button class="close-modal" id="close-switch-modal-btn">&times;</button>
+            <div class="accounts-title">Switch Account</div>
+            <div class="accounts-list-container" id="accounts-list">
+                <!-- Заполняется динамически -->
+            </div>
+            <button class="add-account-modal-btn" id="add-account-btn">+ Add Account</button>
         </div>
     </div>
 
@@ -510,14 +619,21 @@
 
         const currentUser = localStorage.getItem('currentUser');
         const authContainer = document.getElementById('auth-container');
+        
+        // Модалки
         const profileModal = document.getElementById('profile-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
         const modalAvatarBox = document.getElementById('modal-avatar-box');
         const modalUsernameText = document.getElementById('modal-username-text');
         const modalUserIdText = document.getElementById('modal-userid-text');
         const modalEmailText = document.getElementById('modal-email-text');
-
         const openDbBtn = document.getElementById('open-db-btn');
+
+        const switchModal = document.getElementById('switch-modal');
+        const closeSwitchModalBtn = document.getElementById('close-switch-modal-btn');
+        const accountsList = document.getElementById('accounts-list');
+        const addAccountBtn = document.getElementById('add-account-btn');
+
         const dbModal = document.getElementById('db-modal');
         const closeDbModalBtn = document.getElementById('close-db-modal-btn');
         const dbTbody = document.getElementById('db-tbody');
@@ -528,6 +644,15 @@
         const confirmNoBtn = document.getElementById('confirm-no-btn');
 
         let userToDelete = null;
+
+        // Автоматически добавляем текущего пользователя в историю входов (savedAccounts)
+        if (currentUser) {
+            let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+            if (!savedAccounts.includes(currentUser)) {
+                savedAccounts.push(currentUser);
+                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
+            }
+        }
 
         function renderDatabaseTable() {
             const allUsers = JSON.parse(localStorage.getItem('users')) || [];
@@ -552,7 +677,6 @@
                 dbTbody.appendChild(row);
             });
 
-            // Навешиваем обработчики только на незащищенные кнопки удаления
             document.querySelectorAll('.delete-user-btn:not(.disabled)').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     userToDelete = e.target.getAttribute('data-username');
@@ -560,6 +684,62 @@
                     dbModal.classList.remove('active');
                     confirmModal.classList.add('active');
                 });
+            });
+        }
+
+        // Рендер списка аккаунтов для смены
+        function renderSwitchAccountsList() {
+            let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+            let allUsers = JSON.parse(localStorage.getItem('users')) || [];
+            accountsList.innerHTML = '';
+
+            if (savedAccounts.length === 0) {
+                accountsList.innerHTML = '<div style="color: #888; font-size: 13px; text-align: center; padding: 20px;">No other accounts saved.</div>';
+                return;
+            }
+
+            savedAccounts.forEach(accName => {
+                const userData = allUsers.find(u => u.username === accName) || { email: 'Unknown email' };
+                const isCurrent = accName === currentUser;
+                const firstLetter = accName.charAt(0).toUpperCase();
+                const avatarColor = getColorFromName(accName);
+
+                const item = document.createElement('div');
+                item.className = `account-item ${isCurrent ? 'current' : ''}`;
+                item.innerHTML = `
+                    <div class="account-info" style="flex: 1; cursor: pointer;">
+                        <div class="account-mini-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>
+                        <div class="account-details">
+                            <div class="acc-name">${accName} ${isCurrent ? '<span style="color: #ff7300; font-size: 11px; margin-left: 5px;">(Current)</span>' : ''}</div>
+                            <div class="acc-email">${userData.email}</div>
+                        </div>
+                    </div>
+                    <button class="remove-saved-acc" data-username="${accName}" title="Remove from list">&times;</button>
+                `;
+
+                // Клик по информации аккаунта -> переключение на него
+                item.querySelector('.account-info').addEventListener('click', () => {
+                    localStorage.setItem('currentUser', accName);
+                    window.location.reload();
+                });
+
+                // Клик по крестику -> удаление из истории входов
+                item.querySelector('.remove-saved-acc').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    let updatedSaved = savedAccounts.filter(name => name !== accName);
+                    localStorage.setItem('savedAccounts', JSON.stringify(updatedSaved));
+
+                    // Если удалили текущего из списка истории, но он остался в базе
+                    if (accName === currentUser) {
+                        localStorage.removeItem('currentUser');
+                        window.location.reload();
+                        return;
+                    }
+
+                    renderSwitchAccountsList();
+                });
+
+                accountsList.appendChild(item);
             });
         }
 
@@ -575,7 +755,6 @@
             const firstLetter = currentUser.charAt(0).toUpperCase();
             const avatarColor = getColorFromName(currentUser);
 
-            // Создаем блок профиля и выпадающее меню
             authContainer.innerHTML = `
                 <div class="user-profile-box" id="profile-toggle-btn">
                     <div class="user-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>
@@ -598,34 +777,33 @@
             modalUserIdText.textContent = `ID: ${displayId}`;
             modalEmailText.textContent = userData.email;
 
-            // Если ID пользователя равен "knqw", показываем кнопку базы данных в модалке профиля
             if (displayId === 'knqw') {
                 openDbBtn.style.display = 'block';
             }
 
-            // Открытие / закрытие выпадающего меню по клику на аватарку
+            // Открытие / закрытие выпадающего меню
             profileToggleBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 profileDropdown.classList.toggle('active');
             });
 
-            // Закрытие меню при клике вне его
             document.addEventListener('click', (e) => {
                 if (!authContainer.contains(e.target)) {
                     profileDropdown.classList.remove('active');
                 }
             });
 
-            // Кнопка "Profile" в меню -> открывает модальное окно информации профиля
+            // Кнопка "Profile"
             menuProfileBtn.addEventListener('click', () => {
                 profileDropdown.classList.remove('active');
                 profileModal.classList.add('active');
             });
 
-            // Кнопка "Switch Account" в меню -> стирает текущего юзера и перенаправляет на логин
+            // Кнопка "Switch Account" -> открывает модалку со списком аккаунтов
             menuSwitchBtn.addEventListener('click', () => {
-                localStorage.removeItem('currentUser');
-                window.location.href = 'login.html';
+                profileDropdown.classList.remove('active');
+                renderSwitchAccountsList();
+                switchModal.classList.add('active');
             });
 
             closeModalBtn.addEventListener('click', () => {
@@ -638,7 +816,23 @@
                 }
             });
 
-            // Открытие базы данных (только для knqw)
+            // Закрытие модалки Switch Account
+            closeSwitchModalBtn.addEventListener('click', () => {
+                switchModal.classList.remove('active');
+            });
+
+            switchModal.addEventListener('click', (e) => {
+                if (e.target === switchModal) {
+                    switchModal.classList.remove('active');
+                }
+            });
+
+            // Кнопка "+ Add Account" внутри модалки смены аккаунта
+            addAccountBtn.addEventListener('click', () => {
+                window.location.href = 'login.html';
+            });
+
+            // База данных
             openDbBtn.addEventListener('click', () => {
                 renderDatabaseTable();
                 profileModal.classList.remove('active');
@@ -655,7 +849,7 @@
                 }
             });
 
-            // Логика подтверждения удаления
+            // Подтверждение удаления
             confirmNoBtn.addEventListener('click', () => {
                 confirmModal.classList.remove('active');
                 dbModal.classList.add('active');
@@ -664,8 +858,6 @@
             confirmYesBtn.addEventListener('click', () => {
                 if (userToDelete) {
                     let allUsers = JSON.parse(localStorage.getItem('users')) || [];
-                    
-                    // Жесткая проверка: запрещаем удалять пользователя с ID knqw программно
                     const targetUser = allUsers.find(u => u.username === userToDelete);
                     if (targetUser && targetUser.customId === 'knqw') {
                         alert('Protected account cannot be deleted!');
@@ -677,7 +869,11 @@
                     allUsers = allUsers.filter(u => u.username !== userToDelete);
                     localStorage.setItem('users', JSON.stringify(allUsers));
 
-                    // Если случайно удалили кого-то другого, кто был залогинен
+                    // Также удаляем из истории сохраненных аккаунтов
+                    let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+                    savedAccounts = savedAccounts.filter(name => name !== userToDelete);
+                    localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
+
                     if (userToDelete === currentUser) {
                         localStorage.removeItem('currentUser');
                         window.location.reload();
