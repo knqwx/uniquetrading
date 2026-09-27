@@ -149,7 +149,7 @@
         <div class="error-message" id="error-msg"></div>
 
         <form id="auth-form">
-            <!-- Поле Username (скрыто на Логине, появляется на Sign Up) -->
+            <!-- Поле Username -->
             <div class="input-group collapsed" id="username-group">
                 <label>Username</label>
                 <input type="text" id="username-input" placeholder="Choose a username">
@@ -188,13 +188,11 @@
 
         let isLoginMode = true;
 
-        // Функция переключения режимов
         function setMode(loginMode) {
             isLoginMode = loginMode;
             errorMsg.style.display = 'none';
 
             if (!isLoginMode) {
-                // Режим Sign Up
                 formTitle.textContent = 'Sign up';
                 usernameGroup.classList.remove('collapsed');
                 usernameInput.setAttribute('required', 'true');
@@ -204,7 +202,6 @@
                 footerText.textContent = 'Already have an account?';
                 toggleBtn.textContent = 'Log in';
             } else {
-                // Режим Log In
                 formTitle.textContent = 'Log in';
                 usernameGroup.classList.add('collapsed');
                 usernameInput.removeAttribute('required');
@@ -216,32 +213,26 @@
             }
         }
 
-        // Автоматически открываем Sign up, если передан параметр ?mode=signup
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('mode') === 'signup') {
             setMode(false);
         }
 
-        // Переключение по кнопке внутри формы
         toggleBtn.addEventListener('click', () => {
             setMode(!isLoginMode);
         });
 
-        // Обработка отправки формы (регистрация или вход)
         authForm.addEventListener('submit', (e) => {
             e.preventDefault();
             errorMsg.style.display = 'none';
 
-            // Получаем существующих пользователей из localStorage (или создаем пустой массив)
             let users = JSON.parse(localStorage.getItem('users')) || [];
 
             if (!isLoginMode) {
-                // --- РЕГИСТРАЦИЯ (SIGN UP) ---
                 const username = usernameInput.value.trim();
                 const email = mainInput.value.trim();
                 const password = passwordInput.value;
 
-                // Проверяем, не занят ли никнейм
                 const existingUser = users.find(u => u.username === username);
                 if (existingUser) {
                     errorMsg.textContent = 'This username is already taken.';
@@ -249,31 +240,22 @@
                     return;
                 }
 
-                // Сохраняем нового пользователя
-                users.log_in = false;
                 users.push({ username, email, password });
                 localStorage.setItem('users', JSON.stringify(users));
-
-                // Сразу авторизуем его
                 localStorage.setItem('currentUser', username);
 
-                // Перенаправляем на главную
                 window.location.href = 'main.html';
 
             } else {
-                // --- ВХОД (LOG IN) ---
-                const loginIdentifier = mainInput.value.trim(); // ник или email
+                const loginIdentifier = mainInput.value.trim();
                 const password = passwordInput.value;
 
-                // Ищем пользователя по имени или email
                 const foundUser = users.find(u => (u.username === loginIdentifier || u.email === loginIdentifier) && u.password === password);
 
                 if (foundUser) {
-                    // Успешный вход
                     localStorage.setItem('currentUser', foundUser.username);
                     window.location.href = 'main.html';
                 } else {
-                    // Ошибка входа
                     errorMsg.textContent = 'Invalid username/email or password.';
                     errorMsg.style.display = 'block';
                 }
