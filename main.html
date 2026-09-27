@@ -61,7 +61,7 @@
             padding: 10px 22px;
             border-radius: 6px;
             transition: opacity 0.2s, transform 0.1s;
-            text-decoration: none; /* Убираем подчеркивание у ссылки-кнопки */
+            text-decoration: none;
             display: inline-block;
         }
 
@@ -110,9 +110,8 @@
     <header class="top-bar">
         <a href="#" class="nav-home">Home</a>
         <div class="auth-buttons">
-            <!-- Обернули кнопку в тег <a> для перехода на login.html -->
             <a href="login.html" class="btn btn-login">Log in</a>
-            <button class="btn btn-signup">Sign up</button>
+            <a href="login.html?mode=signup" class="btn btn-signup">Sign up</a>
         </div>
     </header>
 
