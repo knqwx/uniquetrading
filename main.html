@@ -41,6 +41,7 @@
             font-size: 15px;
             font-weight: 500;
             transition: color 0.2s;
+            cursor: pointer;
         }
 
         .nav-home:hover {
@@ -377,6 +378,13 @@
             align-items: center;
             box-sizing: border-box;
             text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.1s;
+        }
+
+        .item-card:hover {
+            border-color: #ff7300;
+            transform: translateY(-2px);
         }
 
         .item-card-img {
@@ -408,6 +416,194 @@
             font-weight: 600;
             width: 100%;
             box-sizing: border-box;
+        }
+
+        /* Полноэкранная детальная страница товара */
+        .item-detail-page {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 70px);
+            background-color: #1a1a1a;
+            z-index: 20;
+            display: none;
+            box-sizing: border-box;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .item-detail-page.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-back-btn {
+            background: none;
+            border: none;
+            color: #ff7300;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 25px;
+            padding: 0;
+            width: fit-content;
+        }
+
+        .detail-back-btn:hover {
+            opacity: 0.8;
+        }
+
+        .detail-content-wrapper {
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            background-color: #262626;
+            border: 1px solid #383838;
+            border-radius: 14px;
+            padding: 40px;
+            display: flex;
+            gap: 40px;
+            box-sizing: border-box;
+        }
+
+        .detail-left-col {
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-main-img {
+            width: 100%;
+            height: 320px;
+            border-radius: 10px;
+            object-fit: cover;
+            background-color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .detail-right-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-game-badge {
+            background-color: rgba(255, 115, 0, 0.15);
+            color: #ff7300;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 6px;
+            width: fit-content;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+        }
+
+        .detail-item-title {
+            color: #ffffff;
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            word-break: break-all;
+        }
+
+        .detail-item-price-box {
+            font-size: 22px;
+            font-weight: 700;
+            color: #ff7300;
+            margin-bottom: 20px;
+            background-color: #1f1f1f;
+            padding: 12px 16px;
+            border-radius: 8px;
+            border: 1px solid #383838;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .detail-section-title {
+            color: #888888;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-item-desc {
+            color: #cccccc;
+            font-size: 14px;
+            line-height: 1.5;
+            background-color: #1f1f1f;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #383838;
+            margin-bottom: 25px;
+            min-height: 80px;
+            box-sizing: border-box;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .detail-seller-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid #383838;
+        }
+
+        .detail-seller-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ff7300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            object-fit: cover;
+        }
+
+        .detail-seller-name {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .detail-seller-sub {
+            color: #888888;
+            font-size: 12px;
+        }
+
+        .buy-item-action-btn {
+            background-color: #ff7300;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .buy-item-action-btn:hover {
+            opacity: 0.9;
         }
 
         /* Окно настроек */
@@ -977,15 +1173,46 @@
 
     <!-- Верхняя линия -->
     <header class="top-bar">
-        <a href="#" class="nav-home">Home</a>
+        <a class="nav-home" id="home-link">Home</a>
         <div class="auth-buttons" id="auth-container">
             <a href="login.html" class="btn btn-login">Log in</a>
             <a href="login.html?mode=signup" class="btn btn-signup">Sign up</a>
         </div>
     </header>
 
-    <!-- Главная страница очищена от мусора -->
+    <!-- Главная страница -->
     <main></main>
+
+    <!-- Полноэкранная детальная страница товара -->
+    <div class="item-detail-page" id="item-detail-page">
+        <button class="detail-back-btn" id="detail-back-btn">&larr; Back</button>
+        <div class="detail-content-wrapper">
+            <div class="detail-left-col">
+                <div class="detail-main-img" id="detail-main-img">No image</div>
+            </div>
+            <div class="detail-right-col">
+                <div class="detail-game-badge" id="detail-game-badge">Murder Mystery 2</div>
+                <div class="detail-item-title" id="detail-item-title">Item Name</div>
+                <div class="detail-item-price-box">
+                    <span id="detail-price-label">Price</span>
+                    <span id="detail-price-val" style="color: #ff7300;">$0.10</span>
+                </div>
+                
+                <div class="detail-section-title">Description</div>
+                <div class="detail-item-desc" id="detail-item-desc">No description provided.</div>
+
+                <button class="buy-item-action-btn" id="buy-item-action-btn">Contact Seller</button>
+
+                <div class="detail-seller-info">
+                    <div class="detail-seller-avatar" id="detail-seller-avatar">U</div>
+                    <div>
+                        <div class="detail-seller-name" id="detail-seller-name">Username</div>
+                        <div class="detail-seller-sub">Seller</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Модальное окно профиля -->
     <div class="modal-overlay" id="profile-modal">
@@ -1204,6 +1431,7 @@
 
         const currentUser = localStorage.getItem('currentUser');
         const authContainer = document.getElementById('auth-container');
+        const homeLink = document.getElementById('home-link');
         
         const profileModal = document.getElementById('profile-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
@@ -1267,6 +1495,19 @@
         const confirmYesBtn = document.getElementById('confirm-yes-btn');
         const confirmNoBtn = document.getElementById('confirm-no-btn');
 
+        // Элементы детальной страницы товара
+        const itemDetailPage = document.getElementById('item-detail-page');
+        const detailBackBtn = document.getElementById('detail-back-btn');
+        const detailMainImg = document.getElementById('detail-main-img');
+        const detailGameBadge = document.getElementById('detail-game-badge');
+        const detailItemTitle = document.getElementById('detail-item-title');
+        const detailPriceLabel = document.getElementById('detail-price-label');
+        const detailPriceVal = document.getElementById('detail-price-val');
+        const detailItemDesc = document.getElementById('detail-item-desc');
+        const detailSellerAvatar = document.getElementById('detail-seller-avatar');
+        const detailSellerName = document.getElementById('detail-seller-name');
+        const buyItemActionBtn = document.getElementById('buy-item-action-btn');
+
         let userToDelete = null;
         let uploadedAvatarData = null; 
         let uploadedItemPhotoData = null;
@@ -1279,7 +1520,16 @@
             }
         }
 
-        // Обновление превью в реальном времени
+        homeLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            itemDetailPage.classList.remove('active');
+            profileModal.classList.remove('active');
+        });
+
+        detailBackBtn.addEventListener('click', () => {
+            itemDetailPage.classList.remove('active');
+        });
+
         function updateItemPreview() {
             const nameVal = itemNameInput.value.trim();
             previewCardName.textContent = nameVal ? nameVal : 'Item Name';
@@ -1303,7 +1553,7 @@
         itemPriceInput.addEventListener('input', updateItemPreview);
         itemTagSelect.addEventListener('change', updateItemPreview);
 
-        // Функция рендеринга товаров в профиле (квадратные карточки)
+        // Функция рендеринга товаров в профиле с открытием детальной страницы
         function renderUserItems(userData) {
             if (!userData.items || userData.items.length === 0) {
                 itemsContainerBox.innerHTML = '<div class="no-items-text">You don\'t have any items listed at the moment</div>';
@@ -1327,6 +1577,45 @@
                     <div class="item-card-name">${item.name}</div>
                     <div class="item-card-price">${priceText}</div>
                 `;
+
+                // Обработчик клика для открытия страницы товара на весь экран
+                card.addEventListener('click', () => {
+                    profileModal.classList.remove('active');
+                    
+                    detailGameBadge.textContent = item.game || 'Murder Mystery 2';
+                    detailItemTitle.textContent = item.name;
+                    detailItemDesc.textContent = item.description || 'No description provided.';
+                    
+                    if (item.tag === 'selling') {
+                        detailPriceLabel.textContent = 'Price';
+                        detailPriceVal.textContent = `$${item.price}`;
+                    } else {
+                        detailPriceLabel.textContent = 'Status';
+                        detailPriceVal.textContent = 'Looking for Offers';
+                    }
+
+                    if (item.photo) {
+                        detailMainImg.innerHTML = `<img src="${item.photo}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;" alt="Item">`;
+                    } else {
+                        detailMainImg.innerHTML = 'No image';
+                    }
+
+                    const displayName = userData.displayName || userData.username;
+                    const firstLetter = userData.username.charAt(0).toUpperCase();
+                    const avatarColor = getColorFromName(userData.username);
+
+                    if (userData.avatar) {
+                        detailSellerAvatar.innerHTML = `<img src="${userData.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Seller">`;
+                        detailSellerAvatar.style.backgroundColor = 'transparent';
+                    } else {
+                        detailSellerAvatar.innerHTML = firstLetter;
+                        detailSellerAvatar.style.backgroundColor = avatarColor;
+                    }
+                    detailSellerName.textContent = displayName;
+
+                    itemDetailPage.classList.add('active');
+                });
+
                 itemsContainerBox.appendChild(card);
             });
         }
@@ -1485,6 +1774,7 @@
 
             menuProfileBtn.addEventListener('click', () => {
                 profileDropdown.classList.remove('active');
+                itemDetailPage.classList.remove('active');
                 profileModal.classList.add('active');
             });
 
