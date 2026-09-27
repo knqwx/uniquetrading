@@ -10,18 +10,17 @@
         body {
             background-color: #1a1a1a;
             margin: 0;
-            height: 100vh;
+            min-height: 100vh;
             font-family: 'Inter', sans-serif;
             position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
         }
 
         /* Верхняя линия (панель) */
         .top-bar {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
@@ -170,6 +169,173 @@
 
         .dropdown-item:hover {
             background-color: #333333;
+        }
+
+        /* Главная страница контент */
+        main {
+            margin-top: 110px;
+            width: 100%;
+            max-width: 1200px;
+            padding: 0 40px 60px 40px;
+            box-sizing: border-box;
+        }
+
+        .main-header-section {
+            margin-bottom: 30px;
+        }
+
+        .all-games-main-title {
+            color: #ffffff;
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        /* Панель фильтров и тегов */
+        .filters-panel {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            background-color: #222222;
+            padding: 15px 20px;
+            border-radius: 12px;
+            border: 1px solid #333333;
+        }
+
+        .games-tags-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .game-tag-btn {
+            background-color: #2c2c2c;
+            color: #aaaaaa;
+            border: 1px solid #383838;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .game-tag-btn:hover {
+            color: #ffffff;
+            border-color: #555;
+        }
+
+        .game-tag-btn.active {
+            background-color: rgba(255, 115, 0, 0.15);
+            color: #ff7300;
+            border-color: #ff7300;
+        }
+
+        .sort-select-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sort-label {
+            color: #888888;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .sort-select {
+            background-color: #2c2c2c;
+            color: #ffffff;
+            border: 1px solid #383838;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .sort-select:focus {
+            border-color: #ff7300;
+        }
+
+        /* Сетка товаров на главной */
+        .global-items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .global-item-card {
+            background-color: #262626;
+            border: 1px solid #383838;
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.1s;
+        }
+
+        .global-item-card:hover {
+            border-color: #ff7300;
+            transform: translateY(-2px);
+        }
+
+        .global-item-img {
+            width: 100%;
+            height: 150px;
+            border-radius: 8px;
+            object-fit: cover;
+            background-color: #333;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .global-item-name {
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .global-item-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+
+        .global-item-price {
+            background-color: rgba(255, 115, 0, 0.15);
+            color: #ff7300;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .global-item-time {
+            color: #888888;
+            font-size: 11px;
+        }
+
+        .no-global-items {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #777;
+            padding: 40px;
+            font-size: 15px;
         }
 
         /* Модальные окна */
@@ -418,7 +584,7 @@
             box-sizing: border-box;
         }
 
-        /* Полноэкранная детальная страница товара (без общего внешнего бокса) */
+        /* Полноэкранная детальная страница товара */
         .item-detail-page {
             position: fixed;
             top: 70px;
@@ -438,7 +604,6 @@
             flex-direction: column;
         }
 
-        /* Увеличенная кнопка Back */
         .detail-back-btn {
             background: none;
             border: none;
@@ -460,7 +625,6 @@
             opacity: 0.8;
         }
 
-        /* Основной контейнер сетки товара (без общего фона/бокса) */
         .detail-main-layout {
             max-width: 1000px;
             width: 100%;
@@ -471,7 +635,6 @@
             box-sizing: border-box;
         }
 
-        /* Левая колонка — изображение в СВОЕМ отдельном боксе */
         .detail-left-box {
             background-color: #262626;
             border: 1px solid #383838;
@@ -494,7 +657,6 @@
             font-size: 14px;
         }
 
-        /* Правая колонка — информация НЕ в боксе, увеличенный текст и элементы */
         .detail-right-col {
             display: flex;
             flex-direction: column;
@@ -520,12 +682,26 @@
             word-break: break-all;
         }
 
-        /* Убран текст Price, только доллары (или Offers) */
         .detail-item-price-val {
             font-size: 28px;
             font-weight: 700;
             color: #ff7300;
+            margin-bottom: 15px;
+        }
+
+        /* Кликабельное время на детальной странице */
+        .detail-time-val {
+            color: #888888;
+            font-size: 14px;
             margin-bottom: 25px;
+            cursor: pointer;
+            width: fit-content;
+            transition: color 0.2s;
+            user-select: none;
+        }
+
+        .detail-time-val:hover {
+            color: #ff7300;
         }
 
         .buy-item-action-btn {
@@ -587,7 +763,6 @@
             font-size: 13px;
         }
 
-        /* Секция описания перенесена вниз под фото и текст */
         .detail-bottom-section {
             max-width: 1000px;
             width: 100%;
@@ -663,7 +838,6 @@
             border-color: #ff7300;
         }
 
-        /* Убираем стрелочки у input type="number" */
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { 
             -webkit-appearance: none; 
@@ -684,7 +858,6 @@
             margin-top: 4px;
         }
 
-        /* Кнопка «Choose File» для выбора файла */
         .choose-file-btn-wrapper {
             display: inline-block;
             background-color: #383838;
@@ -702,7 +875,6 @@
             background-color: #444444;
         }
 
-        /* Превью аватарки в настройках */
         .settings-avatar-preview-row {
             display: flex;
             align-items: center;
@@ -783,7 +955,6 @@
             opacity: 0.9;
         }
 
-        /* Тост-уведомление */
         .toast-notification {
             position: fixed;
             bottom: 30px;
@@ -809,7 +980,6 @@
             pointer-events: auto;
         }
 
-        /* Окно Select Game */
         .select-game-modal-content {
             width: 380px;
             text-align: left;
@@ -842,7 +1012,6 @@
             border-color: #ff7300;
         }
 
-        /* Окно создания предмета с боковым превью */
         .create-item-modal-content {
             width: 740px;
             max-height: 85vh;
@@ -879,7 +1048,6 @@
             width: 100%;
         }
 
-        /* Карточка превью товара */
         .preview-item-card {
             width: 160px;
             background-color: #1f1f1f;
@@ -945,7 +1113,6 @@
             height: 16px;
         }
 
-        /* Остальные модалки (переключение аккаунтов, база данных, подтверждение) */
         .accounts-modal-content {
             width: 450px;
             max-height: 80vh;
@@ -1193,7 +1360,29 @@
     </header>
 
     <!-- Главная страница -->
-    <main></main>
+    <main>
+        <div class="main-header-section">
+            <h1 class="all-games-main-title">All Games</h1>
+            <div class="filters-panel">
+                <div class="games-tags-group" id="tags-group">
+                    <button class="game-tag-btn active" data-tag="All">All Games</button>
+                    <button class="game-tag-btn" data-tag="Murder Mystery 2">Murder Mystery 2</button>
+                </div>
+                <div class="sort-select-wrapper">
+                    <span class="sort-label">Sort by:</span>
+                    <select class="sort-select" id="sort-select">
+                        <option value="recently">Recently Listed</option>
+                        <option value="lowest">Lowest Price</option>
+                        <option value="highest">Highest Price</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="global-items-grid" id="global-items-grid">
+            <!-- Сюда динамически выводятся все товары -->
+        </div>
+    </main>
 
     <!-- Полноэкранная детальная страница товара -->
     <div class="item-detail-page" id="item-detail-page">
@@ -1205,11 +1394,12 @@
                 <div class="detail-main-img" id="detail-main-img">No image</div>
             </div>
 
-            <!-- Правая колонка: текст и кнопки НЕ в боксе, увеличены -->
+            <!-- Правая колонка: текст и кнопки -->
             <div class="detail-right-col">
                 <div class="detail-game-badge" id="detail-game-badge">Murder Mystery 2</div>
                 <div class="detail-item-title" id="detail-item-title">Item Name</div>
                 <div class="detail-item-price-val" id="detail-price-val">$0.10</div>
+                <div class="detail-time-val" id="detail-time-val" title="Click to toggle date format">Just now</div>
                 
                 <button class="buy-item-action-btn" id="buy-item-action-btn">Contact Seller</button>
 
@@ -1223,7 +1413,7 @@
             </div>
         </div>
 
-        <!-- Секция описания перенесена вниз под фото и текст -->
+        <!-- Секция описания -->
         <div class="detail-bottom-section">
             <div class="detail-section-title">Description</div>
             <div class="detail-item-desc" id="detail-item-desc">No description provided.</div>
@@ -1315,7 +1505,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно создания предмета (с боковым превью) -->
+    <!-- Модальное окно создания предмета -->
     <div class="modal-overlay" id="create-item-modal">
         <div class="modal-content create-item-modal-content">
             <button class="close-modal" id="close-create-item-btn">&times;</button>
@@ -1347,13 +1537,11 @@
                     </select>
                 </div>
 
-                <!-- Динамическое поле для Selling -->
                 <div class="setting-group" id="selling-price-group">
                     <label class="setting-label">Price ($)</label>
                     <input type="number" step="0.01" class="setting-input" id="item-price-input" placeholder="0.10">
                 </div>
 
-                <!-- Динамическое поле для Looking for Offers (с чекбоксами) -->
                 <div class="setting-group" id="offers-options-group" style="display: none;">
                     <label class="setting-label">Availability Scope</label>
                     <label class="checkbox-label">
@@ -1445,6 +1633,32 @@
             }, 3000);
         }
 
+        // Функция форматирования времени назад
+        function getTimeAgo(timestamp) {
+            if (!timestamp) return 'Just now';
+            const seconds = Math.floor((new Date() - timestamp) / 1000);
+            
+            if (seconds < 60) return 'Just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes} min ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours} hours ago`;
+            const days = Math.floor(hours / 24);
+            if (days === 1) return 'Yesterday';
+            if (days < 30) return `${days} days ago`;
+            const months = Math.floor(days / 30);
+            if (months < 12) return `${months} months ago`;
+            return `${Math.floor(months / 12)} years ago`;
+        }
+
+        // Функция точной даты
+        function getExactDate(timestamp) {
+            if (!timestamp) return 'Unknown date';
+            const date = new Date(timestamp);
+            const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            return date.toLocaleDateString('en-US', options);
+        }
+
         const currentUser = localStorage.getItem('currentUser');
         const authContainer = document.getElementById('auth-container');
         const homeLink = document.getElementById('home-link');
@@ -1518,16 +1732,25 @@
         const detailGameBadge = document.getElementById('detail-game-badge');
         const detailItemTitle = document.getElementById('detail-item-title');
         const detailPriceVal = document.getElementById('detail-price-val');
+        const detailTimeVal = document.getElementById('detail-time-val');
         const detailItemDesc = document.getElementById('detail-item-desc');
         const detailSellerBox = document.getElementById('detail-seller-box');
         const detailSellerAvatar = document.getElementById('detail-seller-avatar');
         const detailSellerName = document.getElementById('detail-seller-name');
         const buyItemActionBtn = document.getElementById('buy-item-action-btn');
 
+        // Элементы главной страницы товаров
+        const globalItemsGrid = document.getElementById('global-items-grid');
+        const sortSelect = document.getElementById('sort-select');
+        const tagsGroup = document.getElementById('tags-group');
+
         let userToDelete = null;
         let uploadedAvatarData = null; 
         let uploadedItemPhotoData = null;
-        let currentSellerUsername = null; // Сохраняем имя текущего продавца для перехода в профиль
+        let currentSellerUsername = null;
+        let activeGameTag = 'All';
+        let currentItemTimestamp = null;
+        let isExactTimeFormat = false;
 
         if (currentUser) {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -1537,24 +1760,160 @@
             }
         }
 
+        // Рендер всех товаров на главной
+        function renderGlobalItems() {
+            let allUsers = JSON.parse(localStorage.getItem('users')) || [];
+            let allItems = [];
+
+            allUsers.forEach(u => {
+                if (u.items && Array.isArray(u.items)) {
+                    u.items.forEach(item => {
+                        allItems.push({
+                            ...item,
+                            sellerUsername: u.username,
+                            sellerDisplayName: u.displayName || u.username,
+                            sellerAvatar: u.avatar
+                        });
+                    });
+                }
+            });
+
+            // Фильтрация по тегу игры
+            if (activeGameTag !== 'All') {
+                allItems = allItems.filter(item => (item.game || 'Murder Mystery 2') === activeGameTag);
+            }
+
+            // Сортировка
+            const sortBy = sortSelect.value;
+            if (sortBy === 'recently') {
+                allItems.sort((a, b) => (b.id || 0) - (a.id || 0));
+            } else if (sortBy === 'lowest') {
+                allItems.sort((a, b) => {
+                    const priceA = a.tag === 'selling' ? parseFloat(a.price) || 0 : 999999;
+                    const priceB = b.tag === 'selling' ? parseFloat(b.price) || 0 : 999999;
+                    return priceA - priceB;
+                });
+            } else if (sortBy === 'highest') {
+                allItems.sort((a, b) => {
+                    const priceA = a.tag === 'selling' ? parseFloat(a.price) || 0 : -1;
+                    const priceB = b.tag === 'selling' ? parseFloat(b.price) || 0 : -1;
+                    return priceB - priceA;
+                });
+            }
+
+            globalItemsGrid.innerHTML = '';
+            if (allItems.length === 0) {
+                globalItemsGrid.innerHTML = '<div class="no-global-items">No items available at the moment.</div>';
+                return;
+            }
+
+            allItems.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'global-item-card';
+
+                let imgHtml = `<div class="global-item-img">No image</div>`;
+                if (item.photo) {
+                    imgHtml = `<img class="global-item-img" src="${item.photo}" alt="Item">`;
+                }
+
+                let priceText = item.tag === 'selling' ? `$${item.price}` : 'Offers';
+                let timeAgo = getTimeAgo(item.id);
+
+                card.innerHTML = `
+                    ${imgHtml}
+                    <div class="global-item-name">${item.name}</div>
+                    <div class="global-item-footer">
+                        <div class="global-item-price">${priceText}</div>
+                        <div class="global-item-time">${timeAgo}</div>
+                    </div>
+                `;
+
+                // Открытие детальной страницы товара
+                card.addEventListener('click', () => {
+                    currentSellerUsername = item.sellerUsername;
+                    currentItemTimestamp = item.id;
+                    isExactTimeFormat = false;
+
+                    detailGameBadge.textContent = item.game || 'Murder Mystery 2';
+                    detailItemTitle.textContent = item.name;
+                    detailItemDesc.textContent = item.description || 'No description provided.';
+                    
+                    if (item.tag === 'selling') {
+                        detailPriceVal.textContent = `$${item.price}`;
+                    } else {
+                        detailPriceVal.textContent = 'Looking for Offers';
+                    }
+
+                    detailTimeVal.textContent = getTimeAgo(currentItemTimestamp);
+
+                    if (item.photo) {
+                        detailMainImg.innerHTML = `<img src="${item.photo}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;" alt="Item">`;
+                    } else {
+                        detailMainImg.innerHTML = 'No image';
+                    }
+
+                    const firstLetter = item.sellerUsername.charAt(0).toUpperCase();
+                    const avatarColor = getColorFromName(item.sellerUsername);
+
+                    if (item.sellerAvatar) {
+                        detailSellerAvatar.innerHTML = `<img src="${item.sellerAvatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Seller">`;
+                        detailSellerAvatar.style.backgroundColor = 'transparent';
+                    } else {
+                        detailSellerAvatar.innerHTML = firstLetter;
+                        detailSellerAvatar.style.backgroundColor = avatarColor;
+                    }
+                    detailSellerName.textContent = item.sellerDisplayName;
+
+                    itemDetailPage.classList.add('active');
+                });
+
+                globalItemsGrid.appendChild(card);
+            });
+        }
+
+        // Переключение формата времени при нажатии на него на странице покупки
+        detailTimeVal.addEventListener('click', () => {
+            if (!currentItemTimestamp) return;
+            isExactTimeFormat = !isExactTimeFormat;
+            if (isExactTimeFormat) {
+                detailTimeVal.textContent = getExactDate(currentItemTimestamp);
+            } else {
+                detailTimeVal.textContent = getTimeAgo(currentItemTimestamp);
+            }
+        });
+
+        // Обработчики фильтров тегов игр
+        tagsGroup.addEventListener('click', (e) => {
+            const btn = e.target.closest('.game-tag-btn');
+            if (!btn) return;
+            document.querySelectorAll('.game-tag-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeGameTag = btn.getAttribute('data-tag');
+            renderGlobalItems();
+        });
+
+        sortSelect.addEventListener('change', () => {
+            renderGlobalItems();
+        });
+
         homeLink.addEventListener('click', (e) => {
             e.preventDefault();
             itemDetailPage.classList.remove('active');
             profileModal.classList.remove('active');
+            renderGlobalItems();
         });
 
         detailBackBtn.addEventListener('click', () => {
             itemDetailPage.classList.remove('active');
         });
 
-        // Клик по профилю продавца на странице товара — открывает его профиль
+        // Клик по профилю продавца на странице товара
         detailSellerBox.addEventListener('click', () => {
             if (!currentSellerUsername) return;
             let allUsers = JSON.parse(localStorage.getItem('users')) || [];
             let sellerData = allUsers.find(u => u.username === currentSellerUsername);
             if (!sellerData) return;
 
-            // Заполняем модальное окно данными продавца
             const displayId = sellerData.customId || '1';
             const displayName = sellerData.displayName || sellerData.username;
             const firstLetter = sellerData.username.charAt(0).toUpperCase();
@@ -1566,19 +1925,16 @@
             } else {
                 modalAvatarBox.style.backgroundColor = avatarColor;
                 modalAvatarBox.textContent = firstLetter;
-                modalAvatarBox.innerHTML = firstLetter;
             }
             modalUsernameText.textContent = displayName;
             modalUserIdText.textContent = `ID: ${displayId}`;
 
-            // Скрываем или показываем кнопку БД админа (только если это вошедший админ и это его профиль)
             if (displayId === 'knqw' && currentUser === sellerData.username) {
                 openDbBtn.style.display = 'block';
             } else {
                 openDbBtn.style.display = 'none';
             }
 
-            // Скрываем кнопку Add Item если это чужой профиль
             if (currentUser !== sellerData.username) {
                 openSelectGameBtn.style.display = 'none';
             } else {
@@ -1613,7 +1969,6 @@
         itemPriceInput.addEventListener('input', updateItemPreview);
         itemTagSelect.addEventListener('change', updateItemPreview);
 
-        // Функция рендеринга товаров в профиле с открытием детальной страницы
         function renderUserItems(userData) {
             if (!userData.items || userData.items.length === 0) {
                 itemsContainerBox.innerHTML = '<div class="no-items-text">You don\'t have any items listed at the moment</div>';
@@ -1638,11 +1993,13 @@
                     <div class="item-card-price">${priceText}</div>
                 `;
 
-                // Обработчик клика для открытия страницы товара на весь экран
                 card.addEventListener('click', () => {
                     profileModal.classList.remove('active');
                     
                     currentSellerUsername = userData.username;
+                    currentItemTimestamp = item.id;
+                    isExactTimeFormat = false;
+
                     detailGameBadge.textContent = item.game || 'Murder Mystery 2';
                     detailItemTitle.textContent = item.name;
                     detailItemDesc.textContent = item.description || 'No description provided.';
@@ -1652,6 +2009,8 @@
                     } else {
                         detailPriceVal.textContent = 'Looking for Offers';
                     }
+
+                    detailTimeVal.textContent = getTimeAgo(currentItemTimestamp);
 
                     if (item.photo) {
                         detailMainImg.innerHTML = `<img src="${item.photo}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;" alt="Item">`;
@@ -1845,7 +2204,6 @@
                 switchModal.classList.add('active');
             });
 
-            // Открытие настроек
             openSettingsBtn.addEventListener('click', () => {
                 profileModal.classList.remove('active');
                 settingUsernameInput.value = userData.username;
@@ -1963,7 +2321,6 @@
                 }, 1000);
             });
 
-            // Открытие выбора игры
             openSelectGameBtn.addEventListener('click', () => {
                 profileModal.classList.remove('active');
                 selectGameModal.classList.add('active');
@@ -1973,7 +2330,6 @@
                 selectGameModal.classList.remove('active');
             });
 
-            // Клик по Murder Mystery 2
             selectMm2Btn.addEventListener('click', () => {
                 selectGameModal.classList.remove('active');
                 itemNameInput.value = '';
@@ -2011,7 +2367,6 @@
                 itemPhotoFileInput.value = '';
             });
 
-            // Логика галочки "All games"
             scopeAllGames.addEventListener('change', (e) => {
                 const isChecked = e.target.checked;
                 gameCheckboxes.forEach(cb => {
@@ -2026,7 +2381,6 @@
                 });
             });
 
-            // Переключение тегов
             itemTagSelect.addEventListener('change', (e) => {
                 if (e.target.value === 'selling') {
                     sellingPriceGroup.style.display = 'block';
@@ -2037,7 +2391,6 @@
                 }
             });
 
-            // Сохранение (публикация) предмета
             saveItemBtn.addEventListener('click', () => {
                 const itemName = itemNameInput.value.trim();
                 const itemDesc = document.getElementById('item-desc-input').value.trim();
@@ -2073,6 +2426,7 @@
                 }
 
                 renderUserItems(userData);
+                renderGlobalItems();
                 showToast('Item listed successfully!');
                 createItemModal.classList.remove('active');
             });
@@ -2133,11 +2487,15 @@
                     }
 
                     renderDatabaseTable();
+                    renderGlobalItems();
                 }
                 confirmModal.classList.remove('active');
                 dbModal.classList.add('active');
             });
         }
+
+        // Первичный рендер товаров на главной при загрузке страницы
+        renderGlobalItems();
     </script>
 
 </body>
