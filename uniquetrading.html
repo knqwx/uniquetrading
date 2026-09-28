@@ -1561,12 +1561,6 @@
             </div>
 
             <div class="setting-group">
-                <label class="setting-label">Custom ID</label>
-                <input type="text" class="setting-input" id="setting-customid-input" placeholder="e.g. knqw">
-                <div class="setting-hint">Your unique custom profile ID.</div>
-            </div>
-
-            <div class="setting-group">
                 <label class="setting-label">Username</label>
                 <input type="text" class="setting-input" id="setting-username-input">
                 <div class="setting-hint" id="username-hint">Can be changed once every 2 weeks.</div>
@@ -1725,6 +1719,7 @@
             authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA2MDU2NDIsImlkIjoiMDFhMGU1NjctNjYwMS03NmMyLWE2YzUtODQyNTEzYTk4MjgzIiwia2lkIjoiakdIakdfX1A3bTFmRGxXRHNhbFR1dGg0OHB6VTF5MFVMZGQ1TzhIUm94ZyIsInJpZCI6ImNjODc2N2NkLTMwYmYtNDJiNy04NDQ1LTIxNjRjY2E0OTNlMSJ9.0hZK9eeqN3Md2Dh7ZgWKDOJlk-3GHN8OZxGvKb_aGVjCQllclb1A3Z0EAstpv18ejSRHHGOB0yoOkm1se5A0Bg"
         });
 
+        // Функция инициализации таблиц на случай их отсутствия
         async function initDB() {
             try {
                 await db.execute(`
@@ -1899,7 +1894,6 @@
         const resetAvatarBtn = document.getElementById('reset-avatar-btn');
         const settingsAvatarPreview = document.getElementById('settings-avatar-preview');
 
-        const settingCustomIdInput = document.getElementById('setting-customid-input');
         const settingUsernameInput = document.getElementById('setting-username-input');
         const settingDisplaynameInput = document.getElementById('setting-displayname-input');
         const settingEmailInput = document.getElementById('setting-email-input');
@@ -2492,7 +2486,6 @@
 
                 openSettingsBtn.addEventListener('click', () => {
                     profileModal.classList.remove('active');
-                    settingCustomIdInput.value = userData.customId || '';
                     settingUsernameInput.value = userData.username;
                     settingDisplaynameInput.value = userData.displayName || userData.username;
                     settingEmailInput.value = userData.email || '';
@@ -2561,7 +2554,6 @@
                 });
 
                 saveSettingsBtn.addEventListener('click', async () => {
-                    const newCustomId = settingCustomIdInput.value.trim();
                     const newUsername = settingUsernameInput.value.trim();
                     const newDisplayName = settingDisplaynameInput.value.trim();
                     const newEmail = settingEmailInput.value.trim();
@@ -2571,19 +2563,6 @@
                     if (!newUsername) {
                         showToast('Username cannot be empty');
                         return;
-                    }
-
-                    // Проверка занятости кастомного ID, если он изменился
-                    if (newCustomId && newCustomId !== userData.customId) {
-                        const existingIdUser = await db.execute({
-                            sql: "SELECT * FROM users WHERE customId = ?",
-                            args: [newCustomId]
-                        });
-                        if (existingIdUser.rows.length > 0) {
-                            showToast('This Custom ID is already taken!');
-                            return;
-                        }
-                        userData.customId = newCustomId;
                     }
 
                     if (newUsername !== userData.username) {
