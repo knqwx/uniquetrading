@@ -1582,7 +1582,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно Select Game (с миниатюрами MM2.webp и SAB.webp) -->
+    <!-- Модальное окно Select Game -->
     <div class="modal-overlay" id="select-game-modal">
         <div class="modal-content select-game-modal-content">
             <button class="close-modal" id="close-select-game-btn">&times;</button>
@@ -1970,7 +1970,7 @@
         let currentSellerUsername = null;
         let currentActiveItem = null;
         let editingItemId = null;
-        let activeGameTag = 'All';
+        let activeGameTag = 'All'; // Установлено по умолчанию для автозагрузки всех предметов
         let currentViewMode = 'home';
         let currentItemTimestamp = null;
         let isExactTimeFormat = false;
@@ -2425,6 +2425,89 @@
         (async function initApp() {
             await initDB();
 
+            // Кнопка открытия выбора игры
+            openSelectGameBtn.addEventListener('click', () => {
+                profileModal.classList.remove('active');
+                selectGameModal.classList.add('active');
+            });
+
+            closeSelectGameBtn.addEventListener('click', () => {
+                selectGameModal.classList.remove('active');
+            });
+
+            function setupGameSelection(gameName) {
+                selectGameModal.classList.remove('active');
+                selectedGameForListing = gameName;
+                editingItemId = null;
+                createItemModalTitle.textContent = `Create Item (${gameName})`;
+                saveItemBtn.textContent = 'List Item';
+
+                itemNameInput.value = '';
+                document.getElementById('item-desc-input').value = '';
+                itemPriceInput.value = '';
+                
+                uploadedItemPhotoData = null;
+                updateItemPreview();
+
+                itemTagSelect.value = 'selling';
+                sellingPriceGroup.style.display = 'block';
+                offersOptionsGroup.style.display = 'none';
+
+                const scopeAllGames = document.getElementById('scope-all-games');
+                if (scopeAllGames) scopeAllGames.checked = false;
+                document.querySelectorAll('.game-checkbox').forEach(cb => cb.checked = true);
+
+                createItemModal.classList.add('active');
+            }
+
+            selectMm2Btn.addEventListener('click', () => setupGameSelection('Murder Mystery 2'));
+            selectSabBtn.addEventListener('click', () => setupGameSelection('Steal a brainrot'));
+
+            closeCreateItemBtn.addEventListener('click', () => {
+                createItemModal.classList.remove('active');
+            });
+
+            itemPhotoFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        uploadedItemPhotoData = event.target.result;
+                        updateItemPreview();
+                        showToast('Photo loaded successfully!');
+                    }
+                    reader.readAsDataURL(file);
+                }
+                itemPhotoFileInput.value = '';
+            });
+
+            const scopeAllGames = document.getElementById('scope-all-games');
+            if (scopeAllGames) {
+                scopeAllGames.addEventListener('change', (e) => {
+                    const isChecked = e.target.checked;
+                    document.querySelectorAll('.game-checkbox').forEach(cb => {
+                        cb.checked = isChecked;
+                    });
+                });
+            }
+
+            document.querySelectorAll('.game-checkbox').forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const allChecked = Array.from(document.querySelectorAll('.game-checkbox')).every(box => box.checked);
+                    if (scopeAllGames) scopeAllGames.checked = allChecked;
+                });
+            });
+
+            itemTagSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'selling') {
+                    sellingPriceGroup.style.display = 'block';
+                    offersOptionsGroup.style.display = 'none';
+                } else {
+                    sellingPriceGroup.style.display = 'none';
+                    offersOptionsGroup.style.display = 'block';
+                }
+            });
+
             if (currentUser) {
                 let userData = await getUserByUsername(currentUser);
 
@@ -2595,84 +2678,6 @@
                     }, 1000);
                 });
 
-                openSelectGameBtn.addEventListener('click', () => {
-                    profileModal.classList.remove('active');
-                    selectGameModal.classList.add('active');
-                });
-
-                closeSelectGameBtn.addEventListener('click', () => {
-                    selectGameModal.classList.remove('active');
-                });
-
-                function setupGameSelection(gameName) {
-                    selectGameModal.classList.remove('active');
-                    selectedGameForListing = gameName;
-                    editingItemId = null;
-                    createItemModalTitle.textContent = `Create Item (${gameName})`;
-                    saveItemBtn.textContent = 'List Item';
-
-                    itemNameInput.value = '';
-                    document.getElementById('item-desc-input').value = '';
-                    itemPriceInput.value = '';
-                    
-                    uploadedItemPhotoData = null;
-                    updateItemPreview();
-
-                    itemTagSelect.value = 'selling';
-                    sellingPriceGroup.style.display = 'block';
-                    offersOptionsGroup.style.display = 'none';
-
-                    scopeAllGames.checked = false;
-                    document.querySelectorAll('.game-checkbox').forEach(cb => cb.checked = true);
-
-                    createItemModal.classList.add('active');
-                }
-
-                selectMm2Btn.addEventListener('click', () => setupGameSelection('Murder Mystery 2'));
-                selectSabBtn.addEventListener('click', () => setupGameSelection('Steal a brainrot'));
-
-                closeCreateItemBtn.addEventListener('click', () => {
-                    createItemModal.classList.remove('active');
-                });
-
-                itemPhotoFileInput.addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = function(event) {
-                            uploadedItemPhotoData = event.target.result;
-                            updateItemPreview();
-                            showToast('Photo loaded successfully!');
-                        }
-                        reader.readAsDataURL(file);
-                    }
-                    itemPhotoFileInput.value = '';
-                });
-
-                scopeAllGames.addEventListener('change', (e) => {
-                    const isChecked = e.target.checked;
-                    document.querySelectorAll('.game-checkbox').forEach(cb => {
-                        cb.checked = isChecked;
-                    });
-                });
-
-                document.querySelectorAll('.game-checkbox').forEach(cb => {
-                    cb.addEventListener('change', () => {
-                        const allChecked = Array.from(document.querySelectorAll('.game-checkbox')).every(box => box.checked);
-                        scopeAllGames.checked = allChecked;
-                    });
-                });
-
-                itemTagSelect.addEventListener('change', (e) => {
-                    if (e.target.value === 'selling') {
-                        sellingPriceGroup.style.display = 'block';
-                        offersOptionsGroup.style.display = 'none';
-                    } else {
-                        sellingPriceGroup.style.display = 'none';
-                        offersOptionsGroup.style.display = 'block';
-                    }
-                });
-
                 saveItemBtn.addEventListener('click', async () => {
                     const itemName = itemNameInput.value.trim();
                     const itemDesc = document.getElementById('item-desc-input').value.trim();
@@ -2795,6 +2800,7 @@
                 });
             }
 
+            // Автоматическая загрузка всех предметов при старте сайта
             renderGlobalItems();
         })();
     </script>
