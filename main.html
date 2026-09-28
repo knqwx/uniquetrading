@@ -1682,6 +1682,11 @@
 
     <script src="https://unpkg.com/@libsql/client@0.6.0/web/index.umd.js"></script>
     <script>
+        const db = libsql.createClient({
+    url: "ВАШ_URL_ИЗ_TURSO",
+    authToken: "ВАШ_ТОКЕН_ИЗ_TURSO"
+});
+        
         function getColorFromName(name) {
             const colors = ['#ff7300', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#009688', '#4caf50', '#ff9800'];
             let hash = 0;
