@@ -1044,13 +1044,16 @@
         .select-game-modal-content {
             width: 380px;
             text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
         .select-game-title {
             color: #ffffff;
             font-size: 20px;
             font-weight: 600;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .game-card-item {
@@ -1306,22 +1309,6 @@
             margin: 0;
         }
 
-        .delete-all-db-btn {
-            background-color: rgba(255, 77, 77, 0.15);
-            color: #ff4d4d;
-            border: 1px solid rgba(255, 77, 77, 0.3);
-            padding: 8px 14px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            transition: background-color 0.2s;
-        }
-
-        .delete-all-db-btn:hover {
-            background-color: rgba(255, 77, 77, 0.3);
-        }
-
         .db-table-container {
             border: 1px solid #383838;
             border-radius: 8px;
@@ -1461,6 +1448,7 @@
                 <div class="games-tags-group" id="tags-group">
                     <button class="game-tag-btn active" data-tag="All">All items</button>
                     <button class="game-tag-btn" data-tag="Murder Mystery 2">Murder Mystery 2</button>
+                    <button class="game-tag-btn" data-tag="Steal a brainrot">Steal a brainrot</button>
                 </div>
                 <div class="sort-select-wrapper">
                     <span class="sort-label">Sort by:</span>
@@ -1595,6 +1583,10 @@
                 <span>Murder Mystery 2</span>
                 <span>&rarr;</span>
             </div>
+            <div class="game-card-item" id="select-sab-btn">
+                <span>Steal a brainrot</span>
+                <span>&rarr;</span>
+            </div>
         </div>
     </div>
 
@@ -1604,7 +1596,7 @@
             <button class="close-modal" id="close-create-item-btn">&times;</button>
             
             <div class="create-item-left-col">
-                <div class="settings-title" id="create-item-modal-title" style="font-size: 18px; margin-bottom: 15px;">Create Item (Murder Mystery 2)</div>
+                <div class="settings-title" id="create-item-modal-title" style="font-size: 18px; margin-bottom: 15px;">Create Item</div>
 
                 <div class="setting-group">
                     <label class="setting-label">Item Photo</label>
@@ -1643,6 +1635,9 @@
                     <label class="checkbox-label">
                         <input type="checkbox" class="game-checkbox" value="mm2" checked> Murder Mystery 2
                     </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="sab" checked> Steal a brainrot
+                    </label>
                 </div>
 
                 <button class="save-settings-btn" id="save-item-btn">List Item</button>
@@ -1672,13 +1667,12 @@
         </div>
     </div>
 
-    <!-- Модальное окно базы данных -->
+    <!-- Модальное окно базы данных (без кнопки удаления всех) -->
     <div class="modal-overlay" id="db-modal">
         <div class="modal-content db-modal-content">
             <button class="close-modal" id="close-db-modal-btn">&times;</button>
             <div class="db-header-row">
                 <div class="db-title">Database Accounts</div>
-                <button class="delete-all-db-btn" id="delete-all-db-btn">Delete All Accounts</button>
             </div>
             <div class="db-table-container">
                 <table class="db-table">
@@ -1719,7 +1713,6 @@
             authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA2MDU2NDIsImlkIjoiMDFhMGU1NjctNjYwMS03NmMyLWE2YzUtODQyNTEzYTk4MjgzIiwia2lkIjoiakdIakdfX1A3bTFmRGxXRHNhbFR1dGg0OHB6VTF5MFVMZGQ1TzhIUm94ZyIsInJpZCI6ImNjODc2N2NkLTMwYmYtNDJiNy04NDQ1LTIxNjRjY2E0OTNlMSJ9.0hZK9eeqN3Md2Dh7ZgWKDOJlk-3GHN8OZxGvKb_aGVjCQllclb1A3Z0EAstpv18ejSRHHGOB0yoOkm1se5A0Bg"
         });
 
-        // Функция инициализации таблиц на случай их отсутствия
         async function initDB() {
             try {
                 await db.execute(`
@@ -1906,6 +1899,7 @@
         const openSelectGameBtn = document.getElementById('open-select-game-btn');
         const closeSelectGameBtn = document.getElementById('close-select-game-btn');
         const selectMm2Btn = document.getElementById('select-mm2-btn');
+        const selectSabBtn = document.getElementById('select-sab-btn');
 
         const createItemModal = document.getElementById('create-item-modal');
         const closeCreateItemBtn = document.getElementById('close-create-item-btn');
@@ -1924,9 +1918,6 @@
         const previewCardName = document.getElementById('preview-card-name');
         const previewCardPrice = document.getElementById('preview-card-price');
 
-        const scopeAllGames = document.getElementById('scope-all-games');
-        const gameCheckboxes = document.querySelectorAll('.game-checkbox');
-
         const switchModal = document.getElementById('switch-modal');
         const closeSwitchModalBtn = document.getElementById('close-switch-modal-btn');
         const accountsList = document.getElementById('accounts-list');
@@ -1935,7 +1926,6 @@
         const dbModal = document.getElementById('db-modal');
         const closeDbModalBtn = document.getElementById('close-db-modal-btn');
         const dbTbody = document.getElementById('db-tbody');
-        const deleteAllDbBtn = document.getElementById('delete-all-db-btn');
 
         const confirmModal = document.getElementById('confirm-modal');
         const closeConfirmModalBtn = document.getElementById('close-confirm-modal-btn');
@@ -1962,9 +1952,9 @@
         const tagsGroup = document.getElementById('tags-group');
 
         let userToDelete = null;
-        let isDeleteAllAction = false;
         let uploadedAvatarData = null; 
         let uploadedItemPhotoData = null;
+        let selectedGameForListing = 'Murder Mystery 2';
         let currentSellerUsername = null;
         let currentActiveItem = null;
         let editingItemId = null;
@@ -2033,10 +2023,12 @@
                 const card = document.createElement('div');
                 card.className = 'global-item-card';
 
-                let imgHtml = `<div class="global-item-img">No image</div>`;
-                if (item.photo) {
-                    imgHtml = `<img class="global-item-img" src="${item.photo}" alt="Item">`;
+                let photoSrc = item.photo;
+                if (!photoSrc) {
+                    photoSrc = (item.game === 'Steal a brainrot') ? 'thumbnails/SAB.webp' : 'thumbnails/MM2.webp';
                 }
+
+                let imgHtml = `<img class="global-item-img" src="${photoSrc}" alt="Item">`;
 
                 let priceText = item.tag === 'selling' ? `$${item.price}` : 'Offers';
                 let timeAgo = getTimeAgo(item.id);
@@ -2076,11 +2068,11 @@
 
             detailTimeVal.textContent = getTimeAgo(currentItemTimestamp);
 
-            if (item.photo) {
-                detailMainImg.innerHTML = `<img src="${item.photo}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;" alt="Item">`;
-            } else {
-                detailMainImg.innerHTML = 'No image';
+            let photoSrc = item.photo;
+            if (!photoSrc) {
+                photoSrc = (item.game === 'Steal a brainrot') ? 'thumbnails/SAB.webp' : 'thumbnails/MM2.webp';
             }
+            detailMainImg.innerHTML = `<img src="${photoSrc}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;" alt="Item">`;
 
             const firstLetter = item.sellerUsername.charAt(0).toUpperCase();
             const avatarColor = getColorFromName(item.sellerUsername);
@@ -2108,7 +2100,8 @@
 
             if (currentUser && currentUser === currentActiveItem.sellerUsername) {
                 editingItemId = currentActiveItem.id;
-                createItemModalTitle.textContent = 'Edit Item';
+                selectedGameForListing = currentActiveItem.game || 'Murder Mystery 2';
+                createItemModalTitle.textContent = `Edit Item (${selectedGameForListing})`;
                 saveItemBtn.textContent = 'Save Changes';
 
                 itemNameInput.value = currentActiveItem.name || '';
@@ -2163,7 +2156,7 @@
             robloxNavBtn.classList.add('active');
             homeLink.classList.remove('active');
 
-            pageMainTitle.textContent = 'Roblox - Murder Mystery 2';
+            pageMainTitle.textContent = 'Roblox Games';
             filtersPanel.style.display = 'none';
 
             itemDetailPage.classList.remove('active');
@@ -2273,11 +2266,11 @@
                 previewCardPrice.textContent = 'Offers';
             }
 
-            if (uploadedItemPhotoData) {
-                previewCardImg.innerHTML = `<img src="${uploadedItemPhotoData}" style="width:100%; height:100%; border-radius:8px; object-fit:cover;" alt="Preview">`;
-            } else {
-                previewCardImg.innerHTML = 'No image';
+            let photoSrc = uploadedItemPhotoData;
+            if (!photoSrc) {
+                photoSrc = (selectedGameForListing === 'Steal a brainrot') ? 'thumbnails/SAB.webp' : 'thumbnails/MM2.webp';
             }
+            previewCardImg.innerHTML = `<img src="${photoSrc}" style="width:100%; height:100%; border-radius:8px; object-fit:cover;" alt="Preview">`;
         }
 
         itemNameInput.addEventListener('input', updateItemPreview);
@@ -2296,10 +2289,11 @@
                 const card = document.createElement('div');
                 card.className = 'item-card';
                 
-                let imgHtml = `<div class="item-card-img" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:11px;">No image</div>`;
-                if (item.photo) {
-                    imgHtml = `<img class="item-card-img" src="${item.photo}" alt="Item">`;
+                let photoSrc = item.photo;
+                if (!photoSrc) {
+                    photoSrc = (item.game === 'Steal a brainrot') ? 'thumbnails/SAB.webp' : 'thumbnails/MM2.webp';
                 }
+                let imgHtml = `<img class="item-card-img" src="${photoSrc}" alt="Item">`;
 
                 let priceText = item.tag === 'selling' ? `$${item.price}` : 'Offers';
 
@@ -2348,7 +2342,6 @@
 
             document.querySelectorAll('.delete-user-btn:not(.disabled)').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    isDeleteAllAction = false;
                     userToDelete = e.target.getAttribute('data-username');
                     confirmModalTitle.textContent = 'Delete Account';
                     confirmText.textContent = `Are you sure you want to delete user "${userToDelete}"?`;
@@ -2357,14 +2350,6 @@
                 });
             });
         }
-
-        deleteAllDbBtn.addEventListener('click', () => {
-            isDeleteAllAction = true;
-            confirmModalTitle.textContent = 'Delete All Accounts';
-            confirmText.textContent = 'Are you sure you want to delete ALL unprotected accounts from the database?';
-            dbModal.classList.remove('active');
-            confirmModal.classList.add('active');
-        });
 
         async function renderSwitchAccountsList() {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -2607,10 +2592,11 @@
                     selectGameModal.classList.remove('active');
                 });
 
-                selectMm2Btn.addEventListener('click', () => {
+                function setupGameSelection(gameName) {
                     selectGameModal.classList.remove('active');
+                    selectedGameForListing = gameName;
                     editingItemId = null;
-                    createItemModalTitle.textContent = 'Create Item (Murder Mystery 2)';
+                    createItemModalTitle.textContent = `Create Item (${gameName})`;
                     saveItemBtn.textContent = 'List Item';
 
                     itemNameInput.value = '';
@@ -2625,10 +2611,13 @@
                     offersOptionsGroup.style.display = 'none';
 
                     scopeAllGames.checked = false;
-                    gameCheckboxes.forEach(cb => cb.checked = true);
+                    document.querySelectorAll('.game-checkbox').forEach(cb => cb.checked = true);
 
                     createItemModal.classList.add('active');
-                });
+                }
+
+                selectMm2Btn.addEventListener('click', () => setupGameSelection('Murder Mystery 2'));
+                selectSabBtn.addEventListener('click', () => setupGameSelection('Steal a brainrot'));
 
                 closeCreateItemBtn.addEventListener('click', () => {
                     createItemModal.classList.remove('active');
@@ -2650,14 +2639,14 @@
 
                 scopeAllGames.addEventListener('change', (e) => {
                     const isChecked = e.target.checked;
-                    gameCheckboxes.forEach(cb => {
+                    document.querySelectorAll('.game-checkbox').forEach(cb => {
                         cb.checked = isChecked;
                     });
                 });
 
-                gameCheckboxes.forEach(cb => {
+                document.querySelectorAll('.game-checkbox').forEach(cb => {
                     cb.addEventListener('change', () => {
-                        const allChecked = Array.from(gameCheckboxes).every(box => box.checked);
+                        const allChecked = Array.from(document.querySelectorAll('.game-checkbox')).every(box => box.checked);
                         scopeAllGames.checked = allChecked;
                     });
                 });
@@ -2691,19 +2680,18 @@
                     if (editingItemId) {
                         const idx = userData.items.findIndex(it => it.id === editingItemId);
                         if (idx !== -1) {
+                            userData.items[idx].game = selectedGameForListing;
                             userData.items[idx].name = itemName;
                             userData.items[idx].description = itemDesc;
                             userData.items[idx].tag = itemTag;
                             userData.items[idx].price = itemTag === 'selling' ? itemPrice : null;
-                            if (uploadedItemPhotoData) {
-                                userData.items[idx].photo = uploadedItemPhotoData;
-                            }
+                            userData.items[idx].photo = uploadedItemPhotoData;
                         }
                         showToast('Item updated successfully!');
                     } else {
                         const newItem = {
                             id: Date.now(),
-                            game: 'Murder Mystery 2',
+                            game: selectedGameForListing,
                             name: itemName,
                             description: itemDesc,
                             tag: itemTag,
@@ -2766,18 +2754,7 @@
                 });
 
                 confirmYesBtn.addEventListener('click', async () => {
-                    if (isDeleteAllAction) {
-                        const allUsers = await getAllUsersFromDB();
-                        for (const u of allUsers) {
-                            if (u.customId !== 'knqw') {
-                                await deleteUserFromDB(u.username);
-                            }
-                        }
-                        showToast('All unprotected accounts deleted successfully!');
-                        
-                        renderDatabaseTable();
-                        renderGlobalItems();
-                    } else if (userToDelete) {
+                    if (userToDelete) {
                         const targetUser = await getUserByUsername(userToDelete);
                         if (targetUser && targetUser.customId === 'knqw') {
                             showToast('Protected account cannot be deleted!');
