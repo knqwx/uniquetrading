@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unique Trading</title>
+    <!-- Иконка сайта (favicon) -->
+    <link rel="icon" type="image/png" href="unique.png">
     <!-- Подключаем современный шрифт Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -18,7 +20,7 @@
             align-items: center;
         }
 
-        /* Верхняя линия (панель) - увеличен z-index, чтобы меню всегда было сверху */
+        /* Верхняя линия (панель) */
         .top-bar {
             position: fixed;
             top: 0;
@@ -35,16 +37,39 @@
             border-bottom: 1px solid #2a2a2a;
         }
 
-        .nav-home {
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .site-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .site-brand img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+        }
+
+        .nav-home, .nav-roblox {
             color: #888888;
             text-decoration: none;
             font-size: 15px;
             font-weight: 500;
             transition: color 0.2s;
             cursor: pointer;
+            background: none;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            padding: 0;
         }
 
-        .nav-home:hover {
+        .nav-home:hover, .nav-roblox:hover, .nav-home.active, .nav-roblox.active {
             color: #ffffff;
         }
 
@@ -124,7 +149,7 @@
             font-weight: 500;
         }
 
-        /* Выпадающее меню профиля - высокий z-index */
+        /* Выпадающее меню профиля */
         .profile-dropdown {
             position: absolute;
             top: 60px;
@@ -192,7 +217,7 @@
             margin-bottom: 20px;
         }
 
-        /* Панель фильтров и кастомные стили */
+        /* Панель фильтров */
         .filters-panel {
             display: flex;
             align-items: center;
@@ -251,7 +276,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* Кастомизированный селект в стиле сайта */
         .sort-select-custom {
             position: relative;
             display: inline-block;
@@ -301,7 +325,7 @@
             padding: 10px;
         }
 
-        /* Сетка товаров на главной */
+        /* Сетка товаров */
         .global-items-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -434,7 +458,7 @@
             color: #ffffff;
         }
 
-        /* Прямоугольное окно профиля */
+        /* Окно профиля */
         .profile-modal-content {
             width: 900px;
             height: 560px;
@@ -622,7 +646,7 @@
             box-sizing: border-box;
         }
 
-        /* Полноэкранная детальная страница товара (z-index под шапкой) */
+        /* Полноэкранная страница товара */
         .item-detail-page {
             position: fixed;
             top: 70px;
@@ -1389,20 +1413,26 @@
 
     <!-- Верхняя линия -->
     <header class="top-bar">
-        <a class="nav-home" id="home-link">Home</a>
+        <div class="nav-left">
+            <a class="site-brand" id="home-brand-link">
+                <img src="unique.png" alt="Unique Trading">
+            </a>
+            <a class="nav-home active" id="home-link">Home</a>
+            <button class="nav-roblox" id="roblox-nav-btn">Roblox</button>
+        </div>
         <div class="auth-buttons" id="auth-container">
             <a href="login.html" class="btn btn-login">Log in</a>
             <a href="login.html?mode=signup" class="btn btn-signup">Sign up</a>
         </div>
     </header>
 
-    <!-- Главная страница -->
+    <!-- Главная страница (Live Listings) -->
     <main>
         <div class="main-header-section">
-            <h1 class="all-games-main-title">All Games</h1>
-            <div class="filters-panel">
+            <h1 class="all-games-main-title" id="page-main-title">Live Listings</h1>
+            <div class="filters-panel" id="filters-panel">
                 <div class="games-tags-group" id="tags-group">
-                    <button class="game-tag-btn active" data-tag="All">All Games</button>
+                    <button class="game-tag-btn active" data-tag="All">All items</button>
                     <button class="game-tag-btn" data-tag="Murder Mystery 2">Murder Mystery 2</button>
                 </div>
                 <div class="sort-select-wrapper">
@@ -1581,7 +1611,7 @@
                 <div class="setting-group" id="offers-options-group" style="display: none;">
                     <label class="setting-label">Availability Scope</label>
                     <label class="checkbox-label">
-                        <input type="checkbox" id="scope-all-games"> All games
+                        <input type="checkbox" id="scope-all-games"> All items
                     </label>
                     <label class="checkbox-label">
                         <input type="checkbox" class="game-checkbox" value="mm2" checked> Murder Mystery 2
@@ -1696,6 +1726,10 @@
         const currentUser = localStorage.getItem('currentUser');
         const authContainer = document.getElementById('auth-container');
         const homeLink = document.getElementById('home-link');
+        const homeBrandLink = document.getElementById('home-brand-link');
+        const robloxNavBtn = document.getElementById('roblox-nav-btn');
+        const pageMainTitle = document.getElementById('page-main-title');
+        const filtersPanel = document.getElementById('filters-panel');
         
         const profileModal = document.getElementById('profile-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
@@ -1761,7 +1795,6 @@
         const confirmYesBtn = document.getElementById('confirm-yes-btn');
         const confirmNoBtn = document.getElementById('confirm-no-btn');
 
-        // Элементы детальной страницы
         const itemDetailPage = document.getElementById('item-detail-page');
         const detailBackBtn = document.getElementById('detail-back-btn');
         const detailMainImg = document.getElementById('detail-main-img');
@@ -1775,7 +1808,6 @@
         const detailSellerName = document.getElementById('detail-seller-name');
         const buyItemActionBtn = document.getElementById('buy-item-action-btn');
 
-        // Главная страница
         const globalItemsGrid = document.getElementById('global-items-grid');
         const sortSelect = document.getElementById('sort-select');
         const tagsGroup = document.getElementById('tags-group');
@@ -1784,9 +1816,10 @@
         let uploadedAvatarData = null; 
         let uploadedItemPhotoData = null;
         let currentSellerUsername = null;
-        let currentActiveItem = null; // Хранение текущего просмотра предмета
-        let editingItemId = null; // Флаг режима редактирования
+        let currentActiveItem = null;
+        let editingItemId = null;
         let activeGameTag = 'All';
+        let currentViewMode = 'home'; // 'home' (Live Listings) или 'roblox' (Раздел Roblox)
         let currentItemTimestamp = null;
         let isExactTimeFormat = false;
 
@@ -1798,7 +1831,7 @@
             }
         }
 
-        // Рендер карточек на главной
+        // Рендер товаров (Live Listings или Roblox)
         function renderGlobalItems() {
             let allUsers = JSON.parse(localStorage.getItem('users')) || [];
             let allItems = [];
@@ -1816,8 +1849,14 @@
                 }
             });
 
-            if (activeGameTag !== 'All') {
-                allItems = allItems.filter(item => (item.game || 'Murder Mystery 2') === activeGameTag);
+            if (currentViewMode === 'roblox') {
+                // В разделе Roblox показываем только Murder Mystery 2
+                allItems = allItems.filter(item => (item.game || 'Murder Mystery 2') === 'Murder Mystery 2');
+            } else {
+                // На главной (Live Listings) учитываем теги фильтрации
+                if (activeGameTag !== 'All') {
+                    allItems = allItems.filter(item => (item.game || 'Murder Mystery 2') === activeGameTag);
+                }
             }
 
             const sortBy = sortSelect.value;
@@ -1872,7 +1911,6 @@
             });
         }
 
-        // Функция открытия детальной страницы товара
         function openItemDetailPage(item) {
             currentActiveItem = item;
             currentSellerUsername = item.sellerUsername;
@@ -1909,7 +1947,6 @@
             }
             detailSellerName.textContent = item.sellerDisplayName;
 
-            // Проверка: свой ли продукт
             if (currentUser && currentUser === item.sellerUsername) {
                 buyItemActionBtn.textContent = 'Edit Item';
             } else {
@@ -1919,12 +1956,10 @@
             itemDetailPage.classList.add('active');
         }
 
-        // Действие при клике на основную кнопку товара (Contact Seller / Edit Item)
         buyItemActionBtn.addEventListener('click', () => {
             if (!currentActiveItem) return;
 
             if (currentUser && currentUser === currentActiveItem.sellerUsername) {
-                // Открываем модальное окно редактирования своего товара
                 editingItemId = currentActiveItem.id;
                 createItemModalTitle.textContent = 'Edit Item';
                 saveItemBtn.textContent = 'Save Changes';
@@ -1950,10 +1985,15 @@
             }
         });
 
-        // Кнопка Home -> Переход на главную страницу
-        homeLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            // Закрываем все модальные окна и детальную страницу
+        // Переход на главную (Live Listings)
+        function switchToHome() {
+            currentViewMode = 'home';
+            homeLink.classList.add('active');
+            robloxNavBtn.classList.remove('active');
+            
+            pageMainTitle.textContent = 'Live Listings';
+            filtersPanel.style.display = 'flex';
+
             itemDetailPage.classList.remove('active');
             profileModal.classList.remove('active');
             settingsModal.classList.remove('active');
@@ -1963,7 +2003,6 @@
             dbModal.classList.remove('active');
             confirmModal.classList.remove('active');
 
-            // Сбрасываем фильтры на все игры
             activeGameTag = 'All';
             document.querySelectorAll('.game-tag-btn').forEach(b => {
                 b.classList.toggle('active', b.getAttribute('data-tag') === 'All');
@@ -1971,7 +2010,33 @@
 
             renderGlobalItems();
             window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
+        }
+
+        // Переход в раздел Roblox -> Murder Mystery 2
+        function switchToRoblox() {
+            currentViewMode = 'roblox';
+            robloxNavBtn.classList.add('active');
+            homeLink.classList.remove('active');
+
+            pageMainTitle.textContent = 'Roblox - Murder Mystery 2';
+            filtersPanel.style.display = 'none'; // Скрываем панель фильтров в категории
+
+            itemDetailPage.classList.remove('active');
+            profileModal.classList.remove('active');
+            settingsModal.classList.remove('active');
+            selectGameModal.classList.remove('active');
+            createItemModal.classList.remove('active');
+            switchModal.classList.remove('active');
+            dbModal.classList.remove('active');
+            confirmModal.classList.remove('active');
+
+            renderGlobalItems();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        homeLink.addEventListener('click', (e) => { e.preventDefault(); switchToHome(); });
+        homeBrandLink.addEventListener('click', (e) => { e.preventDefault(); switchToHome(); });
+        robloxNavBtn.addEventListener('click', (e) => { e.preventDefault(); switchToRoblox(); });
 
         detailTimeVal.addEventListener('click', () => {
             if (!currentItemTimestamp) return;
@@ -2000,7 +2065,6 @@
             itemDetailPage.classList.remove('active');
         });
 
-        // Клик по продавцу
         detailSellerBox.addEventListener('click', () => {
             if (!currentSellerUsername) return;
             let allUsers = JSON.parse(localStorage.getItem('users')) || [];
@@ -2010,7 +2074,6 @@
             openProfileModal(sellerData);
         });
 
-        // Функция открытия профиля любого пользователя
         function openProfileModal(sellerData) {
             const displayId = sellerData.customId || '1';
             const displayName = sellerData.displayName || sellerData.username;
@@ -2029,7 +2092,6 @@
 
             const isOwnProfile = (currentUser === sellerData.username);
 
-            // Настройка кнопок слева
             if (isOwnProfile) {
                 openSettingsBtn.style.display = 'block';
                 if (displayId === 'knqw') {
@@ -2042,7 +2104,6 @@
                 openDbBtn.style.display = 'none';
             }
 
-            // Настройка правой колонки и заголовка
             if (isOwnProfile) {
                 yourItemsTitleText.textContent = 'Your Items';
                 openSelectGameBtn.style.display = 'block';
@@ -2394,7 +2455,7 @@
 
             selectMm2Btn.addEventListener('click', () => {
                 selectGameModal.classList.remove('active');
-                editingItemId = null; // Создание нового предмета
+                editingItemId = null;
                 createItemModalTitle.textContent = 'Create Item (Murder Mystery 2)';
                 saveItemBtn.textContent = 'List Item';
 
@@ -2457,7 +2518,6 @@
                 }
             });
 
-            // Сохранение или обновление предмета
             saveItemBtn.addEventListener('click', () => {
                 const itemName = itemNameInput.value.trim();
                 const itemDesc = document.getElementById('item-desc-input').value.trim();
@@ -2475,7 +2535,6 @@
                 }
 
                 if (editingItemId) {
-                    // Режим редактирования существующего товара
                     const idx = userData.items.findIndex(it => it.id === editingItemId);
                     if (idx !== -1) {
                         userData.items[idx].name = itemName;
@@ -2488,7 +2547,6 @@
                     }
                     showToast('Item updated successfully!');
                 } else {
-                    // Режим создания нового товара
                     const newItem = {
                         id: Date.now(),
                         game: 'Murder Mystery 2',
@@ -2511,7 +2569,6 @@
                 renderUserItems(userData);
                 renderGlobalItems();
 
-                // Если предмет открыт на детальной странице, обновляем и её
                 if (editingItemId && currentActiveItem && currentActiveItem.id === editingItemId) {
                     const updated = userData.items.find(it => it.id === editingItemId);
                     if (updated) {
