@@ -194,7 +194,7 @@
             pointer-events: none;
             transform: translateY(-10px);
             transition: opacity 0.2s ease, transform 0.2s ease;
-            z-index: 110;
+            z-index: 150; /* Повышен z-index, чтобы меню было поверх страницы сообщений */
         }
 
         .profile-dropdown.active {
@@ -889,7 +889,7 @@
             width: 100%;
             height: calc(100vh - 70px);
             background-color: #1a1a1a;
-            z-index: 120;
+            z-index: 12;
             display: none;
             box-sizing: border-box;
             padding: 30px 50px;
@@ -2510,7 +2510,6 @@
 
             let myMessages = me.messages || [];
             
-            // Находим всех уникальных собеседников
             let interlocutorsSet = new Set();
             myMessages.forEach(m => {
                 if (m.sender === currentUser) interlocutorsSet.add(m.receiver);
@@ -2530,10 +2529,10 @@
                 return;
             }
 
-            if (!activeChatUsername && interlocutors.length > 0) {
-                activeChatUsername = selectUsername || interlocutors[0];
-            } else if (selectUsername) {
+            if (selectUsername) {
                 activeChatUsername = selectUsername;
+            } else if (!activeChatUsername || !interlocutors.includes(activeChatUsername)) {
+                activeChatUsername = interlocutors[0];
             }
 
             interlocutors.forEach(username => {
@@ -2541,7 +2540,6 @@
                 const firstLetter = username.charAt(0).toUpperCase();
                 const avatarColor = getColorFromName(username);
 
-                // Ищем последнее сообщение
                 let chatMsgs = myMessages.filter(m => m.sender === username || m.receiver === username);
                 chatMsgs.sort((a, b) => a.timestamp - b.timestamp);
                 let lastMsg = chatMsgs.length > 0 ? chatMsgs[chatMsgs.length - 1].text : 'No messages yet';
@@ -2564,7 +2562,7 @@
 
                 item.addEventListener('click', () => {
                     activeChatUsername = username;
-                    renderChatsList();
+                    renderChatsList(username);
                 });
 
                 chatsContainer.appendChild(item);
@@ -2638,7 +2636,7 @@
                 await saveUserToDB(receiverUser);
 
                 inputField.value = '';
-                renderChatsList();
+                renderChatsList(targetUsername);
             };
 
             sendBtn.addEventListener('click', handleSend);
