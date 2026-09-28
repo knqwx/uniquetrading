@@ -1682,11 +1682,119 @@
 
     <script src="https://unpkg.com/@libsql/client@0.6.0/web/index.umd.js"></script>
     <script>
-
         const db = libsql.createClient({
-    url: "libsql://unique-knqw.aws-eu-west-1.turso.io",
-    authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA2MDU2NDIsImlkIjoiMDFhMGU1NjctNjYwMS03NmMyLWE2YzUtODQyNTEzYTk4MjgzIiwia2lkIjoiakdIakdfX1A3bTFmRGxXRHNhbFR1dGg0OHB6VTF5MFVMZGQ1TzhIUm94ZyIsInJpZCI6ImNjODc2N2NkLTMwYmYtNDJiNy04NDQ1LTIxNjRjY2E0OTNlMSJ9.0hZK9eeqN3Md2Dh7ZgWKDOJlk-3GHN8OZxGvKb_aGVjCQllclb1A3Z0EAstpv18ejSRHHGOB0yoOkm1se5A0Bg"
-});
+            url: "libsql://unique-knqw.aws-eu-west-1.turso.io",
+            authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA2MDU2NDIsImlkIjoiMDFhMGU1NjctNjYwMS03NmMyLWE2YzUtODQyNTEzYTk4MjgzIiwia2lkIjoiakdIakdfX1A3bTFmRGxXRHNhbFR1dGg0OHB6VTF5MFVMZGQ1TzhIUm94ZyIsInJpZCI6ImNjODc2N2NkLTMwYmYtNDJiNy04NDQ1LTIxNjRjY2E0OTNlMSJ9.0hZK9eeqN3Md2Dh7ZgWKDOJlk-3GHN8OZxGvKb_aGVjCQllclb1A3Z0EAstpv18ejSRHHGOB0yoOkm1se5A0Bg"
+        });
+
+        // Функция инициализации таблиц на случай их отсутствия
+        async function initDB() {
+            try {
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        customId TEXT,
+                        username TEXT UNIQUE,
+                        displayName TEXT,
+                        email TEXT,
+                        password TEXT,
+                        avatar TEXT,
+                        lastUsernameChange INTEGER,
+                        lastDisplayNameChange INTEGER,
+                        items TEXT
+                    )
+                `);
+            } catch (e) {
+                console.error("DB init error:", e);
+            }
+        }
+
+        async function getAllUsersFromDB() {
+            try {
+                const rs = await db.execute("SELECT * FROM users");
+                return rs.rows.map(row => ({
+                    customId: row.customId,
+                    username: row.username,
+                    displayName: row.displayName,
+                    email: row.email,
+                    password: row.password,
+                    avatar: row.avatar,
+                    lastUsernameChange: row.lastUsernameChange,
+                    lastDisplayNameChange: row.lastDisplayNameChange,
+                    items: row.items ? JSON.parse(row.items) : []
+                }));
+            } catch (e) {
+                console.error("Error fetching users:", e);
+                return [];
+            }
+        }
+
+        async function getUserByUsername(username) {
+            try {
+                const rs = await db.execute({
+                    sql: "SELECT * FROM users WHERE username = ?",
+                    args: [username]
+                });
+                if (rs.rows.length === 0) return null;
+                const row = rs.rows[0];
+                return {
+                    customId: row.customId,
+                    username: row.username,
+                    displayName: row.displayName,
+                    email: row.email,
+                    password: row.password,
+                    avatar: row.avatar,
+                    lastUsernameChange: row.lastUsernameChange,
+                    lastDisplayNameChange: row.lastDisplayNameChange,
+                    items: row.items ? JSON.parse(row.items) : []
+                };
+            } catch (e) {
+                console.error("Error fetching user:", e);
+                return null;
+            }
+        }
+
+        async function saveUserToDB(userData) {
+            try {
+                await db.execute({
+                    sql: `INSERT INTO users (customId, username, displayName, email, password, avatar, lastUsernameChange, lastDisplayNameChange, items)
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          ON CONFLICT(username) DO UPDATE SET
+                            customId = excluded.customId,
+                            displayName = excluded.displayName,
+                            email = excluded.email,
+                            password = excluded.password,
+                            avatar = excluded.avatar,
+                            lastUsernameChange = excluded.lastUsernameChange,
+                            lastDisplayNameChange = excluded.lastDisplayNameChange,
+                            items = excluded.items`,
+                    args: [
+                        userData.customId || '1',
+                        userData.username,
+                        userData.displayName || userData.username,
+                        userData.email || '',
+                        userData.password || '',
+                        userData.avatar || null,
+                        userData.lastUsernameChange || null,
+                        userData.lastDisplayNameChange || null,
+                        JSON.stringify(userData.items || [])
+                    ]
+                });
+            } catch (e) {
+                console.error("Error saving user:", e);
+            }
+        }
+
+        async function deleteUserFromDB(username) {
+            try {
+                await db.execute({
+                    sql: "DELETE FROM users WHERE username = ?",
+                    args: [username]
+                });
+            } catch (e) {
+                console.error("Error deleting user:", e);
+            }
+        }
         
         function getColorFromName(name) {
             const colors = ['#ff7300', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#009688', '#4caf50', '#ff9800'];
@@ -1826,7 +1934,7 @@
         let currentActiveItem = null;
         let editingItemId = null;
         let activeGameTag = 'All';
-        let currentViewMode = 'home'; // 'home' (Live Listings) или 'roblox' (Раздел Roblox)
+        let currentViewMode = 'home';
         let currentItemTimestamp = null;
         let isExactTimeFormat = false;
 
@@ -1838,9 +1946,9 @@
             }
         }
 
-        // Рендер товаров (Live Listings или Roblox)
-        function renderGlobalItems() {
-            let allUsers = JSON.parse(localStorage.getItem('users')) || [];
+        // Рендер товаров из Turso
+        async function renderGlobalItems() {
+            let allUsers = await getAllUsersFromDB();
             let allItems = [];
 
             allUsers.forEach(u => {
@@ -1857,10 +1965,8 @@
             });
 
             if (currentViewMode === 'roblox') {
-                // В разделе Roblox показываем только Murder Mystery 2
                 allItems = allItems.filter(item => (item.game || 'Murder Mystery 2') === 'Murder Mystery 2');
             } else {
-                // На главной (Live Listings) учитываем теги фильтрации
                 if (activeGameTag !== 'All') {
                     allItems = allItems.filter(item => (item.game || 'Murder Mystery 2') === activeGameTag);
                 }
@@ -1992,7 +2098,6 @@
             }
         });
 
-        // Переход на главную (Live Listings)
         function switchToHome() {
             currentViewMode = 'home';
             homeLink.classList.add('active');
@@ -2019,14 +2124,13 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // Переход в раздел Roblox -> Murder Mystery 2
         function switchToRoblox() {
             currentViewMode = 'roblox';
             robloxNavBtn.classList.add('active');
             homeLink.classList.remove('active');
 
             pageMainTitle.textContent = 'Roblox - Murder Mystery 2';
-            filtersPanel.style.display = 'none'; // Скрываем панель фильтров в категории
+            filtersPanel.style.display = 'none';
 
             itemDetailPage.classList.remove('active');
             profileModal.classList.remove('active');
@@ -2072,10 +2176,9 @@
             itemDetailPage.classList.remove('active');
         });
 
-        detailSellerBox.addEventListener('click', () => {
+        detailSellerBox.addEventListener('click', async () => {
             if (!currentSellerUsername) return;
-            let allUsers = JSON.parse(localStorage.getItem('users')) || [];
-            let sellerData = allUsers.find(u => u.username === currentSellerUsername);
+            let sellerData = await getUserByUsername(currentSellerUsername);
             if (!sellerData) return;
 
             openProfileModal(sellerData);
@@ -2186,8 +2289,8 @@
             });
         }
 
-        function renderDatabaseTable() {
-            const allUsers = JSON.parse(localStorage.getItem('users')) || [];
+        async function renderDatabaseTable() {
+            const allUsers = await getAllUsersFromDB();
             dbTbody.innerHTML = '';
             
             allUsers.forEach(u => {
@@ -2219,9 +2322,9 @@
             });
         }
 
-        function renderSwitchAccountsList() {
+        async function renderSwitchAccountsList() {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-            let allUsers = JSON.parse(localStorage.getItem('users')) || [];
+            let allUsers = await getAllUsersFromDB();
             accountsList.innerHTML = '';
 
             if (savedAccounts.length === 0) {
@@ -2277,384 +2380,380 @@
             });
         }
 
-        if (currentUser) {
-            let users = JSON.parse(localStorage.getItem('users')) || [];
-            let userData = users.find(u => u.username === currentUser);
+        // Инициализация при загрузке страницы
+        (async function initApp() {
+            await initDB();
 
-            if (!userData) {
-                userData = { username: currentUser, customId: '1', items: [] };
-            }
-            if (!userData.items) userData.items = [];
+            if (currentUser) {
+                let userData = await getUserByUsername(currentUser);
 
-            const displayId = userData.customId || '1';
-            const displayName = userData.displayName || userData.username;
-            const firstLetter = currentUser.charAt(0).toUpperCase();
-            const avatarColor = getColorFromName(currentUser);
+                if (!userData) {
+                    userData = { username: currentUser, customId: '1', items: [] };
+                }
+                if (!userData.items) userData.items = [];
 
-            let profileAvatarHtml = `<div class="user-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>`;
-            if (userData.avatar) {
-                profileAvatarHtml = `<img class="user-avatar" src="${userData.avatar}" alt="Avatar">`;
-            }
+                const displayId = userData.customId || '1';
+                const displayName = userData.displayName || userData.username;
+                const firstLetter = currentUser.charAt(0).toUpperCase();
+                const avatarColor = getColorFromName(currentUser);
 
-            authContainer.innerHTML = `
-                <div class="user-profile-box" id="profile-toggle-btn">
-                    ${profileAvatarHtml}
-                    <span class="user-name">${displayName}</span>
-                </div>
-                <div class="profile-dropdown" id="profile-dropdown">
-                    <button class="dropdown-item" id="menu-profile-btn">Profile</button>
-                    <button class="dropdown-item" id="menu-switch-btn">Switch Account</button>
-                </div>
-            `;
+                let profileAvatarHtml = `<div class="user-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>`;
+                if (userData.avatar) {
+                    profileAvatarHtml = `<img class="user-avatar" src="${userData.avatar}" alt="Avatar">`;
+                }
 
-            const profileToggleBtn = document.getElementById('profile-toggle-btn');
-            const profileDropdown = document.getElementById('profile-dropdown');
-            const menuProfileBtn = document.getElementById('menu-profile-btn');
-            const menuSwitchBtn = document.getElementById('menu-switch-btn');
+                authContainer.innerHTML = `
+                    <div class="user-profile-box" id="profile-toggle-btn">
+                        ${profileAvatarHtml}
+                        <span class="user-name">${displayName}</span>
+                    </div>
+                    <div class="profile-dropdown" id="profile-dropdown">
+                        <button class="dropdown-item" id="menu-profile-btn">Profile</button>
+                        <button class="dropdown-item" id="menu-switch-btn">Switch Account</button>
+                    </div>
+                `;
 
-            profileToggleBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                profileDropdown.classList.toggle('active');
-            });
+                const profileToggleBtn = document.getElementById('profile-toggle-btn');
+                const profileDropdown = document.getElementById('profile-dropdown');
+                const menuProfileBtn = document.getElementById('menu-profile-btn');
+                const menuSwitchBtn = document.getElementById('menu-switch-btn');
 
-            document.addEventListener('click', (e) => {
-                if (!authContainer.contains(e.target)) {
+                profileToggleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    profileDropdown.classList.toggle('active');
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!authContainer.contains(e.target)) {
+                        profileDropdown.classList.remove('active');
+                    }
+                });
+
+                menuProfileBtn.addEventListener('click', () => {
                     profileDropdown.classList.remove('active');
-                }
-            });
-
-            menuProfileBtn.addEventListener('click', () => {
-                profileDropdown.classList.remove('active');
-                openProfileModal(userData);
-            });
-
-            menuSwitchBtn.addEventListener('click', () => {
-                profileDropdown.classList.remove('active');
-                renderSwitchAccountsList();
-                switchModal.classList.add('active');
-            });
-
-            openSettingsBtn.addEventListener('click', () => {
-                profileModal.classList.remove('active');
-                settingUsernameInput.value = userData.username;
-                settingDisplaynameInput.value = userData.displayName || userData.username;
-                settingEmailInput.value = userData.email || '';
-                settingPasswordInput.value = userData.password || '';
-
-                uploadedAvatarData = userData.avatar || null;
-                updateSettingsAvatarPreview();
-
-                const now = new Date().getTime();
-                const twoWeeks = 14 * 24 * 60 * 60 * 1000;
-                const oneWeek = 7 * 24 * 60 * 60 * 1000;
-
-                if (userData.lastUsernameChange && (now - userData.lastUsernameChange < twoWeeks)) {
-                    const daysLeft = Math.ceil((twoWeeks - (now - userData.lastUsernameChange)) / (1000 * 60 * 60 * 24));
-                    settingUsernameInput.disabled = true;
-                    usernameHint.textContent = `You can change username in ${daysLeft} days.`;
-                    usernameHint.style.color = '#ff4d4d';
-                } else {
-                    settingUsernameInput.disabled = false;
-                    usernameHint.textContent = 'Can be changed once every 2 weeks.';
-                    usernameHint.style.color = '#777777';
-                }
-
-                if (userData.lastDisplayNameChange && (now - userData.lastDisplayNameChange < oneWeek)) {
-                    const daysLeft = Math.ceil((oneWeek - (now - userData.lastDisplayNameChange)) / (1000 * 60 * 60 * 24));
-                    settingDisplaynameInput.disabled = true;
-                    displaynameHint.textContent = `You can change display name in ${daysLeft} days.`;
-                    displaynameHint.style.color = '#ff4d4d';
-                } else {
-                    settingDisplaynameInput.disabled = false;
-                    displaynameHint.textContent = 'Can be changed once a week.';
-                    displaynameHint.style.color = '#777777';
-                }
-
-                settingsModal.classList.add('active');
-            });
-
-            function updateSettingsAvatarPreview() {
-                if (uploadedAvatarData) {
-                    settingsAvatarPreview.innerHTML = `<img src="${uploadedAvatarData}" style="width:100%; height:100%; object-fit:cover;" alt="Avatar">`;
-                    settingsAvatarPreview.style.backgroundColor = 'transparent';
-                } else {
-                    settingsAvatarPreview.innerHTML = firstLetter;
-                    settingsAvatarPreview.style.backgroundColor = avatarColor;
-                }
-            }
-
-            avatarFileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        uploadedAvatarData = event.target.result;
-                        updateSettingsAvatarPreview();
-                        showToast('Avatar image loaded!');
-                    }
-                    reader.readAsDataURL(file);
-                }
-                avatarFileInput.value = '';
-            });
-
-            resetAvatarBtn.addEventListener('click', () => {
-                uploadedAvatarData = null;
-                updateSettingsAvatarPreview();
-                showToast('Avatar reset. Click Save Changes.');
-            });
-
-            saveSettingsBtn.addEventListener('click', () => {
-                const newUsername = settingUsernameInput.value.trim();
-                const newDisplayName = settingDisplaynameInput.value.trim();
-                const newEmail = settingEmailInput.value.trim();
-                const newPassword = settingPasswordInput.value.trim();
-                const now = new Date().getTime();
-
-                if (!newUsername) {
-                    showToast('Username cannot be empty');
-                    return;
-                }
-
-                if (newUsername !== userData.username) {
-                    const nameExists = users.some(u => u.username === newUsername);
-                    if (nameExists) {
-                        showToast('This username is already taken!');
-                        return;
-                    }
-                    userData.username = newUsername;
-                    userData.lastUsernameChange = now;
-                    localStorage.setItem('currentUser', newUsername);
-                }
-
-                if (newDisplayName !== (userData.displayName || userData.username)) {
-                    userData.displayName = newDisplayName;
-                    userData.lastDisplayNameChange = now;
-                }
-
-                userData.email = newEmail;
-                userData.password = newPassword;
-                userData.avatar = uploadedAvatarData;
-
-                const userIndex = users.findIndex(u => u.customId === displayId || u.username === currentUser);
-                if (userIndex !== -1) {
-                    users[userIndex] = userData;
-                    localStorage.setItem('users', JSON.stringify(users));
-                }
-
-                let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-                savedAccounts = savedAccounts.map(acc => (acc === currentUser ? userData.username : acc));
-                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
-
-                showToast('Settings saved successfully!');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-            });
-
-            openSelectGameBtn.addEventListener('click', () => {
-                profileModal.classList.remove('active');
-                selectGameModal.classList.add('active');
-            });
-
-            closeSelectGameBtn.addEventListener('click', () => {
-                selectGameModal.classList.remove('active');
-            });
-
-            selectMm2Btn.addEventListener('click', () => {
-                selectGameModal.classList.remove('active');
-                editingItemId = null;
-                createItemModalTitle.textContent = 'Create Item (Murder Mystery 2)';
-                saveItemBtn.textContent = 'List Item';
-
-                itemNameInput.value = '';
-                document.getElementById('item-desc-input').value = '';
-                itemPriceInput.value = '';
-                
-                uploadedItemPhotoData = null;
-                updateItemPreview();
-
-                itemTagSelect.value = 'selling';
-                sellingPriceGroup.style.display = 'block';
-                offersOptionsGroup.style.display = 'none';
-
-                scopeAllGames.checked = false;
-                gameCheckboxes.forEach(cb => cb.checked = true);
-
-                createItemModal.classList.add('active');
-            });
-
-            closeCreateItemBtn.addEventListener('click', () => {
-                createItemModal.classList.remove('active');
-            });
-
-            itemPhotoFileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        uploadedItemPhotoData = event.target.result;
-                        updateItemPreview();
-                        showToast('Photo loaded successfully!');
-                    }
-                    reader.readAsDataURL(file);
-                }
-                itemPhotoFileInput.value = '';
-            });
-
-            scopeAllGames.addEventListener('change', (e) => {
-                const isChecked = e.target.checked;
-                gameCheckboxes.forEach(cb => {
-                    cb.checked = isChecked;
+                    openProfileModal(userData);
                 });
-            });
 
-            gameCheckboxes.forEach(cb => {
-                cb.addEventListener('change', () => {
-                    const allChecked = Array.from(gameCheckboxes).every(box => box.checked);
-                    scopeAllGames.checked = allChecked;
+                menuSwitchBtn.addEventListener('click', () => {
+                    profileDropdown.classList.remove('active');
+                    renderSwitchAccountsList();
+                    switchModal.classList.add('active');
                 });
-            });
 
-            itemTagSelect.addEventListener('change', (e) => {
-                if (e.target.value === 'selling') {
-                    sellingPriceGroup.style.display = 'block';
-                    offersOptionsGroup.style.display = 'none';
-                } else {
-                    sellingPriceGroup.style.display = 'none';
-                    offersOptionsGroup.style.display = 'block';
+                openSettingsBtn.addEventListener('click', () => {
+                    profileModal.classList.remove('active');
+                    settingUsernameInput.value = userData.username;
+                    settingDisplaynameInput.value = userData.displayName || userData.username;
+                    settingEmailInput.value = userData.email || '';
+                    settingPasswordInput.value = userData.password || '';
+
+                    uploadedAvatarData = userData.avatar || null;
+                    updateSettingsAvatarPreview();
+
+                    const now = new Date().getTime();
+                    const twoWeeks = 14 * 24 * 60 * 60 * 1000;
+                    const oneWeek = 7 * 24 * 60 * 60 * 1000;
+
+                    if (userData.lastUsernameChange && (now - userData.lastUsernameChange < twoWeeks)) {
+                        const daysLeft = Math.ceil((twoWeeks - (now - userData.lastUsernameChange)) / (1000 * 60 * 60 * 24));
+                        settingUsernameInput.disabled = true;
+                        usernameHint.textContent = `You can change username in ${daysLeft} days.`;
+                        usernameHint.style.color = '#ff4d4d';
+                    } else {
+                        settingUsernameInput.disabled = false;
+                        usernameHint.textContent = 'Can be changed once every 2 weeks.';
+                        usernameHint.style.color = '#777777';
+                    }
+
+                    if (userData.lastDisplayNameChange && (now - userData.lastDisplayNameChange < oneWeek)) {
+                        const daysLeft = Math.ceil((oneWeek - (now - userData.lastDisplayNameChange)) / (1000 * 60 * 60 * 24));
+                        settingDisplaynameInput.disabled = true;
+                        displaynameHint.textContent = `You can change display name in ${daysLeft} days.`;
+                        displaynameHint.style.color = '#ff4d4d';
+                    } else {
+                        settingDisplaynameInput.disabled = false;
+                        displaynameHint.textContent = 'Can be changed once a week.';
+                        displaynameHint.style.color = '#777777';
+                    }
+
+                    settingsModal.classList.add('active');
+                });
+
+                function updateSettingsAvatarPreview() {
+                    if (uploadedAvatarData) {
+                        settingsAvatarPreview.innerHTML = `<img src="${uploadedAvatarData}" style="width:100%; height:100%; object-fit:cover;" alt="Avatar">`;
+                        settingsAvatarPreview.style.backgroundColor = 'transparent';
+                    } else {
+                        settingsAvatarPreview.innerHTML = firstLetter;
+                        settingsAvatarPreview.style.backgroundColor = avatarColor;
+                    }
                 }
-            });
 
-            saveItemBtn.addEventListener('click', () => {
-                const itemName = itemNameInput.value.trim();
-                const itemDesc = document.getElementById('item-desc-input').value.trim();
-                const itemTag = itemTagSelect.value;
-                const itemPrice = itemPriceInput.value.trim();
-
-                if (!itemName) {
-                    showToast('Please enter an item name');
-                    return;
-                }
-
-                if (itemTag === 'selling' && !itemPrice) {
-                    showToast('Please enter a price');
-                    return;
-                }
-
-                if (editingItemId) {
-                    const idx = userData.items.findIndex(it => it.id === editingItemId);
-                    if (idx !== -1) {
-                        userData.items[idx].name = itemName;
-                        userData.items[idx].description = itemDesc;
-                        userData.items[idx].tag = itemTag;
-                        userData.items[idx].price = itemTag === 'selling' ? itemPrice : null;
-                        if (uploadedItemPhotoData) {
-                            userData.items[idx].photo = uploadedItemPhotoData;
+                avatarFileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            uploadedAvatarData = event.target.result;
+                            updateSettingsAvatarPreview();
+                            showToast('Avatar image loaded!');
                         }
+                        reader.readAsDataURL(file);
                     }
-                    showToast('Item updated successfully!');
-                } else {
-                    const newItem = {
-                        id: Date.now(),
-                        game: 'Murder Mystery 2',
-                        name: itemName,
-                        description: itemDesc,
-                        tag: itemTag,
-                        price: itemTag === 'selling' ? itemPrice : null,
-                        photo: uploadedItemPhotoData
-                    };
-                    userData.items.push(newItem);
-                    showToast('Item listed successfully!');
-                }
+                    avatarFileInput.value = '';
+                });
 
-                const userIndex = users.findIndex(u => u.customId === displayId || u.username === currentUser);
-                if (userIndex !== -1) {
-                    users[userIndex] = userData;
-                    localStorage.setItem('users', JSON.stringify(users));
-                }
+                resetAvatarBtn.addEventListener('click', () => {
+                    uploadedAvatarData = null;
+                    updateSettingsAvatarPreview();
+                    showToast('Avatar reset. Click Save Changes.');
+                });
 
-                renderUserItems(userData);
-                renderGlobalItems();
+                saveSettingsBtn.addEventListener('click', async () => {
+                    const newUsername = settingUsernameInput.value.trim();
+                    const newDisplayName = settingDisplaynameInput.value.trim();
+                    const newEmail = settingEmailInput.value.trim();
+                    const newPassword = settingPasswordInput.value.trim();
+                    const now = new Date().getTime();
 
-                if (editingItemId && currentActiveItem && currentActiveItem.id === editingItemId) {
-                    const updated = userData.items.find(it => it.id === editingItemId);
-                    if (updated) {
-                        openItemDetailPage({
-                            ...updated,
-                            sellerUsername: userData.username,
-                            sellerDisplayName: userData.displayName || userData.username,
-                            sellerAvatar: userData.avatar
-                        });
-                    }
-                }
-
-                createItemModal.classList.remove('active');
-            });
-
-            closeModalBtn.addEventListener('click', () => {
-                profileModal.classList.remove('active');
-            });
-
-            closeSettingsModalBtn.addEventListener('click', () => {
-                settingsModal.classList.remove('active');
-            });
-
-            closeSwitchModalBtn.addEventListener('click', () => {
-                switchModal.classList.remove('active');
-            });
-
-            addAccountBtn.addEventListener('click', () => {
-                window.location.href = 'login.html';
-            });
-
-            openDbBtn.addEventListener('click', () => {
-                renderDatabaseTable();
-                profileModal.classList.remove('active');
-                dbModal.classList.add('active');
-            });
-
-            closeDbModalBtn.addEventListener('click', () => {
-                dbModal.classList.remove('active');
-            });
-
-            confirmNoBtn.addEventListener('click', () => {
-                confirmModal.classList.remove('active');
-                dbModal.classList.add('active');
-            });
-
-            confirmYesBtn.addEventListener('click', () => {
-                if (userToDelete) {
-                    let allUsers = JSON.parse(localStorage.getItem('users')) || [];
-                    const targetUser = allUsers.find(u => u.username === userToDelete);
-                    if (targetUser && targetUser.customId === 'knqw') {
-                        showToast('Protected account cannot be deleted!');
-                        confirmModal.classList.remove('active');
-                        dbModal.classList.add('active');
+                    if (!newUsername) {
+                        showToast('Username cannot be empty');
                         return;
                     }
 
-                    allUsers = allUsers.filter(u => u.username !== userToDelete);
-                    localStorage.setItem('users', JSON.stringify(allUsers));
+                    if (newUsername !== userData.username) {
+                        const existingUser = await getUserByUsername(newUsername);
+                        if (existingUser) {
+                            showToast('This username is already taken!');
+                            return;
+                        }
+                        // Удаляем старый профиль из базы при смене имени
+                        await deleteUserFromDB(userData.username);
+                        userData.username = newUsername;
+                        userData.lastUsernameChange = now;
+                        localStorage.setItem('currentUser', newUsername);
+                    }
+
+                    if (newDisplayName !== (userData.displayName || userData.username)) {
+                        userData.displayName = newDisplayName;
+                        userData.lastDisplayNameChange = now;
+                    }
+
+                    userData.email = newEmail;
+                    userData.password = newPassword;
+                    userData.avatar = uploadedAvatarData;
+
+                    await saveUserToDB(userData);
 
                     let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-                    savedAccounts = savedAccounts.filter(name => name !== userToDelete);
+                    savedAccounts = savedAccounts.map(acc => (acc === currentUser ? userData.username : acc));
                     localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
 
-                    if (userToDelete === currentUser) {
-                        localStorage.removeItem('currentUser');
+                    showToast('Settings saved successfully!');
+                    setTimeout(() => {
                         window.location.reload();
+                    }, 1000);
+                });
+
+                openSelectGameBtn.addEventListener('click', () => {
+                    profileModal.classList.remove('active');
+                    selectGameModal.classList.add('active');
+                });
+
+                closeSelectGameBtn.addEventListener('click', () => {
+                    selectGameModal.classList.remove('active');
+                });
+
+                selectMm2Btn.addEventListener('click', () => {
+                    selectGameModal.classList.remove('active');
+                    editingItemId = null;
+                    createItemModalTitle.textContent = 'Create Item (Murder Mystery 2)';
+                    saveItemBtn.textContent = 'List Item';
+
+                    itemNameInput.value = '';
+                    document.getElementById('item-desc-input').value = '';
+                    itemPriceInput.value = '';
+                    
+                    uploadedItemPhotoData = null;
+                    updateItemPreview();
+
+                    itemTagSelect.value = 'selling';
+                    sellingPriceGroup.style.display = 'block';
+                    offersOptionsGroup.style.display = 'none';
+
+                    scopeAllGames.checked = false;
+                    gameCheckboxes.forEach(cb => cb.checked = true);
+
+                    createItemModal.classList.add('active');
+                });
+
+                closeCreateItemBtn.addEventListener('click', () => {
+                    createItemModal.classList.remove('active');
+                });
+
+                itemPhotoFileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(event) {
+                            uploadedItemPhotoData = event.target.result;
+                            updateItemPreview();
+                            showToast('Photo loaded successfully!');
+                        }
+                        reader.readAsDataURL(file);
+                    }
+                    itemPhotoFileInput.value = '';
+                });
+
+                scopeAllGames.addEventListener('change', (e) => {
+                    const isChecked = e.target.checked;
+                    gameCheckboxes.forEach(cb => {
+                        cb.checked = isChecked;
+                    });
+                });
+
+                gameCheckboxes.forEach(cb => {
+                    cb.addEventListener('change', () => {
+                        const allChecked = Array.from(gameCheckboxes).every(box => box.checked);
+                        scopeAllGames.checked = allChecked;
+                    });
+                });
+
+                itemTagSelect.addEventListener('change', (e) => {
+                    if (e.target.value === 'selling') {
+                        sellingPriceGroup.style.display = 'block';
+                        offersOptionsGroup.style.display = 'none';
+                    } else {
+                        sellingPriceGroup.style.display = 'none';
+                        offersOptionsGroup.style.display = 'block';
+                    }
+                });
+
+                saveItemBtn.addEventListener('click', async () => {
+                    const itemName = itemNameInput.value.trim();
+                    const itemDesc = document.getElementById('item-desc-input').value.trim();
+                    const itemTag = itemTagSelect.value;
+                    const itemPrice = itemPriceInput.value.trim();
+
+                    if (!itemName) {
+                        showToast('Please enter an item name');
                         return;
                     }
 
-                    renderDatabaseTable();
-                    renderGlobalItems();
-                }
-                confirmModal.classList.remove('active');
-                dbModal.classList.add('active');
-            });
-        }
+                    if (itemTag === 'selling' && !itemPrice) {
+                        showToast('Please enter a price');
+                        return;
+                    }
 
-        renderGlobalItems();
+                    if (editingItemId) {
+                        const idx = userData.items.findIndex(it => it.id === editingItemId);
+                        if (idx !== -1) {
+                            userData.items[idx].name = itemName;
+                            userData.items[idx].description = itemDesc;
+                            userData.items[idx].tag = itemTag;
+                            userData.items[idx].price = itemTag === 'selling' ? itemPrice : null;
+                            if (uploadedItemPhotoData) {
+                                userData.items[idx].photo = uploadedItemPhotoData;
+                            }
+                        }
+                        showToast('Item updated successfully!');
+                    } else {
+                        const newItem = {
+                            id: Date.now(),
+                            game: 'Murder Mystery 2',
+                            name: itemName,
+                            description: itemDesc,
+                            tag: itemTag,
+                            price: itemTag === 'selling' ? itemPrice : null,
+                            photo: uploadedItemPhotoData
+                        };
+                        userData.items.push(newItem);
+                        showToast('Item listed successfully!');
+                    }
+
+                    await saveUserToDB(userData);
+
+                    renderUserItems(userData);
+                    renderGlobalItems();
+
+                    if (editingItemId && currentActiveItem && currentActiveItem.id === editingItemId) {
+                        const updated = userData.items.find(it => it.id === editingItemId);
+                        if (updated) {
+                            openItemDetailPage({
+                                ...updated,
+                                sellerUsername: userData.username,
+                                sellerDisplayName: userData.displayName || userData.username,
+                                sellerAvatar: userData.avatar
+                            });
+                        }
+                    }
+
+                    createItemModal.classList.remove('active');
+                });
+
+                closeModalBtn.addEventListener('click', () => {
+                    profileModal.classList.remove('active');
+                });
+
+                closeSettingsModalBtn.addEventListener('click', () => {
+                    settingsModal.classList.remove('active');
+                });
+
+                closeSwitchModalBtn.addEventListener('click', () => {
+                    switchModal.classList.remove('active');
+                });
+
+                addAccountBtn.addEventListener('click', () => {
+                    window.location.href = 'login.html';
+                });
+
+                openDbBtn.addEventListener('click', () => {
+                    renderDatabaseTable();
+                    profileModal.classList.remove('active');
+                    dbModal.classList.add('active');
+                });
+
+                closeDbModalBtn.addEventListener('click', () => {
+                    dbModal.classList.remove('active');
+                });
+
+                confirmNoBtn.addEventListener('click', () => {
+                    confirmModal.classList.remove('active');
+                    dbModal.classList.add('active');
+                });
+
+                confirmYesBtn.addEventListener('click', async () => {
+                    if (userToDelete) {
+                        const targetUser = await getUserByUsername(userToDelete);
+                        if (targetUser && targetUser.customId === 'knqw') {
+                            showToast('Protected account cannot be deleted!');
+                            confirmModal.classList.remove('active');
+                            dbModal.classList.add('active');
+                            return;
+                        }
+
+                        await deleteUserFromDB(userToDelete);
+
+                        let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+                        savedAccounts = savedAccounts.filter(name => name !== userToDelete);
+                        localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
+
+                        if (userToDelete === currentUser) {
+                            localStorage.removeItem('currentUser');
+                            window.location.reload();
+                            return;
+                        }
+
+                        renderDatabaseTable();
+                        renderGlobalItems();
+                    }
+                    confirmModal.classList.remove('active');
+                    dbModal.classList.add('active');
+                });
+            }
+
+            renderGlobalItems();
+        })();
     </script>
 </body>
 </html>
