@@ -257,7 +257,6 @@
             errorMsg.style.display = 'none';
 
             if (!isLoginMode) {
-                // РЕГИСТРАЦИЯ
                 const username = usernameInput.value.trim();
                 const email = mainInput.value.trim();
                 const password = passwordInput.value;
@@ -310,14 +309,13 @@
                     });
 
                     localStorage.setItem('currentUser', username);
-                    window.location.href = 'uniquetrading.html'; // Исправлено на правильный файл
+                    window.location.href = 'uniquetrading.html';
                 } catch (err) {
                     console.error(err);
                     showError('Database error during registration. Try again.');
                 }
 
             } else {
-                // ВХОД
                 const loginIdentifier = mainInput.value.trim();
                 const password = passwordInput.value;
 
@@ -345,7 +343,7 @@
                     }
 
                     localStorage.setItem('currentUser', user.username);
-                    window.location.href = 'uniquetrading.html'; // Исправлено на правильный файл
+                    window.location.href = 'uniquetrading.html';
                 } catch (err) {
                     console.error(err);
                     showError('Database connection error. Try again later.');
