@@ -302,7 +302,8 @@
                     }
 
                     const countRs = await db.execute("SELECT COUNT(*) as cnt FROM users");
-                    const newCustomId = String(countRs.rows.length > 0 ? countRs.rows[0].cnt + 1 : 1);
+                    const countVal = countRs.rows.length > 0 ? Number(countRs.rows[0].cnt || 0) : 0;
+                    const newCustomId = String(countVal + 1);
 
                     await db.execute({
                         sql: `INSERT INTO users (customId, username, displayName, email, password, items) VALUES (?, ?, ?, ?, ?, ?)`,
