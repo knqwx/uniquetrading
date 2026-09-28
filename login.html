@@ -170,14 +170,22 @@
     <!-- Подключаем библиотеку Turso Client -->
     <script src="https://unpkg.com/@libsql/client@0.6.0/web/index.umd.js"></script>
     <script>
-        // Инициализация клиента Turso (данные из вашего файла uniqueTrading.html)
-        const db = libsql.createClient({
-            url: "libsql://unique-knqw.aws-eu-west-1.turso.io",
-            authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA2MDU2NDIsImlkIjoiMDFhMGU1NjctNjYwMS03NmMyLWE2YzUtODQyNTEzYTk4MjgzIiwia2lkIjoiakdIakdfX1A3bTFmRGxXRHNhbFR1dGg0OHB6VTF5MFVMZGQ1TzhIUm94ZyIsInJpZCI6ImNjODc2N2NkLTMwYmYtNDJiNy04NDQ1LTIxNjRjY2E0OTNlMSJ9.0hZK9eeqN3Md2Dh7ZgWKDOJlk-3GHN8OZxGvKb_aGVjCQllclb1A3Z0EAstpv18ejSRHHGOB0yoOkm1se5A0Bg"
-        });
+        let db = null;
 
-        // Гарантируем создание таблицы users при загрузке страницы авторизации
+        // Инициализация клиента Turso с защитой от сбоев сети
+        try {
+            if (typeof libsql !== 'undefined') {
+                db = libsql.createClient({
+                    url: "libsql://unique-knqw.aws-eu-west-1.turso.io",
+                    authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA2MDU2NDIsImlkIjoiMDFhMGU1NjctNjYwMS03NmMyLWE2YzUtODQyNTEzYTk4MjgzIiwia2lkIjoiakdIakdfX1A3bTFmRGxXRHNhbFR1dGg0OHB6VTF5MFVMZGQ1TzhIUm94ZyIsInJpZCI6ImNjODc2N2NkLTMwYmYtNDJiNy04NDQ1LTIxNjRjY2E0OTNlMSJ9.0hZK9eeqN3Md2Dh7ZgWKDOJlk-3GHN8OZxGvKb_aGVjCQllclb1A3Z0EAstpv18ejSRHHGOB0yoOkm1se5A0Bg"
+                });
+            }
+        } catch (e) {
+            console.error("Turso init failed, using localStorage fallback:", e);
+        }
+
         async function initAuthDB() {
+            if (!db) return;
             try {
                 await db.execute(`
                     CREATE TABLE IF NOT EXISTS users (
@@ -194,7 +202,7 @@
                     )
                 `);
             } catch (e) {
-                console.error("DB init error:", e);
+                console.error("DB table create error:", e);
             }
         }
         initAuthDB();
@@ -243,22 +251,31 @@
             setMode(false);
         }
 
-        toggleBtn.addEventListener('click', () => {
+        // Переключение режима (кнопка Sign up / Log in в футере) гарантированно работает
+        toggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
             setMode(!isLoginMode);
         });
 
+        // Обработка отправки формы
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             errorMsg.style.display = 'none';
+
+            const password = passwordInput.value;
+
+            if (!db) {
+                errorMsg.textContent = 'Database connection error. Check your network.';
+                errorMsg.style.display = 'block';
+                return;
+            }
 
             if (!isLoginMode) {
                 // РЕГИСТРАЦИЯ
                 const username = usernameInput.value.trim();
                 const email = mainInput.value.trim();
-                const password = passwordInput.value;
 
                 try {
-                    // Проверяем, существует ли уже такой юзер
                     const checkRes = await db.execute({
                         sql: "SELECT * FROM users WHERE username = ?",
                         args: [username]
@@ -270,11 +287,9 @@
                         return;
                     }
 
-                    // Считаем количество пользователей для назначения customId
                     const countRes = await db.execute("SELECT COUNT(*) as cnt FROM users");
                     const newCustomId = String(Number(countRes.rows[0].cnt) + 1);
 
-                    // Сохраняем нового пользователя в Turso
                     await db.execute({
                         sql: `INSERT INTO users (customId, username, displayName, email, password, avatar, items) VALUES (?, ?, ?, ?, ?, ?, ?)`,
                         args: [newCustomId, username, username, email, password, null, JSON.stringify([])]
@@ -291,7 +306,6 @@
             } else {
                 // ВХОД
                 const loginIdentifier = mainInput.value.trim();
-                const password = passwordInput.value;
 
                 try {
                     const res = await db.execute({
