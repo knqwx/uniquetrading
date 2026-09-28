@@ -111,6 +111,33 @@
             color: #ffffff;
         }
 
+        /* Иконка письма в шапке */
+        .messages-icon-btn {
+            background-color: #262626;
+            border: 1px solid #383838;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            position: relative;
+            color: #cccccc;
+        }
+
+        .messages-icon-btn:hover {
+            background-color: #313131;
+            color: #ffffff;
+        }
+
+        .messages-icon-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
         /* Кликабельный бокс профиля с аватаркой */
         .user-profile-box {
             display: flex;
@@ -854,6 +881,240 @@
             word-break: break-all;
         }
 
+        /* Полноэкранный чат / сообщения */
+        .messages-page {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 70px);
+            background-color: #1a1a1a;
+            z-index: 120;
+            display: none;
+            box-sizing: border-box;
+            padding: 30px 50px;
+        }
+
+        .messages-page.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .messages-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 25px;
+            flex: 1;
+            max-width: 1300px;
+            width: 100%;
+            margin: 0 auto;
+            overflow: hidden;
+            background-color: #222222;
+            border: 1px solid #333333;
+            border-radius: 14px;
+        }
+
+        .chats-list-col {
+            background-color: #1c1c1c;
+            border-right: 1px solid #333333;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chats-list-header {
+            padding: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #ffffff;
+            border-bottom: 1px solid #333333;
+        }
+
+        .chats-items {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .chat-item {
+            padding: 12px 14px;
+            border-radius: 8px;
+            background-color: transparent;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-item:hover {
+            background-color: #262626;
+        }
+
+        .chat-item.active {
+            background-color: rgba(255, 115, 0, 0.15);
+            border: 1px solid rgba(255, 115, 0, 0.3);
+        }
+
+        .chat-item-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ff7300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            font-size: 16px;
+            object-fit: cover;
+        }
+
+        .chat-item-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .chat-item-name {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-item-last {
+            color: #888888;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-window-col {
+            display: flex;
+            flex-direction: column;
+            background-color: #222222;
+            overflow: hidden;
+        }
+
+        .chat-header-row {
+            padding: 16px 20px;
+            border-bottom: 1px solid #333333;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background-color: #1c1c1c;
+        }
+
+        .chat-header-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #ff7300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            font-size: 14px;
+            object-fit: cover;
+        }
+
+        .chat-header-name {
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .chat-messages-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message-bubble {
+            max-width: 65%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .message-bubble.incoming {
+            background-color: #2b2b2b;
+            color: #ffffff;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-bubble.outgoing {
+            background-color: #ff7300;
+            color: #ffffff;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-input-row {
+            padding: 16px 20px;
+            border-top: 1px solid #333333;
+            display: flex;
+            gap: 12px;
+            background-color: #1c1c1c;
+        }
+
+        .chat-input {
+            flex: 1;
+            background-color: #2a2a2a;
+            border: 1px solid #3d3d3d;
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            outline: none;
+            resize: none;
+            height: 20px;
+            max-height: 100px;
+        }
+
+        .chat-input:focus {
+            border-color: #ff7300;
+        }
+
+        .chat-send-btn {
+            background-color: #ff7300;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 0 20px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .chat-send-btn:hover {
+            opacity: 0.9;
+        }
+
+        .no-chat-selected {
+            margin: auto;
+            color: #777777;
+            font-size: 15px;
+            text-align: center;
+        }
+
         /* Настройки */
         .settings-modal-content {
             width: 480px;
@@ -1449,7 +1710,7 @@
     </header>
 
     <!-- Главная страница (Live Listings) -->
-    <main>
+    <main id="main-content-area">
         <div class="main-header-section">
             <h1 class="all-games-main-title" id="page-main-title">Live Listings</h1>
             <div class="filters-panel" id="filters-panel">
@@ -1475,6 +1736,21 @@
             <!-- Сюда динамически выводятся все товары -->
         </div>
     </main>
+
+    <!-- Полноэкранная страница сообщений (чатов) -->
+    <div class="messages-page" id="messages-page">
+        <div class="messages-layout">
+            <div class="chats-list-col">
+                <div class="chats-list-header">Messages</div>
+                <div class="chats-items" id="chats-items-container">
+                    <!-- Список чатов -->
+                </div>
+            </div>
+            <div class="chat-window-col" id="chat-window-col">
+                <div class="no-chat-selected">Select a chat to start messaging</div>
+            </div>
+        </div>
+    </div>
 
     <!-- Полноэкранная детальная страница товара -->
     <div class="item-detail-page" id="item-detail-page">
@@ -1738,7 +2014,9 @@
                         avatar TEXT,
                         lastUsernameChange INTEGER,
                         lastDisplayNameChange INTEGER,
-                        items TEXT
+                        items TEXT,
+                        lastItemTime INTEGER,
+                        messages TEXT
                     )
                 `);
             } catch (e) {
@@ -1758,7 +2036,9 @@
                     avatar: row.avatar,
                     lastUsernameChange: row.lastUsernameChange,
                     lastDisplayNameChange: row.lastDisplayNameChange,
-                    items: row.items ? JSON.parse(row.items) : []
+                    items: row.items ? JSON.parse(row.items) : [],
+                    lastItemTime: row.lastItemTime || 0,
+                    messages: row.messages ? JSON.parse(row.messages) : []
                 }));
             } catch (e) {
                 console.error("Error fetching users:", e);
@@ -1783,7 +2063,9 @@
                     avatar: row.avatar,
                     lastUsernameChange: row.lastUsernameChange,
                     lastDisplayNameChange: row.lastDisplayNameChange,
-                    items: row.items ? JSON.parse(row.items) : []
+                    items: row.items ? JSON.parse(row.items) : [],
+                    lastItemTime: row.lastItemTime || 0,
+                    messages: row.messages ? JSON.parse(row.messages) : []
                 };
             } catch (e) {
                 console.error("Error fetching user:", e);
@@ -1794,8 +2076,8 @@
         async function saveUserToDB(userData) {
             try {
                 await db.execute({
-                    sql: `INSERT INTO users (customId, username, displayName, email, password, avatar, lastUsernameChange, lastDisplayNameChange, items)
-                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    sql: `INSERT INTO users (customId, username, displayName, email, password, avatar, lastUsernameChange, lastDisplayNameChange, items, lastItemTime, messages)
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                           ON CONFLICT(username) DO UPDATE SET
                             customId = excluded.customId,
                             displayName = excluded.displayName,
@@ -1804,7 +2086,9 @@
                             avatar = excluded.avatar,
                             lastUsernameChange = excluded.lastUsernameChange,
                             lastDisplayNameChange = excluded.lastDisplayNameChange,
-                            items = excluded.items`,
+                            items = excluded.items,
+                            lastItemTime = excluded.lastItemTime,
+                            messages = excluded.messages`,
                     args: [
                         userData.customId || '1',
                         userData.username,
@@ -1814,7 +2098,9 @@
                         userData.avatar || null,
                         userData.lastUsernameChange || null,
                         userData.lastDisplayNameChange || null,
-                        JSON.stringify(userData.items || [])
+                        JSON.stringify(userData.items || []),
+                        userData.lastItemTime || 0,
+                        JSON.stringify(userData.messages || [])
                     ]
                 });
             } catch (e) {
@@ -1882,6 +2168,8 @@
         const robloxNavBtn = document.getElementById('roblox-nav-btn');
         const pageMainTitle = document.getElementById('page-main-title');
         const filtersPanel = document.getElementById('filters-panel');
+        const mainContentArea = document.getElementById('main-content-area');
+        const messagesPage = document.getElementById('messages-page');
         
         const profileModal = document.getElementById('profile-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
@@ -1970,10 +2258,11 @@
         let currentSellerUsername = null;
         let currentActiveItem = null;
         let editingItemId = null;
-        let activeGameTag = 'All'; // Установлено по умолчанию для автозагрузки всех предметов
+        let activeGameTag = 'All';
         let currentViewMode = 'home';
         let currentItemTimestamp = null;
         let isExactTimeFormat = false;
+        let activeChatUsername = null;
 
         if (currentUser) {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -2074,8 +2363,10 @@
             
             if (item.tag === 'selling') {
                 detailPriceVal.textContent = `$${item.price}`;
+                buyItemActionBtn.textContent = (currentUser && currentUser === item.sellerUsername) ? 'Edit Item' : 'Contact Seller';
             } else {
                 detailPriceVal.textContent = 'Looking for Offers';
+                buyItemActionBtn.textContent = (currentUser && currentUser === item.sellerUsername) ? 'Edit Item' : 'Make an Offer';
             }
 
             detailTimeVal.textContent = getTimeAgo(currentItemTimestamp);
@@ -2097,12 +2388,6 @@
                 detailSellerAvatar.style.backgroundColor = avatarColor;
             }
             detailSellerName.textContent = item.sellerDisplayName;
-
-            if (currentUser && currentUser === item.sellerUsername) {
-                buyItemActionBtn.textContent = 'Edit Item';
-            } else {
-                buyItemActionBtn.textContent = 'Contact Seller';
-            }
 
             itemDetailPage.classList.add('active');
         }
@@ -2133,7 +2418,11 @@
                 updateItemPreview();
                 createItemModal.classList.add('active');
             } else {
-                showToast(`Contact functionality for ${currentActiveItem.sellerDisplayName} is coming soon!`);
+                if (!currentUser) {
+                    showToast('Please log in to contact the seller.');
+                    return;
+                }
+                openMessagesPage(currentActiveItem.sellerUsername);
             }
         });
 
@@ -2144,8 +2433,10 @@
             
             pageMainTitle.textContent = 'Live Listings';
             filtersPanel.style.display = 'flex';
+            mainContentArea.style.display = 'block';
 
             itemDetailPage.classList.remove('active');
+            messagesPage.classList.remove('active');
             profileModal.classList.remove('active');
             settingsModal.classList.remove('active');
             selectGameModal.classList.remove('active');
@@ -2170,8 +2461,10 @@
 
             pageMainTitle.textContent = 'Roblox Games';
             filtersPanel.style.display = 'none';
+            mainContentArea.style.display = 'block';
 
             itemDetailPage.classList.remove('active');
+            messagesPage.classList.remove('active');
             profileModal.classList.remove('active');
             settingsModal.classList.remove('active');
             selectGameModal.classList.remove('active');
@@ -2182,6 +2475,183 @@
 
             renderGlobalItems();
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function openMessagesPage(targetUsername = null) {
+            if (!currentUser) {
+                showToast('Please log in to view messages.');
+                return;
+            }
+
+            mainContentArea.style.display = 'none';
+            itemDetailPage.classList.remove('active');
+            profileModal.classList.remove('active');
+            settingsModal.classList.remove('active');
+            selectGameModal.classList.remove('active');
+            createItemModal.classList.remove('active');
+            switchModal.classList.remove('active');
+            dbModal.classList.remove('active');
+            confirmModal.classList.remove('active');
+
+            homeLink.classList.remove('active');
+            robloxNavBtn.classList.remove('active');
+
+            messagesPage.classList.add('active');
+            await renderChatsList(targetUsername);
+        }
+
+        async function renderChatsList(selectUsername = null) {
+            const chatsContainer = document.getElementById('chats-items-container');
+            const chatWindowCol = document.getElementById('chat-window-col');
+            
+            let allUsers = await getAllUsersFromDB();
+            let me = allUsers.find(u => u.username === currentUser);
+            if (!me) return;
+
+            let myMessages = me.messages || [];
+            
+            // Находим всех уникальных собеседников
+            let interlocutorsSet = new Set();
+            myMessages.forEach(m => {
+                if (m.sender === currentUser) interlocutorsSet.add(m.receiver);
+                if (m.receiver === currentUser) interlocutorsSet.add(m.sender);
+            });
+
+            if (selectUsername && selectUsername !== currentUser) {
+                interlocutorsSet.add(selectUsername);
+            }
+
+            let interlocutors = Array.from(interlocutorsSet);
+
+            chatsContainer.innerHTML = '';
+            if (interlocutors.length === 0) {
+                chatsContainer.innerHTML = '<div style="color: #777; font-size: 13px; text-align: center; padding: 20px;">No conversations yet.</div>';
+                chatWindowCol.innerHTML = '<div class="no-chat-selected">Select a chat to start messaging</div>';
+                return;
+            }
+
+            if (!activeChatUsername && interlocutors.length > 0) {
+                activeChatUsername = selectUsername || interlocutors[0];
+            } else if (selectUsername) {
+                activeChatUsername = selectUsername;
+            }
+
+            interlocutors.forEach(username => {
+                let otherUser = allUsers.find(u => u.username === username) || { username, displayName: username };
+                const firstLetter = username.charAt(0).toUpperCase();
+                const avatarColor = getColorFromName(username);
+
+                // Ищем последнее сообщение
+                let chatMsgs = myMessages.filter(m => m.sender === username || m.receiver === username);
+                chatMsgs.sort((a, b) => a.timestamp - b.timestamp);
+                let lastMsg = chatMsgs.length > 0 ? chatMsgs[chatMsgs.length - 1].text : 'No messages yet';
+
+                const item = document.createElement('div');
+                item.className = `chat-item ${activeChatUsername === username ? 'active' : ''}`;
+
+                let avatarHtml = `<div class="chat-item-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>`;
+                if (otherUser.avatar) {
+                    avatarHtml = `<img class="chat-item-avatar" src="${otherUser.avatar}" alt="Avatar">`;
+                }
+
+                item.innerHTML = `
+                    ${avatarHtml}
+                    <div class="chat-item-info">
+                        <div class="chat-item-name">${otherUser.displayName || username}</div>
+                        <div class="chat-item-last">${lastMsg}</div>
+                    </div>
+                `;
+
+                item.addEventListener('click', () => {
+                    activeChatUsername = username;
+                    renderChatsList();
+                });
+
+                chatsContainer.appendChild(item);
+            });
+
+            if (activeChatUsername) {
+                renderActiveChatWindow(activeChatUsername, allUsers);
+            }
+        }
+
+        async function renderActiveChatWindow(targetUsername, allUsers) {
+            const chatWindowCol = document.getElementById('chat-window-col');
+            let me = allUsers.find(u => u.username === currentUser);
+            let otherUser = allUsers.find(u => u.username === targetUsername) || { username: targetUsername, displayName: targetUsername };
+            
+            let myMessages = me.messages || [];
+            let chatMsgs = myMessages.filter(m => m.sender === targetUsername || m.receiver === targetUsername);
+            chatMsgs.sort((a, b) => a.timestamp - b.timestamp);
+
+            const firstLetter = targetUsername.charAt(0).toUpperCase();
+            const avatarColor = getColorFromName(targetUsername);
+            let headerAvatarHtml = `<div class="chat-header-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>`;
+            if (otherUser.avatar) {
+                headerAvatarHtml = `<img class="chat-header-avatar" src="${otherUser.avatar}" alt="Avatar">`;
+            }
+
+            chatWindowCol.innerHTML = `
+                <div class="chat-header-row">
+                    ${headerAvatarHtml}
+                    <div class="chat-header-name">${otherUser.displayName || targetUsername}</div>
+                </div>
+                <div class="chat-messages-container" id="chat-messages-scroll">
+                    ${chatMsgs.length === 0 ? '<div class="no-chat-selected">Send a message in any language!</div>' : ''}
+                    ${chatMsgs.map(m => `
+                        <div class="message-bubble ${m.sender === currentUser ? 'outgoing' : 'incoming'}">
+                            ${escapeHtml(m.text)}
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="chat-input-row">
+                    <textarea class="chat-input" id="chat-message-input" placeholder="Type a message..."></textarea>
+                    <button class="chat-send-btn" id="chat-send-btn">Send</button>
+                </div>
+            `;
+
+            const scrollContainer = document.getElementById('chat-messages-scroll');
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+
+            const sendBtn = document.getElementById('chat-send-btn');
+            const inputField = document.getElementById('chat-message-input');
+
+            const handleSend = async () => {
+                let text = inputField.value.trim();
+                if (!text) return;
+
+                let freshUsers = await getAllUsersFromDB();
+                let senderUser = freshUsers.find(u => u.username === currentUser);
+                let receiverUser = freshUsers.find(u => u.username === targetUsername);
+
+                if (!senderUser || !receiverUser) return;
+
+                let timestamp = Date.now();
+                let newMsg = { sender: currentUser, receiver: targetUsername, text, timestamp };
+
+                if (!senderUser.messages) senderUser.messages = [];
+                senderUser.messages.push(newMsg);
+                await saveUserToDB(senderUser);
+
+                if (!receiverUser.messages) receiverUser.messages = [];
+                receiverUser.messages.push(newMsg);
+                await saveUserToDB(receiverUser);
+
+                inputField.value = '';
+                renderChatsList();
+            };
+
+            sendBtn.addEventListener('click', handleSend);
+            inputField.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                }
+            });
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
         homeLink.addEventListener('click', (e) => { e.preventDefault(); switchToHome(); });
@@ -2263,6 +2733,7 @@
 
             renderUserItems(sellerData);
             itemDetailPage.classList.remove('active');
+            messagesPage.classList.remove('active');
             profileModal.classList.add('active');
         }
 
@@ -2425,7 +2896,6 @@
         (async function initApp() {
             await initDB();
 
-            // Кнопка открытия выбора игры
             openSelectGameBtn.addEventListener('click', () => {
                 profileModal.classList.remove('active');
                 selectGameModal.classList.add('active');
@@ -2512,7 +2982,7 @@
                 let userData = await getUserByUsername(currentUser);
 
                 if (!userData) {
-                    userData = { username: currentUser, customId: '1', items: [] };
+                    userData = { username: currentUser, customId: '1', items: [], lastItemTime: 0, messages: [] };
                 }
                 if (!userData.items) userData.items = [];
 
@@ -2527,6 +2997,9 @@
                 }
 
                 authContainer.innerHTML = `
+                    <button class="messages-icon-btn" id="header-messages-btn" title="Messages">
+                        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                    </button>
                     <div class="user-profile-box" id="profile-toggle-btn">
                         ${profileAvatarHtml}
                         <span class="user-name">${displayName}</span>
@@ -2536,6 +3009,10 @@
                         <button class="dropdown-item" id="menu-switch-btn">Switch Account</button>
                     </div>
                 `;
+
+                document.getElementById('header-messages-btn').addEventListener('click', () => {
+                    openMessagesPage();
+                });
 
                 const profileToggleBtn = document.getElementById('profile-toggle-btn');
                 const profileDropdown = document.getElementById('profile-dropdown');
@@ -2694,6 +3171,17 @@
                         return;
                     }
 
+                    const now = Date.now();
+                    const TEN_MINUTES = 10 * 60 * 1000;
+
+                    if (!editingItemId && userData.lastItemTime && (now - userData.lastItemTime < TEN_MINUTES)) {
+                        const remainingSecs = Math.ceil((TEN_MINUTES - (now - userData.lastItemTime)) / 1000);
+                        const mins = Math.floor(remainingSecs / 60);
+                        const secs = remainingSecs % 60;
+                        showToast(`You can post a new item only once every 10 minutes. Please wait ${mins}m ${secs}s.`);
+                        return;
+                    }
+
                     if (editingItemId) {
                         const idx = userData.items.findIndex(it => it.id === editingItemId);
                         if (idx !== -1) {
@@ -2707,7 +3195,7 @@
                         showToast('Item updated successfully!');
                     } else {
                         const newItem = {
-                            id: Date.now(),
+                            id: now,
                             game: selectedGameForListing,
                             name: itemName,
                             description: itemDesc,
@@ -2716,6 +3204,7 @@
                             photo: uploadedItemPhotoData
                         };
                         userData.items.push(newItem);
+                        userData.lastItemTime = now;
                         showToast('Item listed successfully!');
                     }
 
@@ -2800,7 +3289,6 @@
                 });
             }
 
-            // Автоматическая загрузка всех предметов при старте сайта
             renderGlobalItems();
         })();
     </script>
