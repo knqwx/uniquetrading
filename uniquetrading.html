@@ -3148,107 +3148,131 @@
                     localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
 
                     showToast('Settings saved successfully!');
-                    settingsModal.classList.remove('active');
-                    setTimeout(() => window.location.reload(), 500);
-                });
-            }
-
-            openDbBtn.addEventListener('click', () => {
-                profileModal.classList.remove('active');
-                renderDatabaseTable();
-                dbModal.classList.add('active');
-            });
-
-            confirmYesBtn.addEventListener('click', async () => {
-                if (userToDelete) {
-                    await deleteUserFromDB(userToDelete);
-                    let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-                    savedAccounts = savedAccounts.filter(name => name !== userToDelete);
-                    localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
-
-                    if (userToDelete === currentUser) {
-                        localStorage.removeItem('currentUser');
+                    setTimeout(() => {
                         window.location.reload();
+                    }, 1000);
+                });
+
+                saveItemBtn.addEventListener('click', async () => {
+                    const itemName = itemNameInput.value.trim();
+                    const itemDesc = document.getElementById('item-desc-input').value.trim();
+                    const itemTag = itemTagSelect.value;
+                    const itemPrice = itemPriceInput.value.trim();
+
+                    if (!itemName) {
+                        showToast('Please enter an item name');
                         return;
                     }
 
-                    showToast(`User "${userToDelete}" deleted.`);
-                    confirmModal.classList.remove('active');
-                    renderDatabaseTable();
-                    dbModal.classList.add('active');
-                }
-            });
+                    if (itemTag === 'selling' && !itemPrice) {
+                        showToast('Please enter a price');
+                        return;
+                    }
 
-            confirmNoBtn.addEventListener('click', () => {
-                confirmModal.classList.remove('active');
-                dbModal.classList.add('active');
-            });
+                    const now = Date.now();
+                    const TEN_MINUTES = 10 * 60 * 1000;
 
-            closeModalBtn.addEventListener('click', () => profileModal.classList.remove('active'));
-            closeSettingsModalBtn.addEventListener('click', () => settingsModal.classList.remove('active'));
-            closeSwitchModalBtn.addEventListener('click', () => switchModal.classList.remove('active'));
-            closeDbModalBtn.addEventListener('click', () => dbModal.classList.remove('active'));
-            closeConfirmModalBtn.addEventListener('click', () => confirmModal.classList.remove('active'));
+                    if (!editingItemId && userData.lastItemTime && (now - userData.lastItemTime < TEN_MINUTES)) {
+                        const remainingSecs = Math.ceil((TEN_MINUTES - (now - userData.lastItemTime)) / 1000);
+                        const mins = Math.floor(remainingSecs / 60);
+                        const secs = remainingSecs % 60;
+                        showToast(`You can post a new item only once every 10 minutes. Please wait ${mins}m ${secs}s.`);
+                        return;
+                    }
 
-            addAccountBtn.addEventListener('click', () => {
-                window.location.href = 'login.html';
-            });
-
-            saveItemBtn.addEventListener('click', async () => {
-                const nameVal = itemNameInput.value.trim();
-                const descVal = document.getElementById('item-desc-input').value.trim();
-                const tagVal = itemTagSelect.value;
-                const priceVal = itemPriceInput.value.trim();
-
-                if (!nameVal) {
-                    showToast('Please enter an item name');
-                    return;
-                }
-
-                if (tagVal === 'selling' && !priceVal) {
-                    showToast('Please enter a price');
-                    return;
-                }
-
-                let freshUsers = await getAllUsersFromDB();
-                let me = freshUsers.find(u => u.username === currentUser);
-                if (!me) return;
-
-                if (!me.items) me.items = [];
-
-                if (editingItemId) {
-                    me.items = me.items.map(it => {
-                        if (it.id === editingItemId) {
-                            return {
-                                ...it,
-                                name: nameVal,
-                                description: descVal,
-                                tag: tagVal,
-                                price: tagVal === 'selling' ? priceVal : '',
-                                photo: uploadedItemPhotoData || it.photo
-                            };
+                    if (editingItemId) {
+                        const idx = userData.items.findIndex(it => it.id === editingItemId);
+                        if (idx !== -1) {
+                            userData.items[idx].game = selectedGameForListing;
+                            userData.items[idx].name = itemName;
+                            userData.items[idx].description = itemDesc;
+                            userData.items[idx].tag = itemTag;
+                            userData.items[idx].price = itemTag === 'selling' ? itemPrice : null;
+                            userData.items[idx].photo = uploadedItemPhotoData;
                         }
-                        return it;
-                    });
-                    showToast('Item updated successfully!');
-                } else {
-                    const newItem = {
-                        id: Date.now(),
-                        game: selectedGameForListing,
-                        name: nameVal,
-                        description: descVal,
-                        tag: tagVal,
-                        price: tagVal === 'selling' ? priceVal : '',
-                        photo: uploadedItemPhotoData
-                    };
-                    me.items.unshift(newItem);
-                    showToast('Item listed successfully!');
-                }
+                        showToast('Item updated successfully!');
+                    } else {
+                        const newItem = {
+                            id: now,
+                            game: selectedGameForListing,
+                            name: itemName,
+                            description: itemDesc,
+                            tag: itemTag,
+                            price: itemTag === 'selling' ? itemPrice : null,
+                            photo: uploadedItemPhotoData
+                        };
+                        userData.items.push(newItem);
+                        userData.lastItemTime = now;
+                        showToast('Item listed successfully!');
+                    }
 
-                await saveUserToDB(me);
-                createItemModal.classList.remove('active');
-                renderGlobalItems();
-            });
+                    await saveUserToDB(userData);
+
+                    renderUserItems(userData);
+                    renderGlobalItems();
+
+                    if (editingItemId && currentActiveItem && currentActiveItem.id === editingItemId) {
+                        const updated = userData.items.find(it => it.id === editingItemId);
+                        if (updated) {
+                            openItemDetailPage({
+                                ...updated,
+                                sellerUsername: userData.username,
+                                sellerDisplayName: userData.displayName || userData.username,
+                                sellerAvatar: userData.avatar
+                            });
+                        }
+                    }
+
+                    createItemModal.classList.remove('active');
+                });
+
+                closeModalBtn.addEventListener('click', () => {
+                    profileModal.classList.remove('active');
+                });
+
+                closeSettingsModalBtn.addEventListener('click', () => {
+                    settingsModal.classList.remove('active');
+                });
+
+                closeSwitchModalBtn.addEventListener('click', () => {
+                    switchModal.classList.remove('active');
+                });
+
+                addAccountBtn.addEventListener('click', () => {
+                    window.location.href = 'login.html';
+                });
+
+                openDbBtn.addEventListener('click', () => {
+                    renderDatabaseTable();
+                    profileModal.classList.remove('active');
+                    dbModal.classList.add('active');
+                });
+
+                closeDbModalBtn.addEventListener('click', () => {
+                    dbModal.classList.remove('active');
+                });
+
+                closeConfirmModalBtn.addEventListener('click', () => {
+                    confirmModal.classList.remove('active');
+                    dbModal.classList.add('app') || dbModal.classList.add('active');
+                });
+
+                confirmNoBtn.addEventListener('click', () => {
+                    confirmModal.classList.remove('active');
+                    dbModal.classList.add('active');
+                });
+
+                confirmYesBtn.addEventListener('click', async () => {
+                    if (userToDelete) {
+                        await deleteUserFromDB(userToDelete);
+                        showToast(`User "${userToDelete}" deleted successfully.`);
+                        userToDelete = null;
+                        confirmModal.classList.remove('active');
+                        renderDatabaseTable();
+                        dbModal.classList.add('active');
+                    }
+                });
+            }
 
             renderGlobalItems();
         })();
