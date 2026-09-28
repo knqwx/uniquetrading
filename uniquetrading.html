@@ -1042,25 +1042,25 @@
         }
 
         .select-game-modal-content {
-            width: 380px;
+            width: 400px;
             text-align: left;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
 
         .select-game-title {
             color: #ffffff;
             font-size: 20px;
             font-weight: 600;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
 
         .game-card-item {
             background-color: #1f1f1f;
             border: 1px solid #383838;
-            border-radius: 8px;
-            padding: 14px 16px;
+            border-radius: 10px;
+            padding: 12px 16px;
             color: #ffffff;
             font-size: 15px;
             font-weight: 500;
@@ -1068,12 +1068,20 @@
             transition: background-color 0.2s, border-color 0.2s;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 15px;
         }
 
         .game-card-item:hover {
             background-color: #2a2a2a;
             border-color: #ff7300;
+        }
+
+        .game-card-thumb {
+            width: 45px;
+            height: 45px;
+            border-radius: 8px;
+            object-fit: cover;
+            background-color: #333;
         }
 
         .create-item-modal-content {
@@ -1574,17 +1582,21 @@
         </div>
     </div>
 
-    <!-- Модальное окно Select Game -->
+    <!-- Модальное окно Select Game (с миниатюрами MM2.webp и SAB.webp) -->
     <div class="modal-overlay" id="select-game-modal">
         <div class="modal-content select-game-modal-content">
             <button class="close-modal" id="close-select-game-btn">&times;</button>
             <div class="select-game-title">Select Game</div>
+            
             <div class="game-card-item" id="select-mm2-btn">
-                <span>Murder Mystery 2</span>
+                <img src="thumbnails/MM2.webp" class="game-card-thumb" alt="MM2">
+                <span style="flex:1; text-align: left;">Murder Mystery 2</span>
                 <span>&rarr;</span>
             </div>
+            
             <div class="game-card-item" id="select-sab-btn">
-                <span>Steal a brainrot</span>
+                <img src="thumbnails/SAB.webp" class="game-card-thumb" alt="SAB">
+                <span style="flex:1; text-align: left;">Steal a brainrot</span>
                 <span>&rarr;</span>
             </div>
         </div>
@@ -1599,7 +1611,7 @@
                 <div class="settings-title" id="create-item-modal-title" style="font-size: 18px; margin-bottom: 15px;">Create Item</div>
 
                 <div class="setting-group">
-                    <label class="setting-label">Item Photo</label>
+                    <label class="setting-label">Item Photo (Optional)</label>
                     <label class="choose-file-btn-wrapper" for="item-photo-file-input">Choose File</label>
                     <input type="file" id="item-photo-file-input" accept="image/*" style="display: none;">
                 </div>
@@ -1667,7 +1679,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно базы данных (без кнопки удаления всех) -->
+    <!-- Модальное окно базы данных -->
     <div class="modal-overlay" id="db-modal">
         <div class="modal-content db-modal-content">
             <button class="close-modal" id="close-db-modal-btn">&times;</button>
