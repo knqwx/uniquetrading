@@ -194,7 +194,7 @@
             pointer-events: none;
             transform: translateY(-10px);
             transition: opacity 0.2s ease, transform 0.2s ease;
-            z-index: 150;
+            z-index: 150; /* Повышен z-index, чтобы меню было поверх страницы сообщений */
         }
 
         .profile-dropdown.active {
@@ -1114,6 +1114,39 @@
             font-size: 15px;
             text-align: center;
         }
+
+
+        .chat-item-context {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 20px;
+            padding: 10px 14px;
+            background-color: rgba(255, 115, 0, 0.1);
+            border: 1px solid rgba(255, 115, 0, 0.3);
+            border-radius: 10px;
+            color: #ffffff;
+            font-size: 13px;
+        }
+        .chat-item-context .ctx-info { flex: 1; overflow: hidden; }
+        .chat-item-context .ctx-label { color: #ff9a44; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; }
+        .chat-item-context .ctx-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-item-context .ctx-price { color: #bbbbbb; }
+        .chat-item-context .ctx-close { background: none; border: none; color: #888; font-size: 18px; cursor: pointer; padding: 0 4px; }
+        .chat-item-context .ctx-close:hover { color: #fff; }
+        .msg-item-ref {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            border-left: 3px solid rgba(255, 255, 255, 0.6);
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .msg-item-ref b { font-size: 13px; }
+        .message-bubble .msg-time { display: block; margin-top: 4px; font-size: 10px; opacity: 0.6; text-align: right; }
 
         /* Настройки */
         .settings-modal-content {
@@ -2263,6 +2296,10 @@
         let currentItemTimestamp = null;
         let isExactTimeFormat = false;
         let activeChatUsername = null;
+        let pendingChatItem = null;
+        let renderedChatUser = null;
+        let chatSignature = '';
+        let chatPollTimer = null;
 
         if (currentUser) {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -2422,7 +2459,7 @@
                     showToast('Please log in to contact the seller.');
                     return;
                 }
-                openMessagesPage(currentActiveItem.sellerUsername);
+                openMessagesPage(currentActiveItem.sellerUsername, currentActiveItem);
             }
         });
 
@@ -2477,11 +2514,24 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        async function openMessagesPage(targetUsername = null) {
+        function chatSig(msgs) {
+            let max = 0;
+            msgs.forEach(m => { if (m.timestamp > max) max = m.timestamp; });
+            return msgs.length + ':' + max;
+        }
+
+        function itemPriceLabel(item) {
+            return item.tag === 'selling' ? `$${item.price}` : 'Looking for Offers';
+        }
+
+        async function openMessagesPage(targetUsername = null, item = null) {
             if (!currentUser) {
                 showToast('Please log in to view messages.');
                 return;
             }
+
+            pendingChatItem = (item && targetUsername) ? item : null;
+            if (targetUsername) renderedChatUser = null; // force a fresh open of this chat
 
             mainContentArea.style.display = 'none';
             itemDetailPage.classList.remove('active');
@@ -2498,38 +2548,54 @@
 
             messagesPage.classList.add('active');
             await renderChatsList(targetUsername);
+            startChatPolling();
+        }
+
+        // Live updates: while the messages page is open, check for new messages every 3s
+        function startChatPolling() {
+            if (chatPollTimer) return;
+            chatPollTimer = setInterval(async () => {
+                if (!messagesPage.classList.contains('active') || document.hidden || !currentUser) return;
+                const me = await getUserByUsername(currentUser);
+                if (!me) return;
+                if (chatSig(me.messages || []) !== chatSignature) {
+                    renderChatsList(activeChatUsername);
+                }
+            }, 3000);
         }
 
         async function renderChatsList(selectUsername = null) {
             const chatsContainer = document.getElementById('chats-items-container');
             const chatWindowCol = document.getElementById('chat-window-col');
-            
+
             let allUsers = await getAllUsersFromDB();
             let me = allUsers.find(u => u.username === currentUser);
             if (!me) return;
 
             let myMessages = me.messages || [];
-            
-            let interlocutorsSet = new Set();
+            chatSignature = chatSig(myMessages);
+
+            let lastTime = {};
             myMessages.forEach(m => {
-                if (m.sender === currentUser) interlocutorsSet.add(m.receiver);
-                if (m.receiver === currentUser) interlocutorsSet.add(m.sender);
+                const other = m.sender === currentUser ? m.receiver : m.sender;
+                if (!(other in lastTime) || m.timestamp > lastTime[other]) lastTime[other] = m.timestamp;
             });
 
-            if (selectUsername && selectUsername !== currentUser) {
-                interlocutorsSet.add(selectUsername);
+            if (selectUsername && selectUsername !== currentUser && !(selectUsername in lastTime)) {
+                lastTime[selectUsername] = Infinity; // brand-new chat goes on top
             }
 
-            let interlocutors = Array.from(interlocutorsSet);
+            let interlocutors = Object.keys(lastTime).sort((a, b) => lastTime[b] - lastTime[a]);
 
             chatsContainer.innerHTML = '';
             if (interlocutors.length === 0) {
                 chatsContainer.innerHTML = '<div style="color: #777; font-size: 13px; text-align: center; padding: 20px;">No conversations yet.</div>';
                 chatWindowCol.innerHTML = '<div class="no-chat-selected">Select a chat to start messaging</div>';
+                renderedChatUser = null;
                 return;
             }
 
-            if (selectUsername) {
+            if (selectUsername && interlocutors.includes(selectUsername)) {
                 activeChatUsername = selectUsername;
             } else if (!activeChatUsername || !interlocutors.includes(activeChatUsername)) {
                 activeChatUsername = interlocutors[0];
@@ -2547,18 +2613,12 @@
                 const item = document.createElement('div');
                 item.className = `chat-item ${activeChatUsername === username ? 'active' : ''}`;
 
-                let avatarHtml = `<div class="chat-item-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>`;
+                let avatarHtml = `<div class="chat-item-avatar" style="background-color: ${avatarColor};">${escapeHtml(firstLetter)}</div>`;
                 if (otherUser.avatar) {
                     avatarHtml = `<img class="chat-item-avatar" src="${otherUser.avatar}" alt="Avatar">`;
                 }
 
-                item.innerHTML = `
-                    ${avatarHtml}
-                    <div class="chat-item-info">
-                        <div class="chat-item-name">${otherUser.displayName || username}</div>
-                        <div class="chat-item-last">${lastMsg}</div>
-                    </div>
-                `;
+                item.innerHTML = `${avatarHtml}<div class="chat-item-info"><div class="chat-item-name">${escapeHtml(otherUser.displayName || username)}</div><div class="chat-item-last">${escapeHtml(lastMsg)}</div></div>`;
 
                 item.addEventListener('click', () => {
                     activeChatUsername = username;
@@ -2577,36 +2637,34 @@
             const chatWindowCol = document.getElementById('chat-window-col');
             let me = allUsers.find(u => u.username === currentUser);
             let otherUser = allUsers.find(u => u.username === targetUsername) || { username: targetUsername, displayName: targetUsername };
-            
+
+            // keep whatever the user was typing when a live refresh re-renders the window
+            const prevInput = document.getElementById('chat-message-input');
+            const sameChat = renderedChatUser === targetUsername;
+            const keepDraft = (sameChat && prevInput) ? prevInput.value : '';
+            const hadFocus = sameChat && prevInput && document.activeElement === prevInput;
+
             let myMessages = me.messages || [];
             let chatMsgs = myMessages.filter(m => m.sender === targetUsername || m.receiver === targetUsername);
             chatMsgs.sort((a, b) => a.timestamp - b.timestamp);
 
+            const ctxItem = (pendingChatItem && pendingChatItem.sellerUsername === targetUsername) ? pendingChatItem : null;
+
             const firstLetter = targetUsername.charAt(0).toUpperCase();
             const avatarColor = getColorFromName(targetUsername);
-            let headerAvatarHtml = `<div class="chat-header-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>`;
+            let headerAvatarHtml = `<div class="chat-header-avatar" style="background-color: ${avatarColor};">${escapeHtml(firstLetter)}</div>`;
             if (otherUser.avatar) {
                 headerAvatarHtml = `<img class="chat-header-avatar" src="${otherUser.avatar}" alt="Avatar">`;
             }
 
-            chatWindowCol.innerHTML = `
-                <div class="chat-header-row">
-                    ${headerAvatarHtml}
-                    <div class="chat-header-name">${otherUser.displayName || targetUsername}</div>
-                </div>
-                <div class="chat-messages-container" id="chat-messages-scroll">
-                    ${chatMsgs.length === 0 ? '<div class="no-chat-selected">Send a message in any language!</div>' : ''}
-                    ${chatMsgs.map(m => `
-                        <div class="message-bubble ${m.sender === currentUser ? 'outgoing' : 'incoming'}">
-                            ${escapeHtml(m.text)}
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="chat-input-row">
-                    <textarea class="chat-input" id="chat-message-input" placeholder="Type a message..."></textarea>
-                    <button class="chat-send-btn" id="chat-send-btn">Send</button>
-                </div>
-            `;
+            const bubblesHtml = chatMsgs.map(m => {
+                const ref = m.itemRef ? `<div class="msg-item-ref"><b>${escapeHtml(m.itemRef.name)}</b><span>${escapeHtml(m.itemRef.price)}</span></div>` : '';
+                return `<div class="message-bubble ${m.sender === currentUser ? 'outgoing' : 'incoming'}" title="${escapeHtml(getExactDate(m.timestamp))}">${ref}${escapeHtml(m.text)}</div>`;
+            }).join('');
+
+            const ctxHtml = ctxItem ? `<div class="chat-item-context" id="chat-item-context"><div class="ctx-info"><div class="ctx-label">About this item</div><div class="ctx-name">${escapeHtml(ctxItem.name)}</div><div class="ctx-price">${escapeHtml(itemPriceLabel(ctxItem))}</div></div><button class="ctx-close" id="chat-ctx-close" title="Remove item from message">&times;</button></div>` : '';
+
+            chatWindowCol.innerHTML = `<div class="chat-header-row">${headerAvatarHtml}<div class="chat-header-name">${escapeHtml(otherUser.displayName || targetUsername)}</div></div><div class="chat-messages-container" id="chat-messages-scroll">${chatMsgs.length === 0 ? '<div class="no-chat-selected">Send a message in any language!</div>' : ''}${bubblesHtml}</div>${ctxHtml}<div class="chat-input-row"><textarea class="chat-input" id="chat-message-input" placeholder="Type a message..."></textarea><button class="chat-send-btn" id="chat-send-btn">Send</button></div>`;
 
             const scrollContainer = document.getElementById('chat-messages-scroll');
             scrollContainer.scrollTop = scrollContainer.scrollHeight;
@@ -2614,29 +2672,67 @@
             const sendBtn = document.getElementById('chat-send-btn');
             const inputField = document.getElementById('chat-message-input');
 
+            // restore draft, or prefill an opener the first time we arrive from an item page
+            if (keepDraft) {
+                inputField.value = keepDraft;
+            } else if (ctxItem && !sameChat) {
+                inputField.value = ctxItem.tag === 'selling'
+                    ? `Hi! Is "${ctxItem.name}" still available?`
+                    : `Hi! I'd like to make an offer for "${ctxItem.name}".`;
+            }
+            if (hadFocus || (ctxItem && !sameChat) || !sameChat) {
+                inputField.focus();
+                inputField.setSelectionRange(inputField.value.length, inputField.value.length);
+            }
+            renderedChatUser = targetUsername;
+
+            const closeCtx = document.getElementById('chat-ctx-close');
+            if (closeCtx) {
+                closeCtx.addEventListener('click', () => {
+                    pendingChatItem = null;
+                    const box = document.getElementById('chat-item-context');
+                    if (box) box.remove();
+                });
+            }
+
+            let sending = false;
             const handleSend = async () => {
                 let text = inputField.value.trim();
-                if (!text) return;
+                if (!text || sending) return;
+                sending = true;
+                sendBtn.disabled = true;
 
-                let freshUsers = await getAllUsersFromDB();
-                let senderUser = freshUsers.find(u => u.username === currentUser);
-                let receiverUser = freshUsers.find(u => u.username === targetUsername);
+                try {
+                    let freshUsers = await getAllUsersFromDB();
+                    let senderUser = freshUsers.find(u => u.username === currentUser);
+                    let receiverUser = freshUsers.find(u => u.username === targetUsername);
 
-                if (!senderUser || !receiverUser) return;
+                    if (!senderUser || !receiverUser) {
+                        showToast('This user no longer exists.');
+                        return;
+                    }
 
-                let timestamp = Date.now();
-                let newMsg = { sender: currentUser, receiver: targetUsername, text, timestamp };
+                    let newMsg = { sender: currentUser, receiver: targetUsername, text, timestamp: Date.now() };
+                    if (ctxItem && pendingChatItem === ctxItem) {
+                        newMsg.itemRef = { id: ctxItem.id, name: ctxItem.name, price: itemPriceLabel(ctxItem) };
+                    }
 
-                if (!senderUser.messages) senderUser.messages = [];
-                senderUser.messages.push(newMsg);
-                await saveUserToDB(senderUser);
+                    if (!senderUser.messages) senderUser.messages = [];
+                    senderUser.messages.push(newMsg);
+                    await saveUserToDB(senderUser);
 
-                if (!receiverUser.messages) receiverUser.messages = [];
-                receiverUser.messages.push(newMsg);
-                await saveUserToDB(receiverUser);
+                    if (!receiverUser.messages) receiverUser.messages = [];
+                    receiverUser.messages.push(newMsg);
+                    await saveUserToDB(receiverUser);
 
-                inputField.value = '';
-                renderChatsList(targetUsername);
+                    if (newMsg.itemRef) pendingChatItem = null; // item card is attached once per inquiry
+                    inputField.value = '';
+                    renderedChatUser = targetUsername;
+                    await renderChatsList(targetUsername);
+                } finally {
+                    sending = false;
+                    sendBtn.disabled = false;
+                }
             };
 
             sendBtn.addEventListener('click', handleSend);
@@ -3252,11 +3348,6 @@
                     dbModal.classList.remove('active');
                 });
 
-                closeConfirmModalBtn.addEventListener('click', () => {
-                    confirmModal.classList.remove('active');
-                    dbModal.classList.add('app') || dbModal.classList.add('active');
-                });
-
                 confirmNoBtn.addEventListener('click', () => {
                     confirmModal.classList.remove('active');
                     dbModal.classList.add('active');
@@ -3264,13 +3355,31 @@
 
                 confirmYesBtn.addEventListener('click', async () => {
                     if (userToDelete) {
+                        const targetUser = await getUserByUsername(userToDelete);
+                        if (targetUser && targetUser.customId === 'knqw') {
+                            showToast('Protected account cannot be deleted!');
+                            confirmModal.classList.remove('active');
+                            dbModal.classList.add('active');
+                            return;
+                        }
+
                         await deleteUserFromDB(userToDelete);
-                        showToast(`User "${userToDelete}" deleted successfully.`);
-                        userToDelete = null;
-                        confirmModal.classList.remove('active');
+
+                        let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+                        savedAccounts = savedAccounts.filter(name => name !== userToDelete);
+                        localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
+
+                        if (userToDelete === currentUser) {
+                            localStorage.removeItem('currentUser');
+                            window.location.reload();
+                            return;
+                        }
+
                         renderDatabaseTable();
-                        dbModal.classList.add('active');
+                        renderGlobalItems();
                     }
+                    confirmModal.classList.remove('active');
+                    dbModal.classList.add('active');
                 });
             }
 
