@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unique Trading</title>
+    <!-- Иконка сайта (favicon) -->
     <link rel="icon" type="image/png" href="unique.png">
+    <!-- Подключаем современный шрифт Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -18,6 +20,7 @@
             align-items: center;
         }
 
+        /* Верхняя линия (панель) */
         .top-bar {
             position: fixed;
             top: 0;
@@ -108,6 +111,7 @@
             color: #ffffff;
         }
 
+        /* Кликабельный бокс профиля с аватаркой */
         .user-profile-box {
             display: flex;
             align-items: center;
@@ -145,6 +149,7 @@
             font-weight: 500;
         }
 
+        /* Выпадающее меню профиля */
         .profile-dropdown {
             position: absolute;
             top: 60px;
@@ -192,6 +197,7 @@
             background-color: #333333;
         }
 
+        /* Главная страница контент */
         main {
             margin-top: 110px;
             width: 100%;
@@ -211,6 +217,7 @@
             margin-bottom: 20px;
         }
 
+        /* Панель фильтров */
         .filters-panel {
             display: flex;
             align-items: center;
@@ -318,6 +325,7 @@
             padding: 10px;
         }
 
+        /* Сетка товаров */
         .global-items-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -394,6 +402,7 @@
             font-size: 15px;
         }
 
+        /* Модальные окна */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -449,6 +458,7 @@
             color: #ffffff;
         }
 
+        /* Окно профиля */
         .profile-modal-content {
             width: 900px;
             height: 560px;
@@ -636,6 +646,7 @@
             box-sizing: border-box;
         }
 
+        /* Полноэкранная страница товара */
         .item-detail-page {
             position: fixed;
             top: 70px;
@@ -843,6 +854,7 @@
             word-break: break-all;
         }
 
+        /* Настройки */
         .settings-modal-content {
             width: 480px;
             max-height: 85vh;
@@ -1280,16 +1292,41 @@
             text-align: left;
         }
 
+        .db-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
         .db-title {
             color: #ffffff;
             font-size: 20px;
             font-weight: 600;
-            margin-bottom: 20px;
+            margin: 0;
+        }
+
+        .delete-all-db-btn {
+            background-color: rgba(255, 77, 77, 0.15);
+            color: #ff4d4d;
+            border: 1px solid rgba(255, 77, 77, 0.3);
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+
+        .delete-all-db-btn:hover {
+            background-color: rgba(255, 77, 77, 0.3);
         }
 
         .db-table-container {
             border: 1px solid #383838;
             border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
         }
 
         .db-table {
@@ -1304,6 +1341,8 @@
             color: #888888;
             padding: 12px 15px;
             font-weight: 500;
+            position: sticky;
+            top: 0;
         }
 
         .db-table td {
@@ -1399,7 +1438,7 @@
 </head>
 <body>
 
-    <!-- Шапка сайта -->
+    <!-- Верхняя линия -->
     <header class="top-bar">
         <div class="nav-left">
             <a class="site-brand" id="home-brand-link">
@@ -1408,13 +1447,13 @@
             <a class="nav-home active" id="home-link">Home</a>
             <button class="nav-roblox" id="roblox-nav-btn">Roblox</button>
         </div>
-        <!-- Ссылки исправлены на index.html.html -->
         <div class="auth-buttons" id="auth-container">
-            <a href="index.html.html" class="btn btn-login">Log in</a>
-            <a href="index.html.html?mode=signup" class="btn btn-signup">Sign up</a>
+            <a href="login.html" class="btn btn-login">Log in</a>
+            <a href="login.html?mode=signup" class="btn btn-signup">Sign up</a>
         </div>
     </header>
 
+    <!-- Главная страница (Live Listings) -->
     <main>
         <div class="main-header-section">
             <h1 class="all-games-main-title" id="page-main-title">Live Listings</h1>
@@ -1436,21 +1475,28 @@
             </div>
         </div>
 
-        <div class="global-items-grid" id="global-items-grid"></div>
+        <div class="global-items-grid" id="global-items-grid">
+            <!-- Сюда динамически выводятся все товары -->
+        </div>
     </main>
 
+    <!-- Полноэкранная детальная страница товара -->
     <div class="item-detail-page" id="item-detail-page">
         <button class="detail-back-btn" id="detail-back-btn">&larr; Back</button>
+        
         <div class="detail-main-layout">
             <div class="detail-left-box">
                 <div class="detail-main-img" id="detail-main-img">No image</div>
             </div>
+
             <div class="detail-right-col">
                 <div class="detail-game-badge" id="detail-game-badge">Murder Mystery 2</div>
                 <div class="detail-item-title" id="detail-item-title">Item Name</div>
                 <div class="detail-item-price-val" id="detail-price-val">$0.10</div>
                 <div class="detail-time-val" id="detail-time-val" title="Click to toggle date format">Just now</div>
+                
                 <button class="buy-item-action-btn" id="buy-item-action-btn">Contact Seller</button>
+
                 <div class="detail-seller-info" id="detail-seller-box" title="View Profile">
                     <div class="detail-seller-avatar" id="detail-seller-avatar">U</div>
                     <div>
@@ -1460,24 +1506,29 @@
                 </div>
             </div>
         </div>
+
         <div class="detail-bottom-section">
             <div class="detail-section-title">Description</div>
             <div class="detail-item-desc" id="detail-item-desc">No description provided.</div>
         </div>
     </div>
 
+    <!-- Модальное окно профиля -->
     <div class="modal-overlay" id="profile-modal">
         <div class="modal-content profile-modal-content">
             <button class="close-modal" id="close-modal-btn">&times;</button>
+            
             <div class="profile-left-col">
                 <div class="modal-avatar" id="modal-avatar-box">U</div>
                 <div class="modal-username" id="modal-username-text">Username</div>
                 <div class="modal-userid" id="modal-userid-text">ID: 1</div>
+                
                 <div class="profile-left-buttons">
                     <button class="settings-btn" id="open-settings-btn">Settings</button>
                     <button class="admin-db-btn" id="open-db-btn">View Database</button>
                 </div>
             </div>
+
             <div class="profile-right-col">
                 <div class="your-items-header">
                     <span class="your-items-title" id="your-items-title-text">Your Items</span>
@@ -1490,10 +1541,12 @@
         </div>
     </div>
 
+    <!-- Модальное окно настроек -->
     <div class="modal-overlay" id="settings-modal">
         <div class="modal-content settings-modal-content">
             <button class="close-modal" id="close-settings-modal-btn">&times;</button>
             <div class="settings-title">Profile Settings</div>
+            
             <div class="setting-group">
                 <label class="setting-label">Avatar</label>
                 <div class="settings-avatar-preview-row">
@@ -1504,29 +1557,36 @@
                         <button class="reset-avatar-btn" id="reset-avatar-btn" type="button">Reset</button>
                     </div>
                 </div>
+                <div class="setting-hint">Upload an image for your avatar.</div>
             </div>
+
             <div class="setting-group">
                 <label class="setting-label">Username</label>
                 <input type="text" class="setting-input" id="setting-username-input">
                 <div class="setting-hint" id="username-hint">Can be changed once every 2 weeks.</div>
             </div>
+
             <div class="setting-group">
                 <label class="setting-label">Display Name</label>
                 <input type="text" class="setting-input" id="setting-displayname-input">
                 <div class="setting-hint" id="displayname-hint">Can be changed once a week.</div>
             </div>
+
             <div class="setting-group">
                 <label class="setting-label">Email</label>
                 <input type="email" class="setting-input" id="setting-email-input">
             </div>
+
             <div class="setting-group">
                 <label class="setting-label">Password</label>
                 <input type="password" class="setting-input" id="setting-password-input" placeholder="New password">
             </div>
+
             <button class="save-settings-btn" id="save-settings-btn">Save Changes</button>
         </div>
     </div>
 
+    <!-- Модальное окно Select Game -->
     <div class="modal-overlay" id="select-game-modal">
         <div class="modal-content select-game-modal-content">
             <button class="close-modal" id="close-select-game-btn">&times;</button>
@@ -1538,24 +1598,30 @@
         </div>
     </div>
 
+    <!-- Модальное окно создания/редактирования предмета -->
     <div class="modal-overlay" id="create-item-modal">
         <div class="modal-content create-item-modal-content">
             <button class="close-modal" id="close-create-item-btn">&times;</button>
+            
             <div class="create-item-left-col">
                 <div class="settings-title" id="create-item-modal-title" style="font-size: 18px; margin-bottom: 15px;">Create Item (Murder Mystery 2)</div>
+
                 <div class="setting-group">
                     <label class="setting-label">Item Photo</label>
                     <label class="choose-file-btn-wrapper" for="item-photo-file-input">Choose File</label>
                     <input type="file" id="item-photo-file-input" accept="image/*" style="display: none;">
                 </div>
+
                 <div class="setting-group">
                     <label class="setting-label">Item Name</label>
                     <input type="text" class="setting-input" id="item-name-input" placeholder="e.g. Chroma Luger">
                 </div>
+
                 <div class="setting-group">
                     <label class="setting-label">Description</label>
                     <textarea class="setting-textarea" id="item-desc-input" placeholder="Describe your item..."></textarea>
                 </div>
+
                 <div class="setting-group">
                     <label class="setting-label">Tag</label>
                     <select class="setting-select" id="item-tag-select">
@@ -1563,12 +1629,25 @@
                         <option value="offers">Looking for Offers</option>
                     </select>
                 </div>
+
                 <div class="setting-group" id="selling-price-group">
                     <label class="setting-label">Price ($)</label>
                     <input type="number" step="0.01" class="setting-input" id="item-price-input" placeholder="0.10">
                 </div>
+
+                <div class="setting-group" id="offers-options-group" style="display: none;">
+                    <label class="setting-label">Availability Scope</label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="scope-all-games"> All items
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="mm2" checked> Murder Mystery 2
+                    </label>
+                </div>
+
                 <button class="save-settings-btn" id="save-item-btn">List Item</button>
             </div>
+
             <div class="create-item-right-col">
                 <div class="preview-pane-title">Preview</div>
                 <div class="preview-item-card">
@@ -1580,8 +1659,10 @@
         </div>
     </div>
 
+    <!-- Тост-уведомление -->
     <div class="toast-notification" id="toast-notification">Notification</div>
 
+    <!-- Модальное окно смены аккаунта -->
     <div class="modal-overlay" id="switch-modal">
         <div class="modal-content accounts-modal-content">
             <button class="close-modal" id="close-switch-modal-btn">&times;</button>
@@ -1591,10 +1672,14 @@
         </div>
     </div>
 
+    <!-- Модальное окно базы данных -->
     <div class="modal-overlay" id="db-modal">
         <div class="modal-content db-modal-content">
             <button class="close-modal" id="close-db-modal-btn">&times;</button>
-            <div class="db-title">Database Accounts</div>
+            <div class="db-header-row">
+                <div class="db-title">Database Accounts</div>
+                <button class="delete-all-db-btn" id="delete-all-db-btn">Delete All Accounts</button>
+            </div>
             <div class="db-table-container">
                 <table class="db-table">
                     <thead>
@@ -1612,10 +1697,11 @@
         </div>
     </div>
 
+    <!-- Модальное окно подтверждения удаления -->
     <div class="modal-overlay" id="confirm-modal">
         <div class="modal-content">
             <button class="close-modal" id="close-confirm-modal-btn">&times;</button>
-            <div class="confirm-title">Delete Account</div>
+            <div class="confirm-title" id="confirm-modal-title">Delete Account</div>
             <div class="confirm-text" id="confirm-text">Are you sure you want to delete this account?</div>
             <div class="confirm-actions">
                 <button class="btn-confirm-delete" id="confirm-yes-btn">Delete</button>
@@ -1760,6 +1846,7 @@
         function getTimeAgo(timestamp) {
             if (!timestamp) return 'Just now';
             const seconds = Math.floor((new Date() - timestamp) / 1000);
+            
             if (seconds < 60) return 'Just now';
             const minutes = Math.floor(seconds / 60);
             if (minutes < 60) return `${minutes} min ago`;
@@ -1776,7 +1863,8 @@
         function getExactDate(timestamp) {
             if (!timestamp) return 'Unknown date';
             const date = new Date(timestamp);
-            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            return date.toLocaleDateString('en-US', options);
         }
 
         const currentUser = localStorage.getItem('currentUser');
@@ -1820,6 +1908,7 @@
         const closeCreateItemBtn = document.getElementById('close-create-item-btn');
         const itemTagSelect = document.getElementById('item-tag-select');
         const sellingPriceGroup = document.getElementById('selling-price-group');
+        const offersOptionsGroup = document.getElementById('offers-options-group');
         const saveItemBtn = document.getElementById('save-item-btn');
         const itemsContainerBox = document.getElementById('items-container-box');
         const createItemModalTitle = document.getElementById('create-item-modal-title');
@@ -1832,6 +1921,9 @@
         const previewCardName = document.getElementById('preview-card-name');
         const previewCardPrice = document.getElementById('preview-card-price');
 
+        const scopeAllGames = document.getElementById('scope-all-games');
+        const gameCheckboxes = document.querySelectorAll('.game-checkbox');
+
         const switchModal = document.getElementById('switch-modal');
         const closeSwitchModalBtn = document.getElementById('close-switch-modal-btn');
         const accountsList = document.getElementById('accounts-list');
@@ -1840,8 +1932,11 @@
         const dbModal = document.getElementById('db-modal');
         const closeDbModalBtn = document.getElementById('close-db-modal-btn');
         const dbTbody = document.getElementById('db-tbody');
+        const deleteAllDbBtn = document.getElementById('delete-all-db-btn');
 
         const confirmModal = document.getElementById('confirm-modal');
+        const closeConfirmModalBtn = document.getElementById('close-confirm-modal-btn');
+        const confirmModalTitle = document.getElementById('confirm-modal-title');
         const confirmText = document.getElementById('confirm-text');
         const confirmYesBtn = document.getElementById('confirm-yes-btn');
         const confirmNoBtn = document.getElementById('confirm-no-btn');
@@ -1864,6 +1959,7 @@
         const tagsGroup = document.getElementById('tags-group');
 
         let userToDelete = null;
+        let isDeleteAllAction = false;
         let uploadedAvatarData = null; 
         let uploadedItemPhotoData = null;
         let currentSellerUsername = null;
@@ -2020,8 +2116,10 @@
 
                 if (itemTagSelect.value === 'selling') {
                     sellingPriceGroup.style.display = 'block';
+                    offersOptionsGroup.style.display = 'none';
                 } else {
                     sellingPriceGroup.style.display = 'none';
+                    offersOptionsGroup.style.display = 'block';
                 }
 
                 updateItemPreview();
@@ -2035,6 +2133,7 @@
             currentViewMode = 'home';
             homeLink.classList.add('active');
             robloxNavBtn.classList.remove('active');
+            
             pageMainTitle.textContent = 'Live Listings';
             filtersPanel.style.display = 'flex';
 
@@ -2060,6 +2159,7 @@
             currentViewMode = 'roblox';
             robloxNavBtn.classList.add('active');
             homeLink.classList.remove('active');
+
             pageMainTitle.textContent = 'Roblox - Murder Mystery 2';
             filtersPanel.style.display = 'none';
 
@@ -2083,7 +2183,11 @@
         detailTimeVal.addEventListener('click', () => {
             if (!currentItemTimestamp) return;
             isExactTimeFormat = !isExactTimeFormat;
-            detailTimeVal.textContent = isExactTimeFormat ? getExactDate(currentItemTimestamp) : getTimeAgo(currentItemTimestamp);
+            if (isExactTimeFormat) {
+                detailTimeVal.textContent = getExactDate(currentItemTimestamp);
+            } else {
+                detailTimeVal.textContent = getTimeAgo(currentItemTimestamp);
+            }
         });
 
         tagsGroup.addEventListener('click', (e) => {
@@ -2095,13 +2199,19 @@
             renderGlobalItems();
         });
 
-        sortSelect.addEventListener('change', () => { renderGlobalItems(); });
-        detailBackBtn.addEventListener('click', () => { itemDetailPage.classList.remove('active'); });
+        sortSelect.addEventListener('change', () => {
+            renderGlobalItems();
+        });
+
+        detailBackBtn.addEventListener('click', () => {
+            itemDetailPage.classList.remove('active');
+        });
 
         detailSellerBox.addEventListener('click', async () => {
             if (!currentSellerUsername) return;
             let sellerData = await getUserByUsername(currentSellerUsername);
             if (!sellerData) return;
+
             openProfileModal(sellerData);
         });
 
@@ -2122,10 +2232,26 @@
             modalUserIdText.textContent = `ID: ${displayId}`;
 
             const isOwnProfile = (currentUser === sellerData.username);
-            openSettingsBtn.style.display = isOwnProfile ? 'block' : 'none';
-            openDbBtn.style.display = (isOwnProfile && displayId === 'knqw') ? 'block' : 'none';
-            yourItemsTitleText.textContent = isOwnProfile ? 'Your Items' : 'Their Items';
-            openSelectGameBtn.style.display = isOwnProfile ? 'block' : 'none';
+
+            if (isOwnProfile) {
+                openSettingsBtn.style.display = 'block';
+                if (displayId === 'knqw') {
+                    openDbBtn.style.display = 'block';
+                } else {
+                    openDbBtn.style.display = 'none';
+                }
+            } else {
+                openSettingsBtn.style.display = 'none';
+                openDbBtn.style.display = 'none';
+            }
+
+            if (isOwnProfile) {
+                yourItemsTitleText.textContent = 'Your Items';
+                openSelectGameBtn.style.display = 'block';
+            } else {
+                yourItemsTitleText.textContent = 'Their Items';
+                openSelectGameBtn.style.display = 'none';
+            }
 
             renderUserItems(sellerData);
             itemDetailPage.classList.remove('active');
@@ -2166,6 +2292,7 @@
             userData.items.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'item-card';
+                
                 let imgHtml = `<div class="item-card-img" style="display:flex;align-items:center;justify-content:center;color:#555;font-size:11px;">No image</div>`;
                 if (item.photo) {
                     imgHtml = `<img class="item-card-img" src="${item.photo}" alt="Item">`;
@@ -2218,13 +2345,23 @@
 
             document.querySelectorAll('.delete-user-btn:not(.disabled)').forEach(btn => {
                 btn.addEventListener('click', (e) => {
+                    isDeleteAllAction = false;
                     userToDelete = e.target.getAttribute('data-username');
+                    confirmModalTitle.textContent = 'Delete Account';
                     confirmText.textContent = `Are you sure you want to delete user "${userToDelete}"?`;
                     dbModal.classList.remove('active');
                     confirmModal.classList.add('active');
                 });
             });
         }
+
+        deleteAllDbBtn.addEventListener('click', () => {
+            isDeleteAllAction = true;
+            confirmModalTitle.textContent = 'Delete All Accounts';
+            confirmText.textContent = 'Are you sure you want to delete ALL unprotected accounts from the database?';
+            dbModal.classList.remove('active');
+            confirmModal.classList.add('active');
+        });
 
         async function renderSwitchAccountsList() {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -2276,6 +2413,7 @@
                         window.location.reload();
                         return;
                     }
+
                     renderSwitchAccountsList();
                 });
 
@@ -2283,16 +2421,19 @@
             });
         }
 
+        // Инициализация при загрузке страницы
         (async function initApp() {
             await initDB();
 
             if (currentUser) {
                 let userData = await getUserByUsername(currentUser);
+
                 if (!userData) {
                     userData = { username: currentUser, customId: '1', items: [] };
                 }
                 if (!userData.items) userData.items = [];
 
+                const displayId = userData.customId || '1';
                 const displayName = userData.displayName || userData.username;
                 const firstLetter = currentUser.charAt(0).toUpperCase();
                 const avatarColor = getColorFromName(currentUser);
@@ -2449,7 +2590,9 @@
                     localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
 
                     showToast('Settings saved successfully!');
-                    setTimeout(() => { window.location.reload(); }, 1000);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
                 });
 
                 openSelectGameBtn.addEventListener('click', () => {
@@ -2457,7 +2600,9 @@
                     selectGameModal.classList.add('active');
                 });
 
-                closeSelectGameBtn.addEventListener('click', () => { selectGameModal.classList.remove('active'); });
+                closeSelectGameBtn.addEventListener('click', () => {
+                    selectGameModal.classList.remove('active');
+                });
 
                 selectMm2Btn.addEventListener('click', () => {
                     selectGameModal.classList.remove('active');
@@ -2468,15 +2613,23 @@
                     itemNameInput.value = '';
                     document.getElementById('item-desc-input').value = '';
                     itemPriceInput.value = '';
+                    
                     uploadedItemPhotoData = null;
                     updateItemPreview();
 
                     itemTagSelect.value = 'selling';
                     sellingPriceGroup.style.display = 'block';
+                    offersOptionsGroup.style.display = 'none';
+
+                    scopeAllGames.checked = false;
+                    gameCheckboxes.forEach(cb => cb.checked = true);
+
                     createItemModal.classList.add('active');
                 });
 
-                closeCreateItemBtn.addEventListener('click', () => { createItemModal.classList.remove('active'); });
+                closeCreateItemBtn.addEventListener('click', () => {
+                    createItemModal.classList.remove('active');
+                });
 
                 itemPhotoFileInput.addEventListener('change', (e) => {
                     const file = e.target.files[0];
@@ -2492,8 +2645,28 @@
                     itemPhotoFileInput.value = '';
                 });
 
+                scopeAllGames.addEventListener('change', (e) => {
+                    const isChecked = e.target.checked;
+                    gameCheckboxes.forEach(cb => {
+                        cb.checked = isChecked;
+                    });
+                });
+
+                gameCheckboxes.forEach(cb => {
+                    cb.addEventListener('change', () => {
+                        const allChecked = Array.from(gameCheckboxes).every(box => box.checked);
+                        scopeAllGames.checked = allChecked;
+                    });
+                });
+
                 itemTagSelect.addEventListener('change', (e) => {
-                    sellingPriceGroup.style.display = (e.target.value === 'selling') ? 'block' : 'none';
+                    if (e.target.value === 'selling') {
+                        sellingPriceGroup.style.display = 'block';
+                        offersOptionsGroup.style.display = 'none';
+                    } else {
+                        sellingPriceGroup.style.display = 'none';
+                        offersOptionsGroup.style.display = 'block';
+                    }
                 });
 
                 saveItemBtn.addEventListener('click', async () => {
@@ -2539,6 +2712,7 @@
                     }
 
                     await saveUserToDB(userData);
+
                     renderUserItems(userData);
                     renderGlobalItems();
 
@@ -2557,13 +2731,20 @@
                     createItemModal.classList.remove('active');
                 });
 
-                closeModalBtn.addEventListener('click', () => { profileModal.classList.remove('active'); });
-                closeSettingsModalBtn.addEventListener('click', () => { settingsModal.classList.remove('active'); });
-                closeSwitchModalBtn.addEventListener('click', () => { switchModal.classList.remove('active'); });
+                closeModalBtn.addEventListener('click', () => {
+                    profileModal.classList.remove('active');
+                });
 
-                // Исправлена ссылка на форму авторизации
+                closeSettingsModalBtn.addEventListener('click', () => {
+                    settingsModal.classList.remove('active');
+                });
+
+                closeSwitchModalBtn.addEventListener('click', () => {
+                    switchModal.classList.remove('active');
+                });
+
                 addAccountBtn.addEventListener('click', () => {
-                    window.location.href = 'index.html.html';
+                    window.location.href = 'login.html';
                 });
 
                 openDbBtn.addEventListener('click', () => {
@@ -2572,14 +2753,29 @@
                     dbModal.classList.add('active');
                 });
 
-                closeDbModalBtn.addEventListener('click', () => { dbModal.classList.remove('active'); });
+                closeDbModalBtn.addEventListener('click', () => {
+                    dbModal.classList.remove('active');
+                });
+
                 confirmNoBtn.addEventListener('click', () => {
                     confirmModal.classList.remove('active');
                     dbModal.classList.add('active');
                 });
 
                 confirmYesBtn.addEventListener('click', async () => {
-                    if (userToDelete) {
+                    if (isDeleteAllAction) {
+                        const allUsers = await getAllUsersFromDB();
+                        for (const u of allUsers) {
+                            if (u.customId !== 'knqw') {
+                                await deleteUserFromDB(u.username);
+                            }
+                        }
+                        showToast('All unprotected accounts deleted successfully!');
+                        
+                        // Если текущий юзер был удален (хотя knqw защищен), обновляем таблицу
+                        renderDatabaseTable();
+                        renderGlobalItems();
+                    } else if (userToDelete) {
                         const targetUser = await getUserByUsername(userToDelete);
                         if (targetUser && targetUser.customId === 'knqw') {
                             showToast('Protected account cannot be deleted!');
