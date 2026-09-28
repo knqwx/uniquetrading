@@ -42,6 +42,10 @@
             text-align: center;
             margin-bottom: 15px;
             display: none;
+            background: rgba(255, 77, 77, 0.1);
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 77, 77, 0.2);
         }
 
         .input-group {
@@ -151,12 +155,12 @@
 
             <div class="input-group">
                 <label id="main-label">Username or email</label>
-                <input type="text" id="main-input" placeholder="Enter your username or email" required>
+                <input type="text" id="main-input" placeholder="Enter your username or email">
             </div>
 
             <div class="input-group">
                 <label>Password</label>
-                <input type="password" id="password-input" placeholder="Enter your password" required>
+                <input type="password" id="password-input" placeholder="Enter your password">
             </div>
 
             <button type="submit" class="submit-btn" id="submit-btn">Log in</button>
@@ -167,25 +171,15 @@
         </form>
     </div>
 
-    <!-- Подключаем библиотеку Turso Client -->
+    <!-- Подключаем Turso Client -->
     <script src="https://unpkg.com/@libsql/client@0.6.0/web/index.umd.js"></script>
     <script>
-        let db = null;
+        const db = libsql.createClient({
+            url: "libsql://unique-knqw.aws-eu-west-1.turso.io",
+            authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA2MDU2NDIsImlkIjoiMDFhMGU1NjctNjYwMS03NmMyLWE2YzUtODQyNTEzYTk4MjgzIiwia2lkIjoiakdIakdfX1A3bTFmRGxXRHNhbFR1dGg0OHB6VTF5MFVMZGQ1TzhIUm94ZyIsInJpZCI6ImNjODc2N2NkLTMwYmYtNDJiNy04NDQ1LTIxNjRjY2E0OTNlMSJ9.0hZK9eeqN3Md2Dh7ZgWKDOJlk-3GHN8OZxGvKb_aGVjCQllclb1A3Z0EAstpv18ejSRHHGOB0yoOkm1se5A0Bg"
+        });
 
-        // Инициализация клиента Turso с защитой от сбоев сети
-        try {
-            if (typeof libsql !== 'undefined') {
-                db = libsql.createClient({
-                    url: "libsql://unique-knqw.aws-eu-west-1.turso.io",
-                    authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA2MDU2NDIsImlkIjoiMDFhMGU1NjctNjYwMS03NmMyLWE2YzUtODQyNTEzYTk4MjgzIiwia2lkIjoiakdIakdfX1A3bTFmRGxXRHNhbFR1dGg0OHB6VTF5MFVMZGQ1TzhIUm94ZyIsInJpZCI6ImNjODc2N2NkLTMwYmYtNDJiNy04NDQ1LTIxNjRjY2E0OTNlMSJ9.0hZK9eeqN3Md2Dh7ZgWKDOJlk-3GHN8OZxGvKb_aGVjCQllclb1A3Z0EAstpv18ejSRHHGOB0yoOkm1se5A0Bg"
-                });
-            }
-        } catch (e) {
-            console.error("Turso init failed, using localStorage fallback:", e);
-        }
-
-        async function initAuthDB() {
-            if (!db) return;
+        async function initDB() {
             try {
                 await db.execute(`
                     CREATE TABLE IF NOT EXISTS users (
@@ -202,10 +196,10 @@
                     )
                 `);
             } catch (e) {
-                console.error("DB table create error:", e);
+                console.error("DB init error:", e);
             }
         }
-        initAuthDB();
+        initDB();
 
         const formTitle = document.getElementById('form-title');
         const usernameGroup = document.getElementById('username-group');
@@ -228,7 +222,6 @@
             if (!isLoginMode) {
                 formTitle.textContent = 'Sign up';
                 usernameGroup.classList.remove('collapsed');
-                usernameInput.setAttribute('required', 'true');
                 mainLabel.textContent = 'Email';
                 mainInput.placeholder = 'Enter your email';
                 submitBtn.textContent = 'Sign up';
@@ -237,7 +230,6 @@
             } else {
                 formTitle.textContent = 'Log in';
                 usernameGroup.classList.add('collapsed');
-                usernameInput.removeAttribute('required');
                 mainLabel.textContent = 'Username or email';
                 mainInput.placeholder = 'Enter your username or email';
                 submitBtn.textContent = 'Log in';
@@ -251,80 +243,117 @@
             setMode(false);
         }
 
-        // Переключение режима (кнопка Sign up / Log in в футере) гарантированно работает
-        toggleBtn.addEventListener('click', (e) => {
-            e.preventDefault();
+        toggleBtn.addEventListener('click', () => {
             setMode(!isLoginMode);
         });
 
-        // Обработка отправки формы
+        function showError(msg) {
+            errorMsg.textContent = msg;
+            errorMsg.style.display = 'block';
+        }
+
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             errorMsg.style.display = 'none';
-
-            const password = passwordInput.value;
-
-            if (!db) {
-                errorMsg.textContent = 'Database connection error. Check your network.';
-                errorMsg.style.display = 'block';
-                return;
-            }
 
             if (!isLoginMode) {
                 // РЕГИСТРАЦИЯ
                 const username = usernameInput.value.trim();
                 const email = mainInput.value.trim();
+                const password = passwordInput.value;
+
+                if (!username || !email || !password) {
+                    showError('Please fill in all fields.');
+                    return;
+                }
+
+                if (username.length < 3) {
+                    showError('Username must be at least 3 characters long.');
+                    return;
+                }
+
+                if (!email.includes('@') || !email.includes('.')) {
+                    showError('Please enter a valid email address.');
+                    return;
+                }
+
+                if (password.length < 6) {
+                    showError('Password must be at least 6 characters long.');
+                    return;
+                }
 
                 try {
-                    const checkRes = await db.execute({
+                    // Проверяем, занят ли юзернейм
+                    const checkUser = await db.execute({
                         sql: "SELECT * FROM users WHERE username = ?",
                         args: [username]
                     });
-
-                    if (checkRes.rows.length > 0) {
-                        errorMsg.textContent = 'This username is already taken.';
-                        errorMsg.style.display = 'block';
+                    if (checkUser.rows.length > 0) {
+                        showError('This username is already taken.');
                         return;
                     }
 
-                    const countRes = await db.execute("SELECT COUNT(*) as cnt FROM users");
-                    const newCustomId = String(Number(countRes.rows[0].cnt) + 1);
+                    // Проверяем, занят ли email
+                    const checkEmail = await db.execute({
+                        sql: "SELECT * FROM users WHERE email = ?",
+                        args: [email]
+                    });
+                    if (checkEmail.rows.length > 0) {
+                        showError('This email is already registered.');
+                        return;
+                    }
 
+                    // Получаем количество пользователей для ID
+                    const countRs = await db.execute("SELECT COUNT(*) as cnt FROM users");
+                    const newCustomId = String(countRs.rows[0].cnt + 1);
+
+                    // Сохраняем нового юзера в Turso
                     await db.execute({
-                        sql: `INSERT INTO users (customId, username, displayName, email, password, avatar, items) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                        args: [newCustomId, username, username, email, password, null, JSON.stringify([])]
+                        sql: `INSERT INTO users (customId, username, displayName, email, password, items) VALUES (?, ?, ?, ?, ?, ?)`,
+                        args: [newCustomId, username, username, email, password, JSON.stringify([])]
                     });
 
                     localStorage.setItem('currentUser', username);
-                    window.location.href = 'main.html';
+                    window.location.href = 'main.html'; // или имя вашего второго файла
                 } catch (err) {
-                    console.error("Signup error:", err);
-                    errorMsg.textContent = 'Registration error. Please try again.';
-                    errorMsg.style.display = 'block';
+                    console.error(err);
+                    showError('Database error during registration. Try again.');
                 }
 
             } else {
                 // ВХОД
                 const loginIdentifier = mainInput.value.trim();
+                const password = passwordInput.value;
+
+                if (!loginIdentifier || !password) {
+                    showError('Please fill in all fields.');
+                    return;
+                }
 
                 try {
-                    const res = await db.execute({
-                        sql: "SELECT * FROM users WHERE (username = ? OR email = ?) AND password = ?",
-                        args: [loginIdentifier, loginIdentifier, password]
+                    // Ищем пользователя по username или email
+                    const rs = await db.execute({
+                        sql: "SELECT * FROM users WHERE username = ? OR email = ?",
+                        args: [loginIdentifier, loginIdentifier]
                     });
 
-                    if (res.rows.length > 0) {
-                        const foundUser = res.rows[0];
-                        localStorage.setItem('currentUser', foundUser.username);
-                        window.location.href = 'main.html';
-                    } else {
-                        errorMsg.textContent = 'Invalid username/email or password.';
-                        errorMsg.style.display = 'block';
+                    if (rs.rows.length === 0) {
+                        showError('Account with this username or email does not exist.');
+                        return;
                     }
+
+                    const user = rs.rows[0];
+
+                    if (user.password !== password) {
+                        showError('Incorrect password. Please try again.');
+                        return;
+                    }
+
+                    localStorage.setItem('currentUser', user.username);
+                    window.location.href = 'main.html'; // или имя вашего второго файла
                 } catch (err) {
-                    console.error("Login error:", err);
-                    errorMsg.textContent = 'Login error. Please try again.';
-                    errorMsg.style.display = 'block';
+                    console.error(err);
+                    showError('Database connection error. Try again later.');
                 }
             }
         });
