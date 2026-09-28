@@ -1682,9 +1682,10 @@
 
     <script src="https://unpkg.com/@libsql/client@0.6.0/web/index.umd.js"></script>
     <script>
+
         const db = libsql.createClient({
-    url: "ВАШ_URL_ИЗ_TURSO",
-    authToken: "ВАШ_ТОКЕН_ИЗ_TURSO"
+    url: "libsql://unique-knqw.aws-eu-west-1.turso.io",
+    authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA2MDU2NDIsImlkIjoiMDFhMGU1NjctNjYwMS03NmMyLWE2YzUtODQyNTEzYTk4MjgzIiwia2lkIjoiakdIakdfX1A3bTFmRGxXRHNhbFR1dGg0OHB6VTF5MFVMZGQ1TzhIUm94ZyIsInJpZCI6ImNjODc2N2NkLTMwYmYtNDJiNy04NDQ1LTIxNjRjY2E0OTNlMSJ9.0hZK9eeqN3Md2Dh7ZgWKDOJlk-3GHN8OZxGvKb_aGVjCQllclb1A3Z0EAstpv18ejSRHHGOB0yoOkm1se5A0Bg"
 });
         
         function getColorFromName(name) {
