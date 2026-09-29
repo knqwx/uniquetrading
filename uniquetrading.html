@@ -2077,6 +2077,13 @@
                         messages TEXT
                     )
                 `);
+                
+                // Добавляем поле balance, если таблица уже существовала без него
+                try {
+                    await db.execute("ALTER TABLE users ADD COLUMN balance REAL DEFAULT 0.00;");
+                } catch (err) {
+                    // Колонка уже существует, игнорируем ошибку
+                }
             } catch (e) {
                 console.error("DB init error:", e);
             }
@@ -2729,7 +2736,7 @@
 
                 item.addEventListener('click', () => {
                     activeChatUsername = username;
-                    pendingChatItem = null; // сбрасываем при переключении чата
+                    pendingChatItem = null;
                     renderChatsList(username);
                 });
 
@@ -3293,7 +3300,7 @@
                     location.reload();
                 } else {
                     confirmModal.classList.remove('active');
-                    openDbBtn.click(); // Обновляем список базы данных
+                    openDbBtn.click();
                 }
             }
         });
