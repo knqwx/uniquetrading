@@ -2223,6 +2223,16 @@
             return date.toLocaleDateString('en-US', options);
         }
 
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         const currentUser = localStorage.getItem('currentUser');
         const authContainer = document.getElementById('auth-container');
         const homeLink = document.getElementById('home-link');
@@ -2362,7 +2372,7 @@
                         </button>
                         <div class="user-profile-box" id="profile-dropdown-trigger">
                             ${avatarInner}
-                            <span class="user-name">${userObj.displayName || userObj.username}</span>
+                            <span class="user-name">${escapeHtml(userObj.displayName || userObj.username)}</span>
                         </div>
                         <div class="profile-dropdown" id="profile-dropdown-menu">
                             <button class="dropdown-item" id="dropdown-profile-btn">Profile</button>
@@ -2471,10 +2481,10 @@
 
                 card.innerHTML = `
                     ${imgHtml}
-                    <div class="global-item-name">${item.name}</div>
+                    <div class="global-item-name">${escapeHtml(item.name)}</div>
                     <div class="global-item-footer">
-                        <div class="global-item-price">${priceText}</div>
-                        <div class="global-item-time">${timeAgo}</div>
+                        <div class="global-item-price">${escapeHtml(priceText)}</div>
+                        <div class="global-item-time">${escapeHtml(timeAgo)}</div>
                     </div>
                 `;
 
@@ -2519,7 +2529,7 @@
                 detailSellerAvatar.innerHTML = `<img src="${item.sellerAvatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Seller">`;
                 detailSellerAvatar.style.backgroundColor = 'transparent';
             } else {
-                detailSellerAvatar.innerHTML = firstLetter;
+                detailSellerAvatar.innerHTML = escapeHtml(firstLetter);
                 detailSellerAvatar.style.backgroundColor = avatarColor;
             }
             detailSellerName.textContent = item.sellerDisplayName;
@@ -2719,6 +2729,7 @@
 
                 item.addEventListener('click', () => {
                     activeChatUsername = username;
+                    pendingChatItem = null; // сбрасываем при переключении чата
                     renderChatsList(username);
                 });
 
@@ -2740,6 +2751,8 @@
             const keepDraft = (sameChat && prevInput) ? prevInput.value : '';
             const hadFocus = sameChat && prevInput && document.activeElement === prevInput;
 
+            renderedChatUser = targetUsername;
+
             let myMessages = me.messages || [];
             let chatMsgs = myMessages.filter(m => m.sender === targetUsername || m.receiver === targetUsername);
             chatMsgs.sort((a, b) => a.timestamp - b.timestamp);
@@ -2755,79 +2768,84 @@
 
             const bubblesHtml = chatMsgs.map(m => {
                 const ref = m.itemRef ? `<div class="msg-item-ref"><b>${escapeHtml(m.itemRef.name)}</b><span>${escapeHtml(m.itemRef.price)}</span></div>` : '';
-                return `<div class="message-bubble ${m.sender === currentUser ? 'outgoing' : 'incoming'}" title="${escapeHtml(getExactDate(m.timestamp))}">${ref}${escapeHtml(m.text)}</div>`;
+                return `<div class="message-bubble ${m.sender === currentUser ? 'outgoing' : 'incoming'}" title="${escapeHtml(getExactDate(m.timestamp))}">${ref}${escapeHtml(m.text)}<span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))}</span></div>`;
             }).join('');
 
-            const ctxHtml = ctxItem ? `<div class="chat-item-context" id="chat-item-context"><div class="ctx-info"><div class="ctx-label">About this item</div><div class="ctx-name">${escapeHtml(ctxItem.name)}</div><div class="ctx-price">${escapeHtml(itemPriceLabel(ctxItem))}</div></div><button class="ctx-close" id="chat-ctx-close" title="Remove item from message">&times;</button></div>` : '';
+            const ctxHtml = ctxItem ? `<div class="chat-item-context" id="chat-item-context"><div class="ctx-info"><div class="ctx-label">About this item</div><div class="ctx-name">${escapeHtml(ctxItem.name)}</div><div class="ctx-price">${escapeHtml(itemPriceLabel(ctxItem))}</div></div><button class="ctx-close" id="chat-ctx-close" title="Remove item from context">&times;</button></div>` : '';
 
-            chatWindowCol.innerHTML = `<div class="chat-header-row">${headerAvatarHtml}<div class="chat-header-name">${escapeHtml(otherUser.displayName || targetUsername)}</div></div><div class="chat-messages-container" id="chat-messages-scroll">${chatMsgs.length === 0 ? '<div class="no-chat-selected">Send a message in any language!</div>' : ''}${bubblesHtml}</div>${ctxHtml}<div class="chat-input-row"><textarea class="chat-input" id="chat-message-input" placeholder="Type a message..."></textarea><button class="chat-send-btn" id="chat-send-btn">Send</button></div>`;
+            chatWindowCol.innerHTML = `
+                <div class="chat-header-row">
+                    ${headerAvatarHtml}
+                    <div class="chat-header-name">${escapeHtml(otherUser.displayName || targetUsername)}</div>
+                </div>
+                <div class="chat-messages-container" id="chat-messages-scroll">
+                    ${chatMsgs.length === 0 ? '<div class="no-chat-selected">No messages yet. Send a message to start conversation!</div>' : ''}
+                    ${bubblesHtml}
+                </div>
+                ${ctxHtml}
+                <div class="chat-input-row">
+                    <textarea class="chat-input" id="chat-message-input" placeholder="Type a message...">${escapeHtml(keepDraft)}</textarea>
+                    <button class="chat-send-btn" id="chat-send-btn">Send</button>
+                </div>
+            `;
 
             const scrollContainer = document.getElementById('chat-messages-scroll');
             scrollContainer.scrollTop = scrollContainer.scrollHeight;
 
-            const sendBtn = document.getElementById('chat-send-btn');
-            const inputField = document.getElementById('chat-message-input');
-
-            if (keepDraft) {
-                inputField.value = keepDraft;
-            } else if (ctxItem && !sameChat) {
-                inputField.value = ctxItem.tag === 'selling'
-                    ? `Hi! Is "${ctxItem.name}" still available?`
-                    : `Hi! I'd like to make an offer for "${ctxItem.name}".`;
-            }
-            if (hadFocus || (ctxItem && !sameChat) || !sameChat) {
-                inputField.focus();
-                inputField.setSelectionRange(inputField.value.length, inputField.value.length);
-            }
-            renderedChatUser = targetUsername;
-
-            const closeCtx = document.getElementById('chat-ctx-close');
-            if (closeCtx) {
-                closeCtx.addEventListener('click', () => {
+            const ctxCloseBtn = document.getElementById('chat-ctx-close');
+            if (ctxCloseBtn) {
+                ctxCloseBtn.addEventListener('click', () => {
                     pendingChatItem = null;
-                    const box = document.getElementById('chat-item-context');
-                    if (box) box.remove();
+                    renderActiveChatWindow(targetUsername, allUsers);
                 });
             }
 
-            let sending = false;
+            const inputField = document.getElementById('chat-message-input');
+            const sendBtn = document.getElementById('chat-send-btn');
+
+            if (hadFocus) {
+                inputField.focus();
+                inputField.selectionStart = inputField.selectionEnd = inputField.value.length;
+            }
+
             const handleSend = async () => {
-                let text = inputField.value.trim();
-                if (!text || sending) return;
-                sending = true;
-                sendBtn.disabled = true;
+                const text = inputField.value.trim();
+                if (!text && !pendingChatItem) return;
 
-                try {
-                    let freshUsers = await getAllUsersFromDB();
-                    let senderUser = freshUsers.find(u => u.username === currentUser);
-                    let receiverUser = freshUsers.find(u => u.username === targetUsername);
+                const messageText = text || 'Inquiring about this item';
+                const timestamp = Date.now();
+                const itemRefData = pendingChatItem ? {
+                    name: pendingChatItem.name,
+                    price: itemPriceLabel(pendingChatItem)
+                } : null;
 
-                    if (!senderUser || !receiverUser) {
-                        showToast('This user no longer exists.');
-                        return;
-                    }
+                const newMessage = {
+                    sender: currentUser,
+                    receiver: targetUsername,
+                    text: messageText,
+                    timestamp: timestamp,
+                    itemRef: itemRefData
+                };
 
-                    let newMsg = { sender: currentUser, receiver: targetUsername, text, timestamp: Date.now() };
-                    if (ctxItem && pendingChatItem === ctxItem) {
-                        newMsg.itemRef = { id: ctxItem.id, name: ctxItem.name, price: itemPriceLabel(ctxItem) };
-                    }
+                let allUsersLatest = await getAllUsersFromDB();
+                let senderObj = allUsersLatest.find(u => u.username === currentUser);
+                let receiverObj = allUsersLatest.find(u => u.username === targetUsername);
 
-                    if (!senderUser.messages) senderUser.messages = [];
-                    senderUser.messages.push(newMsg);
-                    await saveUserToDB(senderUser);
-
-                    if (!receiverUser.messages) receiverUser.messages = [];
-                    receiverUser.messages.push(newMsg);
-                    await saveUserToDB(receiverUser);
-
-                    if (newMsg.itemRef) pendingChatItem = null;
-                    inputField.value = '';
-                    renderedChatUser = targetUsername;
-                    await renderChatsList(targetUsername);
-                } finally {
-                    sending = false;
-                    sendBtn.disabled = false;
+                if (senderObj) {
+                    senderObj.messages = senderObj.messages || [];
+                    senderObj.messages.push(newMessage);
+                    await saveUserToDB(senderObj);
                 }
+
+                if (receiverObj && receiverObj.username !== currentUser) {
+                    receiverObj.messages = receiverObj.messages || [];
+                    receiverObj.messages.push(newMessage);
+                    await saveUserToDB(receiverObj);
+                }
+
+                pendingChatItem = null;
+                inputField.value = '';
+                await renderChatsList(targetUsername);
             };
 
             sendBtn.addEventListener('click', handleSend);
@@ -2839,16 +2857,26 @@
             });
         }
 
-        function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
+        homeLink.addEventListener('click', switchToHome);
+        homeBrandLink.addEventListener('click', switchToHome);
+        robloxNavBtn.addEventListener('click', switchToRoblox);
 
-        homeLink.addEventListener('click', (e) => { e.preventDefault(); switchToHome(); });
-        homeBrandLink.addEventListener('click', (e) => { e.preventDefault(); switchToHome(); });
-        robloxNavBtn.addEventListener('click', (e) => { e.preventDefault(); switchToRoblox(); });
+        document.getElementById('detail-back-btn').addEventListener('click', () => {
+            itemDetailPage.classList.remove('active');
+        });
+
+        sortSelect.addEventListener('change', renderGlobalItems);
+
+        document.querySelectorAll('.game-tag-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.game-tag-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                activeGameTag = btn.getAttribute('data-tag');
+                renderGlobalItems();
+            });
+        });
 
         detailTimeVal.addEventListener('click', () => {
-            if (!currentItemTimestamp) return;
             isExactTimeFormat = !isExactTimeFormat;
             if (isExactTimeFormat) {
                 detailTimeVal.textContent = getExactDate(currentItemTimestamp);
@@ -2857,131 +2885,65 @@
             }
         });
 
-        tagsGroup.addEventListener('click', (e) => {
-            const btn = e.target.closest('.game-tag-btn');
-            if (!btn) return;
-            document.querySelectorAll('.game-tag-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            activeGameTag = btn.getAttribute('data-tag');
-            renderGlobalItems();
-        });
+        async function openProfileModal(userObj) {
+            const firstLetter = userObj.username.charAt(0).toUpperCase();
+            const avatarColor = getColorFromName(userObj.username);
 
-        sortSelect.addEventListener('change', () => {
-            renderGlobalItems();
-        });
-
-        detailBackBtn.addEventListener('click', () => {
-            itemDetailPage.classList.remove('active');
-        });
-
-        detailSellerBox.addEventListener('click', async () => {
-            if (!currentSellerUsername) return;
-            let sellerData = await getUserByUsername(currentSellerUsername);
-            if (!sellerData) return;
-
-            openProfileModal(sellerData);
-        });
-
-        function openProfileModal(sellerData) {
-            const displayId = sellerData.customId || '1';
-            const displayName = sellerData.displayName || sellerData.username;
-            const firstLetter = sellerData.username.charAt(0).toUpperCase();
-            const avatarColor = getColorFromName(sellerData.username);
-
-            if (sellerData.avatar) {
-                modalAvatarBox.innerHTML = `<img src="${sellerData.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
+            if (userObj.avatar) {
+                modalAvatarBox.innerHTML = `<img src="${userObj.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
                 modalAvatarBox.style.backgroundColor = 'transparent';
             } else {
+                modalAvatarBox.innerHTML = escapeHtml(firstLetter);
                 modalAvatarBox.style.backgroundColor = avatarColor;
-                modalAvatarBox.textContent = firstLetter;
             }
-            modalUsernameText.textContent = displayName;
-            modalUserIdText.textContent = `ID: ${displayId}`;
 
-            const isOwnProfile = (currentUser === sellerData.username);
+            modalUsernameText.textContent = userObj.displayName || userObj.username;
+            modalUserIdText.textContent = `ID: ${userObj.customId || '1'}`;
+            yourItemsTitleText.textContent = `${userObj.displayName || userObj.username}'s Items`;
 
-            if (isOwnProfile) {
-                openSettingsBtn.style.display = 'block';
-                if (displayId === 'knqw') {
-                    openDbBtn.style.display = 'block';
-                } else {
-                    openDbBtn.style.display = 'none';
-                }
+            if (userObj.username === 'admin') {
+                openDbBtn.style.display = 'block';
             } else {
-                openSettingsBtn.style.display = 'none';
                 openDbBtn.style.display = 'none';
             }
 
-            if (isOwnProfile) {
-                yourItemsTitleText.textContent = 'Your Items';
-                openSelectGameBtn.style.display = 'block';
-            } else {
-                yourItemsTitleText.textContent = 'Their Items';
-                openSelectGameBtn.style.display = 'none';
-            }
-
-            renderUserItems(sellerData);
-            itemDetailPage.classList.remove('active');
-            messagesPage.classList.remove('active');
+            renderUserItems(userObj);
             profileModal.classList.add('active');
         }
 
-        function updateItemPreview() {
-            const nameVal = itemNameInput.value.trim();
-            previewCardName.textContent = nameVal ? nameVal : 'Item Name';
+        function renderUserItems(userObj) {
+            itemsContainerBox.innerHTML = '';
+            const items = userObj.items || [];
 
-            const tagVal = itemTagSelect.value;
-            if (tagVal === 'selling') {
-                const priceVal = itemPriceInput.value.trim();
-                previewCardPrice.textContent = priceVal ? `$${priceVal}` : '$0.10';
-            } else {
-                previewCardPrice.textContent = 'Offers';
-            }
-
-            let photoSrc = uploadedItemPhotoData;
-            if (!photoSrc) {
-                photoSrc = (selectedGameForListing === 'Steal a brainrot') ? 'thumbnails/SAB.webp' : 'thumbnails/MM2.webp';
-            }
-            previewCardImg.innerHTML = `<img src="${photoSrc}" style="width:100%; height:100%; border-radius:8px; object-fit:cover;" alt="Preview">`;
-        }
-
-        itemNameInput.addEventListener('input', updateItemPreview);
-        itemPriceInput.addEventListener('input', updateItemPreview);
-        itemTagSelect.addEventListener('change', updateItemPreview);
-
-        function renderUserItems(userData) {
-            if (!userData.items || userData.items.length === 0) {
-                const isOwn = (currentUser === userData.username);
-                itemsContainerBox.innerHTML = `<div class="no-items-text">${isOwn ? "You don't have any items listed at the moment" : "This user doesn't have any items listed."}</div>`;
+            if (items.length === 0) {
+                itemsContainerBox.innerHTML = '<div class="no-items-text">You don\'t have any items listed at the moment</div>';
                 return;
             }
 
-            itemsContainerBox.innerHTML = '';
-            userData.items.forEach(item => {
+            items.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'item-card';
-                
+
                 let photoSrc = item.photo;
                 if (!photoSrc) {
                     photoSrc = (item.game === 'Steal a brainrot') ? 'thumbnails/SAB.webp' : 'thumbnails/MM2.webp';
                 }
-                let imgHtml = `<img class="item-card-img" src="${photoSrc}" alt="Item">`;
 
                 let priceText = item.tag === 'selling' ? `$${item.price}` : 'Offers';
 
                 card.innerHTML = `
-                    ${imgHtml}
-                    <div class="item-card-name">${item.name}</div>
-                    <div class="item-card-price">${priceText}</div>
+                    <img class="item-card-img" src="${photoSrc}" alt="Item">
+                    <div class="item-card-name">${escapeHtml(item.name)}</div>
+                    <div class="item-card-price">${escapeHtml(priceText)}</div>
                 `;
 
                 card.addEventListener('click', () => {
                     profileModal.classList.remove('active');
                     openItemDetailPage({
                         ...item,
-                        sellerUsername: userData.username,
-                        sellerDisplayName: userData.displayName || userData.username,
-                        sellerAvatar: userData.avatar
+                        sellerUsername: userObj.username,
+                        sellerDisplayName: userObj.displayName || userObj.username,
+                        sellerAvatar: userObj.avatar
                     });
                 });
 
@@ -2989,125 +2951,17 @@
             });
         }
 
-        async function renderDatabaseTable() {
-            const allUsers = await getAllUsersFromDB();
-            dbTbody.innerHTML = '';
-            
-            allUsers.forEach(u => {
-                const isProtected = u.customId === 'knqw';
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${u.customId || '-'}</td>
-                    <td>${u.username}</td>
-                    <td>${u.email}</td>
-                    <td>${u.password}</td>
-                    <td>
-                        <button class="delete-user-btn ${isProtected ? 'disabled' : ''}" 
-                                data-username="${u.username}" 
-                                ${isProtected ? 'disabled title="Protected account"' : ''}>
-                            ${isProtected ? 'Protected' : 'Delete'}
-                        </button>
-                    </td>
-                `;
-                dbTbody.appendChild(row);
-            });
-
-            document.querySelectorAll('.delete-user-btn:not(.disabled)').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    userToDelete = e.target.getAttribute('data-username');
-                    confirmModalTitle.textContent = 'Delete Account';
-                    confirmText.textContent = `Are you sure you want to delete user "${userToDelete}"?`;
-                    dbModal.classList.remove('active');
-                    confirmModal.classList.add('active');
-                });
-            });
-        }
-
-        async function renderSwitchAccountsList() {
-            let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-            let allUsers = await getAllUsersFromDB();
-            accountsList.innerHTML = '';
-
-            if (savedAccounts.length === 0) {
-                accountsList.innerHTML = '<div style="color: #888; font-size: 13px; text-align: center; padding: 20px;">No other accounts saved.</div>';
-                return;
-            }
-
-            savedAccounts.forEach(accName => {
-                const userData = allUsers.find(u => u.username === accName) || { email: 'Unknown email' };
-                const isCurrent = accName === currentUser;
-                const firstLetter = accName.charAt(0).toUpperCase();
-                const avatarColor = getColorFromName(accName);
-
-                const item = document.createElement('div');
-                item.className = `account-item ${isCurrent ? 'current' : ''}`;
-                
-                let avatarHtml = `<div class="account-mini-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>`;
-                if (userData.avatar) {
-                    avatarHtml = `<img class="account-mini-avatar" src="${userData.avatar}" alt="Avatar">`;
-                }
-
-                item.innerHTML = `
-                    <div class="account-info" style="flex: 1; cursor: pointer;">
-                        ${avatarHtml}
-                        <div class="account-details">
-                            <div class="acc-name">${accName}</div>
-                            <div class="acc-email">${userData.email || 'No email'}</div>
-                        </div>
-                    </div>
-                    <button class="remove-saved-acc" data-username="${accName}" title="Remove account">&times;</button>
-                `;
-
-                item.querySelector('.account-info').addEventListener('click', () => {
-                    localStorage.setItem('currentUser', accName);
-                    location.reload();
-                });
-
-                item.querySelector('.remove-saved-acc').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    savedAccounts = savedAccounts.filter(a => a !== accName);
-                    localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
-                    if (isCurrent && savedAccounts.length > 0) {
-                        localStorage.setItem('currentUser', savedAccounts[0]);
-                        location.reload();
-                    } else if (isCurrent && savedAccounts.length === 0) {
-                        localStorage.removeItem('currentUser');
-                        location.reload();
-                    } else {
-                        renderSwitchAccountsList();
-                    }
-                });
-
-                accountsList.appendChild(item);
-            });
-        }
-
-        addAccountBtn.addEventListener('click', () => {
-            window.location.href = 'login.html';
-        });
-
-        openDbBtn.addEventListener('click', async () => {
+        closeModalBtn.addEventListener('click', () => {
             profileModal.classList.remove('active');
-            await renderDatabaseTable();
-            dbModal.classList.add('active');
         });
-
-        closeModalBtn.addEventListener('click', () => profileModal.classList.remove('active'));
-        closeSettingsModalBtn.addEventListener('click', () => settingsModal.classList.remove('active'));
-        closeSelectGameBtn.addEventListener('click', () => selectGameModal.classList.remove('active'));
-        closeCreateItemModal.addEventListener('click', () => createItemModal.classList.remove('active'));
-        closeSwitchModalBtn.addEventListener('click', () => switchModal.classList.remove('active'));
-        closeDbModalBtn.addEventListener('click', () => dbModal.classList.remove('active'));
-        closeConfirmModalBtn.addEventListener('click', () => confirmModal.classList.remove('active'));
-        confirmNoBtn.addEventListener('click', () => confirmModal.classList.remove('active'));
 
         openSettingsBtn.addEventListener('click', async () => {
             profileModal.classList.remove('active');
             let userObj = await getUserByUsername(currentUser);
             if (!userObj) return;
 
-            settingUsernameInput.value = userObj.username;
-            settingDisplaynameInput.value = userObj.displayName || userObj.username;
+            settingUsernameInput.value = userObj.username || '';
+            settingDisplaynameInput.value = userObj.displayName || userObj.username || '';
             settingEmailInput.value = userObj.email || '';
             settingPasswordInput.value = '';
             uploadedAvatarData = userObj.avatar || null;
@@ -3118,31 +2972,35 @@
                 settingsAvatarPreview.innerHTML = `<img src="${userObj.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
                 settingsAvatarPreview.style.backgroundColor = 'transparent';
             } else {
-                settingsAvatarPreview.innerHTML = firstLetter;
+                settingsAvatarPreview.innerHTML = escapeHtml(firstLetter);
                 settingsAvatarPreview.style.backgroundColor = avatarColor;
             }
 
             settingsModal.classList.add('active');
         });
 
-        avatarFileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                uploadedAvatarData = event.target.result;
-                settingsAvatarPreview.innerHTML = `<img src="${uploadedAvatarData}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
-                settingsAvatarPreview.style.backgroundColor = 'transparent';
-            };
-            reader.readAsDataURL(file);
+        closeSettingsModalBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('active');
         });
 
-        resetAvatarBtn.addEventListener('click', async () => {
+        avatarFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    uploadedAvatarData = evt.target.result;
+                    settingsAvatarPreview.innerHTML = `<img src="${uploadedAvatarData}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
+                    settingsAvatarPreview.style.backgroundColor = 'transparent';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        resetAvatarBtn.addEventListener('click', () => {
             uploadedAvatarData = null;
-            let userObj = await getUserByUsername(currentUser);
-            const firstLetter = userObj.username.charAt(0).toUpperCase();
-            const avatarColor = getColorFromName(userObj.username);
-            settingsAvatarPreview.innerHTML = firstLetter;
+            const firstLetter = currentUser.charAt(0).toUpperCase();
+            const avatarColor = getColorFromName(currentUser);
+            settingsAvatarPreview.innerHTML = escapeHtml(firstLetter);
             settingsAvatarPreview.style.backgroundColor = avatarColor;
         });
 
@@ -3156,36 +3014,33 @@
             const newPassword = settingPasswordInput.value.trim();
 
             if (!newUsername) {
-                showToast('Username cannot be empty.');
+                showToast('Username cannot be empty');
                 return;
             }
 
-            if (newUsername !== userObj.username) {
+            if (newUsername !== currentUser) {
                 const existing = await getUserByUsername(newUsername);
                 if (existing) {
-                    showToast('Username already taken.');
+                    showToast('Username is already taken');
                     return;
                 }
-                await deleteUserFromDB(userObj.username);
-                userObj.username = newUsername;
-                currentUser = newUsername;
-                localStorage.setItem('currentUser', newUsername);
-                let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-                savedAccounts = savedAccounts.map(acc => acc === userObj.username ? newUsername : acc);
-                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
             }
 
+            userObj.username = newUsername;
             userObj.displayName = newDisplayName || newUsername;
             userObj.email = newEmail;
-            if (newPassword) {
-                userObj.password = newPassword;
-            }
+            if (newPassword) userObj.password = newPassword;
             userObj.avatar = uploadedAvatarData;
+
+            if (newUsername !== currentUser) {
+                await deleteUserFromDB(currentUser);
+                localStorage.setItem('currentUser', newUsername);
+            }
 
             await saveUserToDB(userObj);
             showToast('Settings saved successfully!');
             settingsModal.classList.remove('active');
-            initHeaderAuth();
+            location.reload();
         });
 
         openSelectGameBtn.addEventListener('click', () => {
@@ -3193,33 +3048,43 @@
             selectGameModal.classList.add('active');
         });
 
+        closeSelectGameBtn.addEventListener('click', () => {
+            selectGameModal.classList.remove('active');
+        });
+
         selectMm2Btn.addEventListener('click', () => {
             selectedGameForListing = 'Murder Mystery 2';
             selectGameModal.classList.remove('active');
-            openCreateItemModalForGame();
+            openCreateItemModal();
         });
 
         selectSabBtn.addEventListener('click', () => {
             selectedGameForListing = 'Steal a brainrot';
             selectGameModal.classList.remove('active');
-            openCreateItemModalForGame();
+            openCreateItemModal();
         });
 
-        function openCreateItemModalForGame() {
+        function openCreateItemModal() {
             editingItemId = null;
             createItemModalTitle.textContent = `Create Item (${selectedGameForListing})`;
             saveItemBtn.textContent = 'List Item';
+
             itemNameInput.value = '';
             document.getElementById('item-desc-input').value = '';
             itemTagSelect.value = 'selling';
-            itemPriceInput.value = '';
+            itemPriceInput.value = '0.10';
             uploadedItemPhotoData = null;
+
             sellingPriceGroup.style.display = 'block';
             offersOptionsGroup.style.display = 'none';
 
             updateItemPreview();
             createItemModal.classList.add('active');
         }
+
+        closeCreateItemBtn.addEventListener('click', () => {
+            createItemModal.classList.remove('active');
+        });
 
         itemTagSelect.addEventListener('change', () => {
             if (itemTagSelect.value === 'selling') {
@@ -3229,22 +3094,45 @@
                 sellingPriceGroup.style.display = 'none';
                 offersOptionsGroup.style.display = 'block';
             }
+            updateItemPreview();
         });
+
+        function updateItemPreview() {
+            const name = itemNameInput.value.trim() || 'Item Name';
+            const price = itemPriceInput.value.trim() || '0.10';
+            const tag = itemTagSelect.value;
+
+            previewCardName.textContent = name;
+            previewCardPrice.textContent = tag === 'selling' ? `$${price}` : 'Offers';
+
+            let photoSrc = uploadedItemPhotoData;
+            if (!photoSrc) {
+                photoSrc = (selectedGameForListing === 'Steal a brainrot') ? 'thumbnails/SAB.webp' : 'thumbnails/MM2.webp';
+            }
+            previewCardImg.innerHTML = `<img src="${photoSrc}" style="width:100%; height:100%; border-radius:8px; object-fit:cover;" alt="Preview">`;
+        }
+
+        itemNameInput.addEventListener('input', updateItemPreview);
+        itemPriceInput.addEventListener('input', updateItemPreview);
 
         itemPhotoFileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                uploadedItemPhotoData = event.target.result;
-                updateItemPreview();
-            };
-            reader.readAsDataURL(file);
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    uploadedItemPhotoData = evt.target.result;
+                    updateItemPreview();
+                };
+                reader.readAsDataURL(file);
+            }
         });
 
         saveItemBtn.addEventListener('click', async () => {
+            let userObj = await getUserByUsername(currentUser);
+            if (!userObj) return;
+
             const name = itemNameInput.value.trim();
-            const description = document.getElementById('item-desc-input').value.trim();
+            const desc = document.getElementById('item-desc-input').value.trim();
             const tag = itemTagSelect.value;
             const price = itemPriceInput.value.trim();
 
@@ -3253,41 +3141,33 @@
                 return;
             }
 
-            if (tag === 'selling' && !price) {
-                showToast('Please enter a price.');
-                return;
-            }
-
-            let userObj = await getUserByUsername(currentUser);
-            if (!userObj) return;
-            if (!userObj.items) userObj.items = [];
+            userObj.items = userObj.items || [];
 
             if (editingItemId) {
-                userObj.items = userObj.items.map(it => {
-                    if (it.id === editingItemId) {
-                        return {
-                            ...it,
-                            name,
-                            description,
-                            tag,
-                            price: tag === 'selling' ? price : '',
-                            photo: uploadedItemPhotoData || it.photo
-                        };
-                    }
-                    return it;
-                });
+                let idx = userObj.items.findIndex(i => i.id === editingItemId);
+                if (idx !== -1) {
+                    userObj.items[idx] = {
+                        ...userObj.items[idx],
+                        name: name,
+                        description: desc,
+                        tag: tag,
+                        price: price,
+                        photo: uploadedItemPhotoData,
+                        game: selectedGameForListing
+                    };
+                }
                 showToast('Item updated successfully!');
             } else {
                 const newItem = {
                     id: Date.now(),
-                    game: selectedGameForListing,
-                    name,
-                    description,
-                    tag,
-                    price: tag === 'selling' ? price : '',
-                    photo: uploadedItemPhotoData
+                    name: name,
+                    description: desc,
+                    tag: tag,
+                    price: price,
+                    photo: uploadedItemPhotoData,
+                    game: selectedGameForListing
                 };
-                userObj.items.unshift(newItem);
+                userObj.items.push(newItem);
                 showToast('Item listed successfully!');
             }
 
@@ -3296,25 +3176,125 @@
             renderGlobalItems();
         });
 
-        confirmYesBtn.addEventListener('click', async () => {
-            if (!userToDelete) return;
-            await deleteUserFromDB(userToDelete);
+        async function renderSwitchAccountsList() {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-            savedAccounts = savedAccounts.filter(a => a !== userToDelete);
-            localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
+            let allUsers = await getAllUsersFromDB();
 
-            if (currentUser === userToDelete) {
-                if (savedAccounts.length > 0) {
-                    localStorage.setItem('currentUser', savedAccounts[0]);
-                } else {
-                    localStorage.removeItem('currentUser');
+            accountsList.innerHTML = '';
+            if (savedAccounts.length === 0) {
+                accountsList.innerHTML = '<div style="color: #777; text-align: center; padding: 20px;">No saved accounts</div>';
+                return;
+            }
+
+            savedAccounts.forEach(username => {
+                let uObj = allUsers.find(u => u.username === username);
+                const isCurrent = username === currentUser;
+                const firstLetter = username.charAt(0).toUpperCase();
+                const avatarColor = getColorFromName(username);
+
+                let avatarInner = `<div class="account-mini-avatar" style="background-color: ${avatarColor};">${escapeHtml(firstLetter)}</div>`;
+                if (uObj && uObj.avatar) {
+                    avatarInner = `<img class="account-mini-avatar" src="${uObj.avatar}" alt="Avatar">`;
                 }
-                location.reload();
-            } else {
-                confirmModal.classList.remove('active');
-                await renderDatabaseTable();
-                dbModal.classList.add('active');
-                showToast(`User "${userToDelete}" deleted successfully.`);
+
+                const item = document.createElement('div');
+                item.className = `account-item ${isCurrent ? 'current' : ''}`;
+                item.innerHTML = `
+                    <div class="account-info">
+                        ${avatarInner}
+                        <div class="account-details">
+                            <div class="acc-name">${escapeHtml(uObj ? (uObj.displayName || uObj.username) : username)}</div>
+                            <div class="acc-email">${escapeHtml(uObj ? uObj.email : '')}</div>
+                        </div>
+                    </div>
+                    ${!isCurrent ? `<button class="remove-saved-acc" title="Remove">&times;</button>` : ''}
+                `;
+
+                item.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('remove-saved-acc')) {
+                        e.stopPropagation();
+                        let filtered = savedAccounts.filter(acc => acc !== username);
+                        localStorage.setItem('savedAccounts', JSON.stringify(filtered));
+                        renderSwitchAccountsList();
+                        return;
+                    }
+                    if (!isCurrent) {
+                        localStorage.setItem('currentUser', username);
+                        location.reload();
+                    }
+                });
+
+                accountsList.appendChild(item);
+            });
+        }
+
+        closeSwitchModalBtn.addEventListener('click', () => {
+            switchModal.classList.remove('active');
+        });
+
+        addAccountBtn.addEventListener('click', () => {
+            window.location.href = 'login.html';
+        });
+
+        openDbBtn.addEventListener('click', async () => {
+            profileModal.classList.remove('active');
+            let allUsers = await getAllUsersFromDB();
+
+            dbTbody.innerHTML = '';
+            allUsers.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${escapeHtml(u.customId || '1')}</td>
+                    <td>${escapeHtml(u.username)}</td>
+                    <td>${escapeHtml(u.email)}</td>
+                    <td>${escapeHtml(u.password)}</td>
+                    <td>
+                        <button class="delete-user-btn ${u.username === 'admin' ? 'disabled' : ''}" data-username="${escapeHtml(u.username)}">Delete</button>
+                    </td>
+                `;
+                dbTbody.appendChild(tr);
+            });
+
+            dbTbody.querySelectorAll('.delete-user-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const uname = e.target.getAttribute('data-username');
+                    if (uname === 'admin') return;
+                    userToDelete = uname;
+                    confirmModalTitle.textContent = 'Delete Account';
+                    confirmText.textContent = `Are you sure you want to delete account "${uname}"?`;
+                    confirmModal.classList.add('active');
+                });
+            });
+
+            dbModal.classList.add('active');
+        });
+
+        closeDbModalBtn.addEventListener('click', () => {
+            dbModal.classList.remove('active');
+        });
+
+        closeConfirmModalBtn.addEventListener('click', () => {
+            confirmModal.classList.remove('active');
+        });
+
+        confirmNoBtn.addEventListener('click', () => {
+            confirmModal.classList.remove('active');
+        });
+
+        confirmYesBtn.addEventListener('click', async () => {
+            if (userToDelete) {
+                await deleteUserFromDB(userToDelete);
+                let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+                savedAccounts = savedAccounts.filter(acc => acc !== userToDelete);
+                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
+
+                if (currentUser === userToDelete) {
+                    localStorage.removeItem('currentUser');
+                    location.reload();
+                } else {
+                    confirmModal.classList.remove('active');
+                    openDbBtn.click(); // Обновляем список базы данных
+                }
             }
         });
     </script>
