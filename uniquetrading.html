@@ -2078,11 +2078,19 @@
                     )
                 `);
                 
-                // Добавляем поле balance, если таблица уже существовала без него
-                try {
-                    await db.execute("ALTER TABLE users ADD COLUMN balance REAL DEFAULT 0.00;");
-                } catch (err) {
-                    // Колонка уже существует, игнорируем ошибку
+                // Автоматически добавляем недостающие колонки для существующих таблиц в БД
+                const columnsToVerify = [
+                    "ALTER TABLE users ADD COLUMN balance REAL DEFAULT 0.00;",
+                    "ALTER TABLE users ADD COLUMN lastItemTime INTEGER;",
+                    "ALTER TABLE users ADD COLUMN messages TEXT;"
+                ];
+
+                for (const sqlQuery of columnsToVerify) {
+                    try {
+                        await db.execute(sqlQuery);
+                    } catch (err) {
+                        // Если колонка уже существует, ошибка игнорируется
+                    }
                 }
             } catch (e) {
                 console.error("DB init error:", e);
