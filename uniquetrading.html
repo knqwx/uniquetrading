@@ -242,6 +242,8 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            width: 100%;
+            text-decoration: none;
         }
 
         .dropdown-item:hover {
@@ -1787,6 +1789,39 @@
         .admin-db-btn:hover {
             background-color: #444444;
         }
+
+        /* Блок привязанной карты в настройках */
+        .card-linked-box {
+            background-color: #1f1f1f;
+            border: 1px solid #383838;
+            border-radius: 8px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 5px;
+        }
+
+        .card-info-text {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .remove-card-btn {
+            background: none;
+            border: none;
+            color: #ff4d4d;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 4px 8px;
+            transition: opacity 0.2s;
+        }
+
+        .remove-card-btn:hover {
+            opacity: 0.8;
+        }
     </style>
 </head>
 <body>
@@ -1951,7 +1986,40 @@
                 <input type="password" class="setting-input" id="setting-password-input" placeholder="New password">
             </div>
 
+            <div class="setting-group">
+                <label class="setting-label">Linked Bank Card</label>
+                <div id="card-container-wrapper">
+                    <!-- Динамически выводится карта или кнопка привязки -->
+                </div>
+            </div>
+
             <button class="save-settings-btn" id="save-settings-btn">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно привязки карты -->
+    <div class="modal-overlay" id="link-card-modal">
+        <div class="modal-content" style="width: 400px; text-align: left;">
+            <button class="close-modal" id="close-link-card-btn">&times;</button>
+            <div class="settings-title" style="font-size: 18px; margin-bottom: 15px;">Link Bank Card</div>
+            
+            <div class="setting-group">
+                <label class="setting-label">Card Number</label>
+                <input type="text" class="setting-input" id="card-number-input" placeholder="4222 2222 2222 2222" maxlength="19">
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <div class="setting-group" style="flex: 1;">
+                    <label class="setting-label">Expiry (MM/YY)</label>
+                    <input type="text" class="setting-input" id="card-expiry-input" placeholder="12/28" maxlength="5">
+                </div>
+                <div class="setting-group" style="flex: 1;">
+                    <label class="setting-label">CVV</label>
+                    <input type="password" class="setting-input" id="card-cvv-input" placeholder="123" maxlength="4">
+                </div>
+            </div>
+
+            <button class="save-settings-btn" id="confirm-link-card-btn">Link Card</button>
         </div>
     </div>
 
@@ -2114,14 +2182,16 @@
                         lastDisplayNameChange INTEGER,
                         items TEXT,
                         lastItemTime INTEGER,
-                        messages TEXT
+                        messages TEXT,
+                        card TEXT
                     )
                 `);
                 
                 const columnsToVerify = [
                     "ALTER TABLE users ADD COLUMN balance REAL DEFAULT 0.00;",
                     "ALTER TABLE users ADD COLUMN lastItemTime INTEGER;",
-                    "ALTER TABLE users ADD COLUMN messages TEXT;"
+                    "ALTER TABLE users ADD COLUMN messages TEXT;",
+                    "ALTER TABLE users ADD COLUMN card TEXT;"
                 ];
 
                 for (const sqlQuery of columnsToVerify) {
@@ -2151,7 +2221,8 @@
                     lastDisplayNameChange: row.lastDisplayNameChange,
                     items: row.items ? JSON.parse(row.items) : [],
                     lastItemTime: row.lastItemTime || 0,
-                    messages: row.messages ? JSON.parse(row.messages) : []
+                    messages: row.messages ? JSON.parse(row.messages) : [],
+                    card: row.card || null
                 }));
             } catch (e) {
                 console.error("Error fetching users:", e);
@@ -2179,7 +2250,8 @@
                     lastDisplayNameChange: row.lastDisplayNameChange,
                     items: row.items ? JSON.parse(row.items) : [],
                     lastItemTime: row.lastItemTime || 0,
-                    messages: row.messages ? JSON.parse(row.messages) : []
+                    messages: row.messages ? JSON.parse(row.messages) : [],
+                    card: row.card || null
                 };
             } catch (e) {
                 console.error("Error fetching user:", e);
@@ -2190,8 +2262,8 @@
         async function saveUserToDB(userData) {
             try {
                 await db.execute({
-                    sql: `INSERT INTO users (customId, username, displayName, email, password, avatar, balance, lastUsernameChange, lastDisplayNameChange, items, lastItemTime, messages)
-                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    sql: `INSERT INTO users (customId, username, displayName, email, password, avatar, balance, lastUsernameChange, lastDisplayNameChange, items, lastItemTime, messages, card)
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                           ON CONFLICT(username) DO UPDATE SET
                             customId = excluded.customId,
                             displayName = excluded.displayName,
@@ -2203,7 +2275,8 @@
                             lastDisplayNameChange = excluded.lastDisplayNameChange,
                             items = excluded.items,
                             lastItemTime = excluded.lastItemTime,
-                            messages = excluded.messages`,
+                            messages = excluded.messages,
+                            card = excluded.card`,
                     args: [
                         userData.customId || '1',
                         userData.username,
@@ -2216,7 +2289,8 @@
                         userData.lastDisplayNameChange || null,
                         JSON.stringify(userData.items || []),
                         userData.lastItemTime || 0,
-                        JSON.stringify(userData.messages || [])
+                        JSON.stringify(userData.messages || []),
+                        userData.card || null
                     ]
                 });
             } catch (e) {
@@ -2317,9 +2391,15 @@
         const settingDisplaynameInput = document.getElementById('setting-displayname-input');
         const settingEmailInput = document.getElementById('setting-email-input');
         const settingPasswordInput = document.getElementById('setting-password-input');
-        const usernameHint = document.getElementById('username-hint');
-        const displaynameHint = document.getElementById('displayname-hint');
         const saveSettingsBtn = document.getElementById('save-settings-btn');
+        const cardContainerWrapper = document.getElementById('card-container-wrapper');
+
+        const linkCardModal = document.getElementById('link-card-modal');
+        const closeLinkCardBtn = document.getElementById('close-link-card-btn');
+        const cardNumberInput = document.getElementById('card-number-input');
+        const cardExpiryInput = document.getElementById('card-expiry-input');
+        const cardCvvInput = document.getElementById('card-cvv-input');
+        const confirmLinkCardBtn = document.getElementById('confirm-link-card-btn');
 
         const selectGameModal = document.getElementById('select-game-modal');
         const openSelectGameBtn = document.getElementById('open-select-game-btn');
@@ -2394,6 +2474,7 @@
         let chatSignature = '';
         let chatPollTimer = null;
         let editingMessageTimestamp = null;
+        let activeUserCard = null;
 
         if (currentUser) {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -2431,6 +2512,7 @@
                         </div>
                         <div class="profile-dropdown" id="profile-dropdown-menu">
                             <button class="dropdown-item" id="dropdown-profile-btn">Profile</button>
+                            <button class="dropdown-item" id="dropdown-settings-btn">Settings</button>
                             <button class="dropdown-item" id="dropdown-switch-btn">Switch Account</button>
                             <button class="dropdown-item" id="dropdown-logout-btn" style="color: #ff4d4d;">Log out</button>
                         </div>
@@ -2454,6 +2536,10 @@
 
                     document.getElementById('dropdown-profile-btn').addEventListener('click', () => {
                         openProfileModal(userObj);
+                    });
+
+                    document.getElementById('dropdown-settings-btn').addEventListener('click', () => {
+                        openSettingsModal();
                     });
 
                     document.getElementById('dropdown-switch-btn').addEventListener('click', async () => {
@@ -2644,6 +2730,7 @@
             switchModal.classList.remove('active');
             dbModal.classList.remove('active');
             confirmModal.classList.remove('active');
+            linkCardModal.classList.remove('active');
 
             activeGameTag = 'All';
             document.querySelectorAll('.game-tag-btn').forEach(b => {
@@ -2672,6 +2759,7 @@
             switchModal.classList.remove('active');
             dbModal.classList.remove('active');
             confirmModal.classList.remove('active');
+            linkCardModal.classList.remove('active');
 
             renderGlobalItems();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2705,6 +2793,7 @@
             switchModal.classList.remove('active');
             dbModal.classList.remove('active');
             confirmModal.classList.remove('active');
+            linkCardModal.classList.remove('active');
 
             homeLink.classList.remove('active');
             robloxNavBtn.classList.remove('active');
@@ -3068,7 +3157,6 @@
             modalUserIdText.textContent = `ID: ${displayId}`;
             yourItemsTitleText.textContent = `${userObj.displayName || userObj.username}'s Items`;
 
-            // Условие отображения кнопки базы данных для аккаунта с customId === 'knqw'
             if (userObj.username === currentUser && displayId === 'knqw') {
                 openDbBtn.style.display = 'block';
             } else {
@@ -3123,7 +3211,7 @@
             profileModal.classList.remove('active');
         });
 
-        openSettingsBtn.addEventListener('click', async () => {
+        async function openSettingsModal() {
             profileModal.classList.remove('active');
             let userObj = await getUserByUsername(currentUser);
             if (!userObj) return;
@@ -3133,6 +3221,7 @@
             settingEmailInput.value = userObj.email || '';
             settingPasswordInput.value = '';
             uploadedAvatarData = userObj.avatar || null;
+            activeUserCard = userObj.card || null;
 
             const firstLetter = userObj.username.charAt(0).toUpperCase();
             const avatarColor = getColorFromName(userObj.username);
@@ -3144,11 +3233,74 @@
                 settingsAvatarPreview.style.backgroundColor = avatarColor;
             }
 
+            renderCardSectionInSettings();
             settingsModal.classList.add('active');
+        }
+
+        openSettingsBtn.addEventListener('click', () => {
+            openSettingsModal();
         });
 
         closeSettingsModalBtn.addEventListener('click', () => {
             settingsModal.classList.remove('active');
+        });
+
+        function renderCardSectionInSettings() {
+            if (activeUserCard) {
+                cardContainerWrapper.innerHTML = `
+                    <div class="card-linked-box">
+                        <div class="card-info-text">💳 ${escapeHtml(activeUserCard)}</div>
+                        <button class="remove-card-btn" id="remove-card-btn" type="button">Remove Card</button>
+                    </div>
+                `;
+                document.getElementById('remove-card-btn').addEventListener('click', () => {
+                    activeUserCard = null;
+                    renderCardSectionInSettings();
+                    showToast('Bank card removed');
+                });
+            } else {
+                cardContainerWrapper.innerHTML = `
+                    <button class="upload-file-btn" id="open-link-card-btn" type="button" style="width: 100%; text-align: center; padding: 10px;">+ Link Bank Card</button>
+                `;
+                document.getElementById('open-link-card-btn').addEventListener('click', () => {
+                    cardNumberInput.value = '';
+                    cardExpiryInput.value = '';
+                    cardCvvInput.value = '';
+                    linkCardModal.classList.add('active');
+                });
+            }
+        }
+
+        closeLinkCardBtn.addEventListener('click', () => {
+            linkCardModal.classList.remove('active');
+        });
+
+        confirmLinkCardBtn.addEventListener('click', () => {
+            const num = cardNumberInput.value.trim();
+            const exp = cardExpiryInput.value.trim();
+            const cvv = cardCvvInput.value.trim();
+
+            if (!num || num.length < 12) {
+                showToast('Please enter a valid card number');
+                return;
+            }
+            if (!exp) {
+                showToast('Please enter expiry date');
+                return;
+            }
+            if (!cvv || cvv.length < 3) {
+                showToast('Please enter a valid CVV');
+                return;
+            }
+
+            // Маскируем карту (оставляем последние 4 цифры)
+            const cleanNum = num.replace(/\D/g, '');
+            const last4 = cleanNum.slice(-4);
+            activeUserCard = `•••• •••• •••• ${last4}`;
+
+            linkCardModal.classList.remove('active');
+            renderCardSectionInSettings();
+            showToast('Bank card linked successfully!');
         });
 
         avatarFileInput.addEventListener('change', (e) => {
@@ -3199,9 +3351,13 @@
             userObj.email = newEmail;
             if (newPassword) userObj.password = newPassword;
             userObj.avatar = uploadedAvatarData;
+            userObj.card = activeUserCard;
 
             if (newUsername !== currentUser) {
                 await deleteUserFromDB(currentUser);
+                let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+                savedAccounts = savedAccounts.map(acc => acc === currentUser ? newUsername : acc);
+                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
                 localStorage.setItem('currentUser', newUsername);
             }
 
