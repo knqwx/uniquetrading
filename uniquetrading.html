@@ -1063,6 +1063,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            position: relative;
         }
 
         .message-bubble {
@@ -1073,6 +1074,8 @@
             line-height: 1.5;
             word-break: break-word;
             white-space: pre-wrap;
+            position: relative;
+            cursor: pointer;
         }
 
         .message-bubble.incoming {
@@ -1087,6 +1090,43 @@
             color: #ffffff;
             align-self: flex-end;
             border-bottom-right-radius: 4px;
+        }
+
+        /* Контекстное меню сообщения */
+        .msg-context-menu {
+            position: absolute;
+            background-color: #262626;
+            border: 1px solid #383838;
+            border-radius: 8px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.6);
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 250;
+            width: 150px;
+        }
+        .msg-ctx-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            text-align: left;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .msg-ctx-btn:hover {
+            background-color: #333333;
+        }
+        .msg-ctx-btn.danger {
+            color: #ff4d4d;
+        }
+        .msg-ctx-btn.danger:hover {
+            background-color: rgba(255, 77, 77, 0.15);
         }
 
         .chat-input-row {
@@ -2354,6 +2394,7 @@
         let renderedChatUser = null;
         let chatSignature = '';
         let chatPollTimer = null;
+        let editingMessageTimestamp = null; // Для отслеживания редактируемого сообщения
 
         if (currentUser) {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -2783,7 +2824,7 @@
 
             const bubblesHtml = chatMsgs.map(m => {
                 const ref = m.itemRef ? `<div class="msg-item-ref"><b>${escapeHtml(m.itemRef.name)}</b><span>${escapeHtml(m.itemRef.price)}</span></div>` : '';
-                return `<div class="message-bubble ${m.sender === currentUser ? 'outgoing' : 'incoming'}" title="${escapeHtml(getExactDate(m.timestamp))}">${ref}${escapeHtml(m.text)}<span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))}</span></div>`;
+                return `<div class="message-bubble ${m.sender === currentUser ? 'outgoing' : 'incoming'}" data-timestamp="${m.timestamp}" data-sender="${m.sender}" title="${escapeHtml(getExactDate(m.timestamp))}">${ref}<span class="msg-text-content">${escapeHtml(m.text)}</span><span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))}</span></div>`;
             }).join('');
 
             const ctxHtml = ctxItem ? `<div class="chat-item-context" id="chat-item-context"><div class="ctx-info"><div class="ctx-label">About this item</div><div class="ctx-name">${escapeHtml(ctxItem.name)}</div><div class="ctx-price">${escapeHtml(itemPriceLabel(ctxItem))}</div></div><button class="ctx-close" id="chat-ctx-close" title="Remove item from context">&times;</button></div>` : '';
@@ -2807,6 +2848,71 @@
             const scrollContainer = document.getElementById('chat-messages-scroll');
             scrollContainer.scrollTop = scrollContainer.scrollHeight;
 
+            // Обработка ПКМ (Context Menu) по сообщениям
+            const messageBubbles = scrollContainer.querySelectorAll('.message-bubble');
+            messageBubbles.forEach(bubble => {
+                bubble.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    
+                    // Удаляем старое меню, если открыто
+                    const oldMenu = document.getElementById('msg-context-menu');
+                    if (oldMenu) oldMenu.remove();
+
+                    const msgTimestamp = Number(bubble.getAttribute('data-timestamp'));
+                    const msgSender = bubble.getAttribute('data-sender');
+                    const textContent = bubble.querySelector('.msg-text-content').textContent;
+
+                    const menu = document.createElement('div');
+                    menu.id = 'msg-context-menu';
+                    menu.className = 'msg-context-menu';
+                    menu.style.top = `${e.clientY}px`;
+                    menu.style.left = `${e.clientX}px`;
+
+                    // Кнопка Копировать
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'msg-ctx-btn';
+                    copyBtn.textContent = 'Copy';
+                    copyBtn.onclick = () => {
+                        navigator.clipboard.writeText(textContent);
+                        showToast('Message copied to clipboard');
+                        menu.remove();
+                    };
+                    menu.appendChild(copyBtn);
+
+                    // Если сообщение принадлежит текущему пользователю, добавляем Edit и Delete
+                    if (msgSender === currentUser) {
+                        const editBtn = document.createElement('button');
+                        editBtn.className = 'msg-ctx-btn';
+                        editBtn.textContent = 'Edit';
+                        editBtn.onclick = () => {
+                            editingMessageTimestamp = msgTimestamp;
+                            const inputField = document.getElementById('chat-message-input');
+                            inputField.value = textContent;
+                            inputField.focus();
+                            menu.remove();
+                        };
+                        menu.appendChild(editBtn);
+
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'msg-ctx-btn danger';
+                        deleteBtn.textContent = 'Delete';
+                        deleteBtn.onclick = async () => {
+                            menu.remove();
+                            await deleteMessageInDB(targetUsername, msgTimestamp);
+                        };
+                        menu.appendChild(deleteBtn);
+                    }
+
+                    document.body.appendChild(menu);
+
+                    const closeMenuHandler = () => {
+                        menu.remove();
+                        document.removeEventListener('click', closeMenuHandler);
+                    };
+                    setTimeout(() => document.addEventListener('click', closeMenuHandler), 10);
+                });
+            });
+
             const ctxCloseBtn = document.getElementById('chat-ctx-close');
             if (ctxCloseBtn) {
                 ctxCloseBtn.addEventListener('click', () => {
@@ -2828,34 +2934,42 @@
                 if (!text && !pendingChatItem) return;
 
                 const messageText = text || 'Inquiring about this item';
-                const timestamp = Date.now();
-                const itemRefData = pendingChatItem ? {
-                    name: pendingChatItem.name,
-                    price: itemPriceLabel(pendingChatItem)
-                } : null;
 
-                const newMessage = {
-                    sender: currentUser,
-                    receiver: targetUsername,
-                    text: messageText,
-                    timestamp: timestamp,
-                    itemRef: itemRefData
-                };
+                if (editingMessageTimestamp) {
+                    // Редактирование существующего сообщения
+                    await editMessageInDB(targetUsername, editingMessageTimestamp, messageText);
+                    editingMessageTimestamp = null;
+                } else {
+                    // Отправка нового сообщения
+                    const timestamp = Date.now();
+                    const itemRefData = pendingChatItem ? {
+                        name: pendingChatItem.name,
+                        price: itemPriceLabel(pendingChatItem)
+                    } : null;
 
-                let allUsersLatest = await getAllUsersFromDB();
-                let senderObj = allUsersLatest.find(u => u.username === currentUser);
-                let receiverObj = allUsersLatest.find(u => u.username === targetUsername);
+                    const newMessage = {
+                        sender: currentUser,
+                        receiver: targetUsername,
+                        text: messageText,
+                        timestamp: timestamp,
+                        itemRef: itemRefData
+                    };
 
-                if (senderObj) {
-                    senderObj.messages = senderObj.messages || [];
-                    senderObj.messages.push(newMessage);
-                    await saveUserToDB(senderObj);
-                }
+                    let allUsersLatest = await getAllUsersFromDB();
+                    let senderObj = allUsersLatest.find(u => u.username === currentUser);
+                    let receiverObj = allUsersLatest.find(u => u.username === targetUsername);
 
-                if (receiverObj && receiverObj.username !== currentUser) {
-                    receiverObj.messages = receiverObj.messages || [];
-                    receiverObj.messages.push(newMessage);
-                    await saveUserToDB(receiverObj);
+                    if (senderObj) {
+                        senderObj.messages = senderObj.messages || [];
+                        senderObj.messages.push(newMessage);
+                        await saveUserToDB(senderObj);
+                    }
+
+                    if (receiverObj && receiverObj.username !== currentUser) {
+                        receiverObj.messages = receiverObj.messages || [];
+                        receiverObj.messages.push(newMessage);
+                        await saveUserToDB(receiverObj);
+                    }
                 }
 
                 pendingChatItem = null;
@@ -2870,6 +2984,50 @@
                     handleSend();
                 }
             });
+        }
+
+        async function editMessageInDB(targetUsername, timestamp, newText) {
+            let allUsers = await getAllUsersFromDB();
+            let senderObj = allUsers.find(u => u.username === currentUser);
+            let receiverObj = allUsers.find(u => u.username === targetUsername);
+
+            if (senderObj && senderObj.messages) {
+                senderObj.messages.forEach(m => {
+                    if (m.sender === currentUser && m.timestamp === timestamp) {
+                        m.text = newText;
+                    }
+                });
+                await saveUserToDB(senderObj);
+            }
+
+            if (receiverObj && receiverObj.messages) {
+                receiverObj.messages.forEach(m => {
+                    if (m.sender === currentUser && m.timestamp === timestamp) {
+                        m.text = newText;
+                    }
+                });
+                await saveUserToDB(receiverObj);
+            }
+            showToast('Message updated');
+        }
+
+        async function deleteMessageInDB(targetUsername, timestamp) {
+            let allUsers = await getAllUsersFromDB();
+            let senderObj = allUsers.find(u => u.username === currentUser);
+            let receiverObj = allUsers.find(u => u.username === targetUsername);
+
+            if (senderObj && senderObj.messages) {
+                senderObj.messages = senderObj.messages.filter(m => !(m.sender === currentUser && m.timestamp === timestamp));
+                await saveUserToDB(senderObj);
+            }
+
+            if (receiverObj && receiverObj.messages) {
+                receiverObj.messages = receiverObj.messages.filter(m => !(m.sender === currentUser && m.timestamp === timestamp));
+                await saveUserToDB(receiverObj);
+            }
+
+            showToast('Message deleted');
+            await renderChatsList(targetUsername);
         }
 
         homeLink.addEventListener('click', switchToHome);
