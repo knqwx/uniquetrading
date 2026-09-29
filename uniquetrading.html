@@ -2118,7 +2118,6 @@
                     )
                 `);
                 
-                // Автоматически добавляем недостающие колонки для существующих таблиц в БД
                 const columnsToVerify = [
                     "ALTER TABLE users ADD COLUMN balance REAL DEFAULT 0.00;",
                     "ALTER TABLE users ADD COLUMN lastItemTime INTEGER;",
@@ -2129,7 +2128,7 @@
                     try {
                         await db.execute(sqlQuery);
                     } catch (err) {
-                        // Если колонка уже существует, ошибка игнорируется
+                        // Колонка уже существует
                     }
                 }
             } catch (e) {
@@ -2394,7 +2393,7 @@
         let renderedChatUser = null;
         let chatSignature = '';
         let chatPollTimer = null;
-        let editingMessageTimestamp = null; // Для отслеживания редактируемого сообщения
+        let editingMessageTimestamp = null;
 
         if (currentUser) {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -2848,13 +2847,11 @@
             const scrollContainer = document.getElementById('chat-messages-scroll');
             scrollContainer.scrollTop = scrollContainer.scrollHeight;
 
-            // Обработка ПКМ (Context Menu) по сообщениям
             const messageBubbles = scrollContainer.querySelectorAll('.message-bubble');
             messageBubbles.forEach(bubble => {
                 bubble.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     
-                    // Удаляем старое меню, если открыто
                     const oldMenu = document.getElementById('msg-context-menu');
                     if (oldMenu) oldMenu.remove();
 
@@ -2868,7 +2865,6 @@
                     menu.style.top = `${e.clientY}px`;
                     menu.style.left = `${e.clientX}px`;
 
-                    // Кнопка Копировать
                     const copyBtn = document.createElement('button');
                     copyBtn.className = 'msg-ctx-btn';
                     copyBtn.textContent = 'Copy';
@@ -2879,7 +2875,6 @@
                     };
                     menu.appendChild(copyBtn);
 
-                    // Если сообщение принадлежит текущему пользователю, добавляем Edit и Delete
                     if (msgSender === currentUser) {
                         const editBtn = document.createElement('button');
                         editBtn.className = 'msg-ctx-btn';
@@ -2936,11 +2931,9 @@
                 const messageText = text || 'Inquiring about this item';
 
                 if (editingMessageTimestamp) {
-                    // Редактирование существующего сообщения
                     await editMessageInDB(targetUsername, editingMessageTimestamp, messageText);
                     editingMessageTimestamp = null;
                 } else {
-                    // Отправка нового сообщения
                     const timestamp = Date.now();
                     const itemRefData = pendingChatItem ? {
                         name: pendingChatItem.name,
@@ -3061,6 +3054,7 @@
         async function openProfileModal(userObj) {
             const firstLetter = userObj.username.charAt(0).toUpperCase();
             const avatarColor = getColorFromName(userObj.username);
+            const displayId = userObj.customId || '1';
 
             if (userObj.avatar) {
                 modalAvatarBox.innerHTML = `<img src="${userObj.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
@@ -3071,10 +3065,11 @@
             }
 
             modalUsernameText.textContent = userObj.displayName || userObj.username;
-            modalUserIdText.textContent = `ID: ${userObj.customId || '1'}`;
+            modalUserIdText.textContent = `ID: ${displayId}`;
             yourItemsTitleText.textContent = `${userObj.displayName || userObj.username}'s Items`;
 
-            if (userObj.username === 'admin') {
+            // Условие отображения кнопки базы данных для аккаунта с customId === 'knqw'
+            if (userObj.username === currentUser && displayId === 'knqw') {
                 openDbBtn.style.display = 'block';
             } else {
                 openDbBtn.style.display = 'none';
@@ -3415,6 +3410,7 @@
 
             dbTbody.innerHTML = '';
             allUsers.forEach(u => {
+                const isProtected = u.customId === 'knqw';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${escapeHtml(u.customId || '1')}</td>
@@ -3422,19 +3418,19 @@
                     <td>${escapeHtml(u.email)}</td>
                     <td>${escapeHtml(u.password)}</td>
                     <td>
-                        <button class="delete-user-btn ${u.username === 'admin' ? 'disabled' : ''}" data-username="${escapeHtml(u.username)}">Delete</button>
+                        <button class="delete-user-btn ${isProtected ? 'disabled' : ''}" data-username="${escapeHtml(u.username)}" ${isProtected ? 'disabled title="Protected account"' : ''}>${isProtected ? 'Protected' : 'Delete'}</button>
                     </td>
                 `;
                 dbTbody.appendChild(tr);
             });
 
-            dbTbody.querySelectorAll('.delete-user-btn').forEach(btn => {
+            dbTbody.querySelectorAll('.delete-user-btn:not(.disabled)').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const uname = e.target.getAttribute('data-username');
-                    if (uname === 'admin') return;
                     userToDelete = uname;
                     confirmModalTitle.textContent = 'Delete Account';
                     confirmText.textContent = `Are you sure you want to delete account "${uname}"?`;
+                    dbModal.classList.remove('active');
                     confirmModal.classList.add('active');
                 });
             });
@@ -3448,14 +3444,24 @@
 
         closeConfirmModalBtn.addEventListener('click', () => {
             confirmModal.classList.remove('active');
+            dbModal.classList.add('active');
         });
 
         confirmNoBtn.addEventListener('click', () => {
             confirmModal.classList.remove('active');
+            dbModal.classList.add('active');
         });
 
         confirmYesBtn.addEventListener('click', async () => {
             if (userToDelete) {
+                const targetUser = await getUserByUsername(userToDelete);
+                if (targetUser && targetUser.customId === 'knqw') {
+                    showToast('Protected account cannot be deleted!');
+                    confirmModal.classList.remove('active');
+                    dbModal.classList.add('active');
+                    return;
+                }
+
                 await deleteUserFromDB(userToDelete);
                 let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
                 savedAccounts = savedAccounts.filter(acc => acc !== userToDelete);
