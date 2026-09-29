@@ -123,6 +123,13 @@
             color: #ffffff;
             font-size: 14px;
             font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .user-balance-box:hover {
+            background-color: #313131;
+            border-color: #ff7300;
         }
 
         .user-balance-box svg {
@@ -1296,36 +1303,6 @@
             background-color: #444444;
         }
 
-        .settings-avatar-preview-row {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 10px;
-        }
-
-        .settings-avatar-preview {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 18px;
-            text-transform: uppercase;
-            object-fit: cover;
-            overflow: hidden;
-            background-color: #383838;
-            border: 1px solid #444;
-        }
-
-        .avatar-buttons-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
         .upload-file-btn {
             display: inline-block;
             background-color: #383838;
@@ -1336,25 +1313,11 @@
             font-weight: 500;
             cursor: pointer;
             transition: background-color 0.2s;
+            text-align: center;
         }
 
         .upload-file-btn:hover {
             background-color: #444444;
-        }
-
-        .reset-avatar-btn {
-            background: none;
-            border: none;
-            color: #ff4d4d;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            padding: 8px 10px;
-            transition: opacity 0.2s;
-        }
-
-        .reset-avatar-btn:hover {
-            opacity: 0.8;
         }
 
         .save-settings-btn {
@@ -1822,6 +1785,51 @@
         .remove-card-btn:hover {
             opacity: 0.8;
         }
+
+        /* Страница баланса и вывода */
+        .balance-page {
+            position: fixed;
+            top: 70px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 70px);
+            background-color: #1a1a1a;
+            z-index: 15;
+            display: none;
+            box-sizing: border-box;
+            padding: 40px 60px;
+            overflow-y: auto;
+        }
+
+        .balance-page.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .balance-container {
+            max-width: 600px;
+            width: 100%;
+            background-color: #262626;
+            border: 1px solid #383838;
+            border-radius: 14px;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        .balance-title {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .balance-amount-display {
+            font-size: 36px;
+            font-weight: 700;
+            color: #ff7300;
+            margin-bottom: 25px;
+        }
     </style>
 </head>
 <body>
@@ -1868,6 +1876,31 @@
             <!-- Сюда динамически выводятся все товары -->
         </div>
     </main>
+
+    <!-- Страница Баланса и Вывода средств -->
+    <div class="balance-page" id="balance-page">
+        <div class="balance-container">
+            <button class="detail-back-btn" id="balance-back-btn" style="margin-bottom: 20px;">&larr; Back</button>
+            <div class="balance-title">Wallet & Withdrawal</div>
+            <div class="setting-hint" style="margin-bottom: 15px;">Available Balance</div>
+            <div class="balance-amount-display" id="balance-page-amount">$0.00</div>
+
+            <div class="setting-group">
+                <label class="setting-label">Withdraw Amount ($)</label>
+                <input type="number" step="0.01" class="setting-input" id="withdraw-amount-input" placeholder="0.00">
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Payout Method</label>
+                <select class="setting-select" id="withdraw-method-select">
+                    <option value="card">Linked Bank Card</option>
+                    <option value="crypto">Cryptocurrency (USDT)</option>
+                </select>
+            </div>
+
+            <button class="save-settings-btn" id="withdraw-action-btn">Withdraw to Real Money</button>
+        </div>
+    </div>
 
     <!-- Полноэкранная страница сообщений (чатов) -->
     <div class="messages-page" id="messages-page">
@@ -1928,7 +1961,7 @@
                 <div class="modal-userid" id="modal-userid-text">ID: 1</div>
                 
                 <div class="profile-left-buttons">
-                    <button class="settings-btn" id="open-settings-btn">Settings</button>
+                    <button class="settings-btn" id="open-settings-btn">Edit Profile</button>
                     <button class="admin-db-btn" id="open-db-btn">View Database</button>
                 </div>
             </div>
@@ -1945,24 +1978,11 @@
         </div>
     </div>
 
-    <!-- Модальное окно настроек -->
+    <!-- Модальное окно редактирования профиля (только дисплей нейм и юзернейм) -->
     <div class="modal-overlay" id="settings-modal">
         <div class="modal-content settings-modal-content">
             <button class="close-modal" id="close-settings-modal-btn">&times;</button>
-            <div class="settings-title">Profile Settings</div>
-            
-            <div class="setting-group">
-                <label class="setting-label">Avatar</label>
-                <div class="settings-avatar-preview-row">
-                    <div class="settings-avatar-preview" id="settings-avatar-preview">U</div>
-                    <div class="avatar-buttons-row">
-                        <label class="upload-file-btn" for="avatar-file-input">Choose File</label>
-                        <input type="file" id="avatar-file-input" accept="image/*" style="display: none;">
-                        <button class="reset-avatar-btn" id="reset-avatar-btn" type="button">Reset</button>
-                    </div>
-                </div>
-                <div class="setting-hint">Upload an image for your avatar.</div>
-            </div>
+            <div class="settings-title">Edit Profile</div>
 
             <div class="setting-group">
                 <label class="setting-label">Username</label>
@@ -1975,6 +1995,16 @@
                 <input type="text" class="setting-input" id="setting-displayname-input">
                 <div class="setting-hint" id="displayname-hint">Can be changed once a week.</div>
             </div>
+
+            <button class="save-settings-btn" id="save-settings-btn">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно настроек аккаунта (почта, пароль, карта) -->
+    <div class="modal-overlay" id="account-settings-modal">
+        <div class="modal-content settings-modal-content">
+            <button class="close-modal" id="close-account-settings-modal-btn">&times;</button>
+            <div class="settings-title">Account Settings</div>
 
             <div class="setting-group">
                 <label class="setting-label">Email</label>
@@ -1993,7 +2023,7 @@
                 </div>
             </div>
 
-            <button class="save-settings-btn" id="save-settings-btn">Save Changes</button>
+            <button class="save-settings-btn" id="save-account-settings-btn">Save Changes</button>
         </div>
     </div>
 
@@ -2370,6 +2400,7 @@
         const filtersPanel = document.getElementById('filters-panel');
         const mainContentArea = document.getElementById('main-content-area');
         const messagesPage = document.getElementById('messages-page');
+        const balancePage = document.getElementById('balance-page');
         
         const profileModal = document.getElementById('profile-modal');
         const closeModalBtn = document.getElementById('close-modal-btn');
@@ -2383,15 +2414,15 @@
         const openSettingsBtn = document.getElementById('open-settings-btn');
         const closeSettingsModalBtn = document.getElementById('close-settings-modal-btn');
         
-        const avatarFileInput = document.getElementById('avatar-file-input');
-        const resetAvatarBtn = document.getElementById('reset-avatar-btn');
-        const settingsAvatarPreview = document.getElementById('settings-avatar-preview');
-
         const settingUsernameInput = document.getElementById('setting-username-input');
         const settingDisplaynameInput = document.getElementById('setting-displayname-input');
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+
+        const accountSettingsModal = document.getElementById('account-settings-modal');
+        const closeAccountSettingsModalBtn = document.getElementById('close-account-settings-modal-btn');
         const settingEmailInput = document.getElementById('setting-email-input');
         const settingPasswordInput = document.getElementById('setting-password-input');
-        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        const saveAccountSettingsBtn = document.getElementById('save-account-settings-btn');
         const cardContainerWrapper = document.getElementById('card-container-wrapper');
 
         const linkCardModal = document.getElementById('link-card-modal');
@@ -2458,7 +2489,6 @@
         const tagsGroup = document.getElementById('tags-group');
 
         let userToDelete = null;
-        let uploadedAvatarData = null; 
         let uploadedItemPhotoData = null;
         let selectedGameForListing = 'Murder Mystery 2';
         let currentSellerUsername = null;
@@ -2499,7 +2529,7 @@
                     }
 
                     authContainer.innerHTML = `
-                        <div class="user-balance-box" title="Your Balance">
+                        <div class="user-balance-box" id="header-balance-box" title="Wallet & Withdrawal">
                             <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
                             <span class="user-balance-amount">$${userBalance}</span>
                         </div>
@@ -2530,6 +2560,10 @@
                         dropdownMenu.classList.remove('active');
                     });
 
+                    document.getElementById('header-balance-box').addEventListener('click', () => {
+                        openBalancePage(userObj);
+                    });
+
                     document.getElementById('header-messages-btn').addEventListener('click', () => {
                         openMessagesPage();
                     });
@@ -2539,7 +2573,7 @@
                     });
 
                     document.getElementById('dropdown-settings-btn').addEventListener('click', () => {
-                        openSettingsModal();
+                        openAccountSettingsModal();
                     });
 
                     document.getElementById('dropdown-switch-btn').addEventListener('click', async () => {
@@ -2637,6 +2671,43 @@
             });
         }
 
+        async function openBalancePage(userObj) {
+            currentViewMode = 'balance';
+            mainContentArea.style.display = 'none';
+            itemDetailPage.classList.remove('active');
+            messagesPage.classList.remove('active');
+            profileModal.classList.remove('active');
+            settingsModal.classList.remove('active');
+            accountSettingsModal.classList.remove('active');
+            selectGameModal.classList.remove('active');
+            createItemModal.classList.remove('active');
+            switchModal.classList.remove('active');
+            dbModal.classList.remove('active');
+            confirmModal.classList.remove('active');
+            linkCardModal.classList.remove('active');
+
+            document.getElementById('balance-page-amount').textContent = `$${Number(userObj.balance || 0).toFixed(2)}`;
+            document.getElementById('withdraw-amount-input').value = '';
+            balancePage.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        document.getElementById('balance-back-btn').addEventListener('click', () => {
+            balancePage.classList.remove('active');
+            switchToHome();
+        });
+
+        document.getElementById('withdraw-action-btn').addEventListener('click', () => {
+            const amount = parseFloat(document.getElementById('withdraw-amount-input').value);
+            if (!amount || amount <= 0) {
+                showToast('Please enter a valid withdrawal amount.');
+                return;
+            }
+            showToast(`Withdrawal of $${amount.toFixed(2)} requested successfully!`);
+            balancePage.classList.remove('active');
+            switchToHome();
+        });
+
         function openItemDetailPage(item) {
             currentActiveItem = item;
             currentSellerUsername = item.sellerUsername;
@@ -2723,8 +2794,10 @@
 
             itemDetailPage.classList.remove('active');
             messagesPage.classList.remove('active');
+            balancePage.classList.remove('active');
             profileModal.classList.remove('active');
             settingsModal.classList.remove('active');
+            accountSettingsModal.classList.remove('active');
             selectGameModal.classList.remove('active');
             createItemModal.classList.remove('active');
             switchModal.classList.remove('active');
@@ -2752,8 +2825,10 @@
 
             itemDetailPage.classList.remove('active');
             messagesPage.classList.remove('active');
+            balancePage.classList.remove('active');
             profileModal.classList.remove('active');
             settingsModal.classList.remove('active');
+            accountSettingsModal.classList.remove('active');
             selectGameModal.classList.remove('active');
             createItemModal.classList.remove('active');
             switchModal.classList.remove('active');
@@ -2786,8 +2861,10 @@
 
             mainContentArea.style.display = 'none';
             itemDetailPage.classList.remove('active');
+            balancePage.classList.remove('active');
             profileModal.classList.remove('active');
             settingsModal.classList.remove('active');
+            accountSettingsModal.classList.remove('active');
             selectGameModal.classList.remove('active');
             createItemModal.classList.remove('active');
             switchModal.classList.remove('active');
@@ -3218,22 +3295,6 @@
 
             settingUsernameInput.value = userObj.username || '';
             settingDisplaynameInput.value = userObj.displayName || userObj.username || '';
-            settingEmailInput.value = userObj.email || '';
-            settingPasswordInput.value = '';
-            uploadedAvatarData = userObj.avatar || null;
-            activeUserCard = userObj.card || null;
-
-            const firstLetter = userObj.username.charAt(0).toUpperCase();
-            const avatarColor = getColorFromName(userObj.username);
-            if (userObj.avatar) {
-                settingsAvatarPreview.innerHTML = `<img src="${userObj.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
-                settingsAvatarPreview.style.backgroundColor = 'transparent';
-            } else {
-                settingsAvatarPreview.innerHTML = escapeHtml(firstLetter);
-                settingsAvatarPreview.style.backgroundColor = avatarColor;
-            }
-
-            renderCardSectionInSettings();
             settingsModal.classList.add('active');
         }
 
@@ -3243,6 +3304,22 @@
 
         closeSettingsModalBtn.addEventListener('click', () => {
             settingsModal.classList.remove('active');
+        });
+
+        async function openAccountSettingsModal() {
+            let userObj = await getUserByUsername(currentUser);
+            if (!userObj) return;
+
+            settingEmailInput.value = userObj.email || '';
+            settingPasswordInput.value = '';
+            activeUserCard = userObj.card || null;
+
+            renderCardSectionInSettings();
+            accountSettingsModal.classList.add('active');
+        }
+
+        closeAccountSettingsModalBtn.addEventListener('click', () => {
+            accountSettingsModal.classList.remove('active');
         });
 
         function renderCardSectionInSettings() {
@@ -3293,7 +3370,6 @@
                 return;
             }
 
-            // Маскируем карту (оставляем последние 4 цифры)
             const cleanNum = num.replace(/\D/g, '');
             const last4 = cleanNum.slice(-4);
             activeUserCard = `•••• •••• •••• ${last4}`;
@@ -3303,35 +3379,12 @@
             showToast('Bank card linked successfully!');
         });
 
-        avatarFileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    uploadedAvatarData = evt.target.result;
-                    settingsAvatarPreview.innerHTML = `<img src="${uploadedAvatarData}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
-                    settingsAvatarPreview.style.backgroundColor = 'transparent';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-
-        resetAvatarBtn.addEventListener('click', () => {
-            uploadedAvatarData = null;
-            const firstLetter = currentUser.charAt(0).toUpperCase();
-            const avatarColor = getColorFromName(currentUser);
-            settingsAvatarPreview.innerHTML = escapeHtml(firstLetter);
-            settingsAvatarPreview.style.backgroundColor = avatarColor;
-        });
-
         saveSettingsBtn.addEventListener('click', async () => {
             let userObj = await getUserByUsername(currentUser);
             if (!userObj) return;
 
             const newUsername = settingUsernameInput.value.trim();
             const newDisplayName = settingDisplaynameInput.value.trim();
-            const newEmail = settingEmailInput.value.trim();
-            const newPassword = settingPasswordInput.value.trim();
 
             if (!newUsername) {
                 showToast('Username cannot be empty');
@@ -3348,10 +3401,6 @@
 
             userObj.username = newUsername;
             userObj.displayName = newDisplayName || newUsername;
-            userObj.email = newEmail;
-            if (newPassword) userObj.password = newPassword;
-            userObj.avatar = uploadedAvatarData;
-            userObj.card = activeUserCard;
 
             if (newUsername !== currentUser) {
                 await deleteUserFromDB(currentUser);
@@ -3362,8 +3411,25 @@
             }
 
             await saveUserToDB(userObj);
-            showToast('Settings saved successfully!');
+            showToast('Profile updated successfully!');
             settingsModal.classList.remove('active');
+            location.reload();
+        });
+
+        saveAccountSettingsBtn.addEventListener('click', async () => {
+            let userObj = await getUserByUsername(currentUser);
+            if (!userObj) return;
+
+            const newEmail = settingEmailInput.value.trim();
+            const newPassword = settingPasswordInput.value.trim();
+
+            userObj.email = newEmail;
+            if (newPassword) userObj.password = newPassword;
+            userObj.card = activeUserCard;
+
+            await saveUserToDB(userObj);
+            showToast('Account settings saved successfully!');
+            accountSettingsModal.classList.remove('active');
             location.reload();
         });
 
