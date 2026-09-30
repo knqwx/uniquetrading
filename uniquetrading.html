@@ -1831,6 +1831,43 @@
             margin-bottom: 25px;
         }
 
+        /* ===== Кошелёк: две колонки ===== */
+        .wallet-wrapper { width: 100%; max-width: 1000px; }
+        .wallet-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+        .wallet-grid .balance-container,
+        .balance-container.admin-wallet { max-width: none; }
+        .balance-container.admin-wallet { margin-top: 24px; border-color: rgba(255,115,0,0.35); }
+        .wallet-card-title { color: #ffffff; font-size: 20px; font-weight: 700; margin-bottom: 18px; }
+        .topup-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+        .topup-preset {
+            background-color: #2a2a2a; color: #cccccc; border: 1px solid #3d3d3d;
+            border-radius: 8px; padding: 12px 0; font-family: 'Inter', sans-serif;
+            font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+        }
+        .topup-preset:hover { color: #ffffff; border-color: #666; background-color: #333; }
+        .topup-preset.active {
+            background-color: rgba(255,115,0,0.15); color: #ff7300; border-color: #ff7300;
+        }
+        .admin-row { display: flex; gap: 10px; }
+        .admin-row .setting-input { flex: 1; }
+        .admin-btn {
+            border: none; border-radius: 8px; padding: 0 18px; font-family: 'Inter', sans-serif;
+            font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; color: #fff;
+        }
+        .admin-btn:hover { opacity: 0.85; }
+        .admin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .admin-btn.add { background-color: #2fa866; }
+        .admin-btn.sub { background-color: #ff4d4d; }
+        @media (max-width: 800px) {
+            .balance-page { padding: 24px 16px; }
+            .wallet-grid { grid-template-columns: 1fr; }
+        }
+
         /* ===== Онлайн-индикатор и Middlemen ===== */
         .av-wrap {
             position: relative;
@@ -2125,28 +2162,76 @@
         </div>
     </main>
 
-    <!-- Страница Баланса и Вывода средств -->
+    <!-- Страница Баланса: слева пополнение, справа вывод -->
     <div class="balance-page" id="balance-page">
-        <div class="balance-container">
+        <div class="wallet-wrapper">
             <button class="detail-back-btn" id="balance-back-btn" style="margin-bottom: 20px;">&larr; Back</button>
-            <div class="balance-title">Wallet & Withdrawal</div>
-            <div class="setting-hint" style="margin-bottom: 15px;">Available Balance</div>
+            <div class="balance-title">Wallet</div>
+            <div class="setting-hint" style="margin-bottom: 6px;">Available Balance</div>
             <div class="balance-amount-display" id="balance-page-amount">$0.00</div>
 
-            <div class="setting-group">
-                <label class="setting-label">Withdraw Amount ($)</label>
-                <input type="number" step="0.01" class="setting-input" id="withdraw-amount-input" placeholder="0.00">
+            <div class="wallet-grid">
+                <!-- Левая колонка: покупка валюты -->
+                <div class="balance-container">
+                    <div class="wallet-card-title">Buy Currency</div>
+
+                    <div class="setting-label">Choose amount</div>
+                    <div class="topup-presets" id="topup-presets">
+                        <button type="button" class="topup-preset" data-amount="5">$5</button>
+                        <button type="button" class="topup-preset" data-amount="10">$10</button>
+                        <button type="button" class="topup-preset" data-amount="25">$25</button>
+                        <button type="button" class="topup-preset" data-amount="50">$50</button>
+                        <button type="button" class="topup-preset" data-amount="100">$100</button>
+                        <button type="button" class="topup-preset" data-amount="250">$250</button>
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">Or enter your own amount ($)</label>
+                        <input type="number" step="0.01" min="1" class="setting-input" id="topup-amount-input" placeholder="0.00">
+                        <div class="setting-hint">Min $1 &middot; Max $10,000</div>
+                    </div>
+
+                    <button class="save-settings-btn" id="topup-buy-btn">Buy</button>
+                </div>
+
+                <!-- Правая колонка: вывод -->
+                <div class="balance-container">
+                    <div class="wallet-card-title">Withdrawal</div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">Withdraw Amount ($)</label>
+                        <input type="number" step="0.01" class="setting-input" id="withdraw-amount-input" placeholder="0.00">
+                    </div>
+
+                    <div class="setting-group">
+                        <label class="setting-label">Payout Method</label>
+                        <select class="setting-select" id="withdraw-method-select">
+                            <option value="card">Linked Bank Card</option>
+                            <option value="crypto">Cryptocurrency (USDT)</option>
+                        </select>
+                    </div>
+
+                    <button class="save-settings-btn" id="withdraw-action-btn">Withdraw to Real Money</button>
+                </div>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-label">Payout Method</label>
-                <select class="setting-select" id="withdraw-method-select">
-                    <option value="card">Linked Bank Card</option>
-                    <option value="crypto">Cryptocurrency (USDT)</option>
-                </select>
+            <!-- Админ-панель (видна только ID knqw) -->
+            <div class="balance-container admin-wallet" id="admin-wallet-card" style="display: none;">
+                <div class="wallet-card-title">Admin: Manage Balances</div>
+                <div class="setting-group">
+                    <label class="setting-label">User</label>
+                    <select class="setting-select" id="admin-user-select"></select>
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">Amount ($)</label>
+                    <div class="admin-row">
+                        <input type="number" step="0.01" min="0" class="setting-input" id="admin-amount-input" placeholder="0.00">
+                        <button class="admin-btn add" id="admin-add-btn" type="button">+ Add</button>
+                        <button class="admin-btn sub" id="admin-sub-btn" type="button">&minus; Subtract</button>
+                    </div>
+                    <div class="setting-hint">Free of charge. Balance can't go below $0.</div>
+                </div>
             </div>
-
-            <button class="save-settings-btn" id="withdraw-action-btn">Withdraw to Real Money</button>
         </div>
     </div>
 
@@ -3085,8 +3170,18 @@
             confirmModal.classList.remove('active');
             linkCardModal.classList.remove('active');
 
-            document.getElementById('balance-page-amount').textContent = `$${Number(userObj.balance || 0).toFixed(2)}`;
+            const freshUser = (await getUserByUsername(currentUser)) || userObj;
+            document.getElementById('balance-page-amount').textContent = `$${Number(freshUser.balance || 0).toFixed(2)}`;
             document.getElementById('withdraw-amount-input').value = '';
+            resetTopUpForm();
+            document.getElementById('admin-amount-input').value = '';
+            const adminCard = document.getElementById('admin-wallet-card');
+            if (freshUser.customId === 'knqw') {
+                adminCard.style.display = 'block';
+                await loadAdminUserList(freshUser.username);
+            } else {
+                adminCard.style.display = 'none';
+            }
             balancePage.classList.add('active');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -3106,6 +3201,143 @@
             balancePage.classList.remove('active');
             switchToHome();
         });
+
+        // ===== Баланс: пополнение и админ-управление =====
+        // ВНИМАНИЕ: пока нет реального платёжного провайдера (Stripe и т.п.),
+        // покупка работает в демо-режиме: списания денег нет, нужна только привязанная карта.
+        // Перед реальным запуском подключи оплату и начисляй баланс на сервере после подтверждения платежа.
+        const PAYMENT_DEMO_MODE = true;
+        const MIN_TOPUP = 1;
+        const MAX_TOPUP = 10000;
+
+        const topupInput = document.getElementById('topup-amount-input');
+        const topupBuyBtn = document.getElementById('topup-buy-btn');
+        const topupPresetBtns = document.querySelectorAll('.topup-preset');
+        const adminUserSelect = document.getElementById('admin-user-select');
+        const adminAmountInput = document.getElementById('admin-amount-input');
+        const adminAddBtn = document.getElementById('admin-add-btn');
+        const adminSubBtn = document.getElementById('admin-sub-btn');
+
+        function fmtMoney(n) { return `$${Number(n || 0).toFixed(2)}`; }
+
+        // Атомарное изменение баланса (не перезаписывает остальные поля пользователя)
+        async function adjustBalance(username, delta) {
+            await db.execute({
+                sql: "UPDATE users SET balance = ROUND(MAX(0, COALESCE(balance, 0) + ?), 2) WHERE username = ?",
+                args: [delta, username]
+            });
+            const rs = await db.execute({
+                sql: "SELECT balance FROM users WHERE username = ?",
+                args: [username]
+            });
+            return rs.rows.length ? Number(rs.rows[0].balance) : null;
+        }
+
+        function showMyBalance(value) {
+            document.getElementById('balance-page-amount').textContent = fmtMoney(value);
+            const headerAmount = document.querySelector('.user-balance-amount');
+            if (headerAmount) headerAmount.textContent = fmtMoney(value);
+        }
+
+        function updateBuyButtonLabel() {
+            const v = parseFloat(topupInput.value);
+            topupBuyBtn.textContent = (v > 0) ? `Buy ${fmtMoney(v)}` : 'Buy';
+        }
+
+        function resetTopUpForm() {
+            topupInput.value = '';
+            topupPresetBtns.forEach(b => b.classList.remove('active'));
+            updateBuyButtonLabel();
+        }
+
+        topupPresetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                topupPresetBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                topupInput.value = btn.getAttribute('data-amount');
+                updateBuyButtonLabel();
+            });
+        });
+
+        topupInput.addEventListener('input', () => {
+            const v = parseFloat(topupInput.value);
+            topupPresetBtns.forEach(b => b.classList.toggle('active', parseFloat(b.getAttribute('data-amount')) === v));
+            updateBuyButtonLabel();
+        });
+
+        topupBuyBtn.addEventListener('click', async () => {
+            if (!currentUser) { showToast('Please log in first.'); return; }
+
+            const amount = Math.round(parseFloat(topupInput.value) * 100) / 100;
+            if (!amount || isNaN(amount)) { showToast('Choose or enter an amount.'); return; }
+            if (amount < MIN_TOPUP) { showToast(`Minimum purchase is ${fmtMoney(MIN_TOPUP)}.`); return; }
+            if (amount > MAX_TOPUP) { showToast(`Maximum purchase is ${fmtMoney(MAX_TOPUP)}.`); return; }
+
+            const me = await getUserByUsername(currentUser);
+            if (!me) return;
+            if (!me.card) {
+                showToast('Link a bank card in Settings first.');
+                return;
+            }
+
+            topupBuyBtn.disabled = true;
+            try {
+                if (!PAYMENT_DEMO_MODE) {
+                    showToast('Payment provider is not connected.');
+                    return;
+                }
+                const newBalance = await adjustBalance(currentUser, amount);
+                if (newBalance === null) { showToast('Account not found.'); return; }
+                showMyBalance(newBalance);
+                resetTopUpForm();
+                showToast(`${fmtMoney(amount)} added to your balance!`);
+            } catch (e) {
+                console.error(e);
+                showToast('Purchase failed. Try again.');
+            } finally {
+                topupBuyBtn.disabled = false;
+            }
+        });
+
+        async function loadAdminUserList(selectUsername) {
+            const keep = selectUsername || adminUserSelect.value;
+            const rs = await db.execute("SELECT username, displayName, balance FROM users ORDER BY username");
+            adminUserSelect.innerHTML = '';
+            rs.rows.forEach(r => {
+                const name = r.displayName && r.displayName !== r.username ? `${r.displayName} (@${r.username})` : `@${r.username}`;
+                adminUserSelect.appendChild(new Option(`${name} — ${fmtMoney(r.balance)}`, r.username));
+            });
+            if (keep) adminUserSelect.value = keep;
+        }
+
+        async function adminAdjust(sign) {
+            // Повторная проверка прав по базе перед каждым действием
+            const me = currentUser ? await getUserByUsername(currentUser) : null;
+            if (!me || me.customId !== 'knqw') { showToast('Only knqw can manage balances.'); return; }
+
+            const target = adminUserSelect.value;
+            const amount = Math.round(parseFloat(adminAmountInput.value) * 100) / 100;
+            if (!target) { showToast('Select a user.'); return; }
+            if (!amount || isNaN(amount) || amount <= 0) { showToast('Enter a valid amount.'); return; }
+
+            adminAddBtn.disabled = adminSubBtn.disabled = true;
+            try {
+                const newBalance = await adjustBalance(target, sign * amount);
+                if (newBalance === null) { showToast('User not found.'); return; }
+                if (target === currentUser) showMyBalance(newBalance);
+                await loadAdminUserList(target);
+                adminAmountInput.value = '';
+                showToast(`${sign > 0 ? 'Added' : 'Subtracted'} ${fmtMoney(amount)} ${sign > 0 ? 'to' : 'from'} ${target}. New balance: ${fmtMoney(newBalance)}`);
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to update balance.');
+            } finally {
+                adminAddBtn.disabled = adminSubBtn.disabled = false;
+            }
+        }
+
+        adminAddBtn.addEventListener('click', () => adminAdjust(1));
+        adminSubBtn.addEventListener('click', () => adminAdjust(-1));
 
         function openItemDetailPage(item) {
             currentActiveItem = item;
