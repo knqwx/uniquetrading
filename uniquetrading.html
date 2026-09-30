@@ -2078,21 +2078,6 @@
         .role-toggle-btn.active:hover {
             background-color: rgba(61, 220, 132, 0.3);
         }
-    
-        .deposit-box { background:#262626; border:1px solid #383838; border-radius:12px; padding:20px; margin:20px 0 28px; }
-        .deposit-title { color:#fff; font-size:18px; font-weight:700; margin-bottom:4px; }
-        .deposit-demo { display:inline-block; background:rgba(255,115,0,.12); color:#ff7300; border-radius:6px; padding:4px 10px; font-size:12px; margin:8px 0 14px; }
-        .quick-amounts { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
-        .quick-amt-btn { background:#333; color:#fff; border:none; border-radius:6px; padding:8px 14px; cursor:pointer; font-size:13px; font-family:'Inter',sans-serif; }
-        .quick-amt-btn:hover { background:#444; }
-        .deposit-row { display:flex; gap:10px; }
-        .deposit-row .setting-group { flex:1; }
-        .tx-title { color:#888; font-size:13px; margin:18px 0 8px; }
-        .tx-row { display:flex; justify-content:space-between; color:#fff; font-size:13px; padding:7px 0; border-top:1px solid #333; }
-        .tx-row small { color:#777; margin-left:6px; }
-        .tx-plus { color:#3ddc84; font-weight:600; } .tx-minus { color:#ff4d4d; font-weight:600; }
-        .give-funds-btn { background:rgba(61,220,132,.15); color:#3ddc84; border:none; padding:5px 10px; border-radius:5px; cursor:pointer; font-size:12px; margin-left:8px; white-space:nowrap; }
-        .give-funds-btn:hover { background:rgba(61,220,132,.3); }
     </style>
 </head>
 <body>
@@ -2147,28 +2132,6 @@
             <div class="balance-title">Wallet & Withdrawal</div>
             <div class="setting-hint" style="margin-bottom: 15px;">Available Balance</div>
             <div class="balance-amount-display" id="balance-page-amount">$0.00</div>
-
-            <div class="deposit-box">
-                <div class="deposit-title">Add Funds</div>
-                <div class="setting-hint">Buy site currency with a bank card. $1 = $1.00 on your balance.</div>
-                <div class="deposit-demo" id="deposit-demo-note">Demo mode: no real money is charged</div>
-                <div class="quick-amounts">
-                    <button type="button" class="quick-amt-btn" data-amt="5">$5</button>
-                    <button type="button" class="quick-amt-btn" data-amt="10">$10</button>
-                    <button type="button" class="quick-amt-btn" data-amt="25">$25</button>
-                    <button type="button" class="quick-amt-btn" data-amt="50">$50</button>
-                    <button type="button" class="quick-amt-btn" data-amt="100">$100</button>
-                </div>
-                <div class="setting-group"><label class="setting-label">Amount ($)</label><input type="number" min="1" step="0.01" class="setting-input" id="deposit-amount-input" placeholder="0.00"></div>
-                <div class="setting-group"><label class="setting-label">Card number</label><input type="text" inputmode="numeric" autocomplete="off" class="setting-input" id="deposit-card-input" placeholder="1234 5678 9012 3456"></div>
-                <div class="deposit-row">
-                    <div class="setting-group"><label class="setting-label">Expiry</label><input type="text" inputmode="numeric" autocomplete="off" class="setting-input" id="deposit-exp-input" placeholder="MM/YY"></div>
-                    <div class="setting-group"><label class="setting-label">CVV</label><input type="password" inputmode="numeric" autocomplete="off" maxlength="4" class="setting-input" id="deposit-cvv-input" placeholder="123"></div>
-                </div>
-                <button class="save-settings-btn" id="deposit-action-btn" type="button">Buy Currency</button>
-                <div class="tx-title">Recent transactions</div>
-                <div id="tx-list"></div>
-            </div>
 
             <div class="setting-group">
                 <label class="setting-label">Withdraw Amount ($)</label>
@@ -2460,20 +2423,6 @@
         </div>
     </div>
 
-    <!-- Модальное окно начисления валюты (knqw) -->
-    <div class="modal-overlay" id="funds-modal">
-        <div class="modal-content settings-modal-content">
-            <button class="close-modal" id="close-funds-modal-btn">&times;</button>
-            <div class="settings-title">Give Funds</div>
-            <div class="setting-hint" id="funds-target-info" style="margin-bottom:12px;"></div>
-            <div class="setting-group">
-                <label class="setting-label">Amount ($) — negative value deducts</label>
-                <input type="number" step="0.01" class="setting-input" id="funds-amount-input" placeholder="0.00">
-            </div>
-            <button class="save-settings-btn" id="funds-submit-btn" type="button">Apply</button>
-        </div>
-    </div>
-
     <!-- Тост-уведомление -->
     <div class="toast-notification" id="toast-notification">Notification</div>
 
@@ -2502,7 +2451,6 @@
                             <th>Username</th>
                             <th>Email</th>
                             <th>Password</th>
-                            <th>Balance</th>
                             <th>Role</th>
                             <th>Action</th>
                         </tr>
@@ -2556,10 +2504,6 @@
                     )
                 `);
                 
-                try {
-                    await db.execute(`CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, amount REAL, type TEXT, note TEXT, ts INTEGER)`);
-                } catch (e) { console.error("transactions init:", e); }
-
                 const columnsToVerify = [
                     "ALTER TABLE users ADD COLUMN balance REAL DEFAULT 0.00;",
                     "ALTER TABLE users ADD COLUMN lastItemTime INTEGER;",
@@ -2641,30 +2585,8 @@
             }
         }
 
-        async function saveUserToDB(userData, opts = {}) {
+        async function saveUserToDB(userData) {
             try {
-                if (!opts.insert) {
-                    const rs = await db.execute({
-                        sql: `UPDATE users SET customId = ?, displayName = ?, email = ?, password = ?, avatar = ?,
-                              lastUsernameChange = ?, lastDisplayNameChange = ?, items = ?, lastItemTime = ?, messages = ?, card = ?
-                              WHERE username = ?`,
-                        args: [
-                            userData.customId || '1',
-                            userData.displayName || userData.username,
-                            userData.email || '',
-                            userData.password || '',
-                            userData.avatar || null,
-                            userData.lastUsernameChange || null,
-                            userData.lastDisplayNameChange || null,
-                            JSON.stringify(userData.items || []),
-                            userData.lastItemTime || 0,
-                            JSON.stringify(userData.messages || []),
-                            userData.card || null,
-                            userData.username
-                        ]
-                    });
-                    return rs.rowsAffected > 0;
-                }
                 await db.execute({
                     sql: `INSERT INTO users (customId, username, displayName, email, password, avatar, balance, lastUsernameChange, lastDisplayNameChange, items, lastItemTime, messages, card, isMiddleman, lastSeen)
                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -2699,44 +2621,19 @@
                         userData.lastSeen || 0
                     ]
                 });
-                return true;
             } catch (e) {
                 console.error("Error saving user:", e);
-                return false;
             }
-        }
-
-        async function userExists(username) {
-            try {
-                const rs = await db.execute({ sql: "SELECT 1 FROM users WHERE username = ?", args: [username] });
-                return rs.rows.length > 0;
-            } catch (e) { return null; }
-        }
-
-        // Атомарное изменение баланса (не перезаписывается устаревшими данными)
-        async function creditBalance(username, delta, type, note) {
-            const rs = await db.execute({
-                sql: "UPDATE users SET balance = MAX(0, COALESCE(balance, 0) + ?) WHERE username = ?",
-                args: [delta, username]
-            });
-            if (!rs.rowsAffected) return null;
-            try {
-                await db.execute({
-                    sql: "INSERT INTO transactions (username, amount, type, note, ts) VALUES (?, ?, ?, ?, ?)",
-                    args: [username, delta, type, note || '', Date.now()]
-                });
-            } catch (e) { console.error("tx log:", e); }
-            const u = await getUserByUsername(username);
-            return u ? Number(u.balance) : null;
         }
 
         async function deleteUserFromDB(username) {
             try {
-                await db.execute({ sql: "DELETE FROM users WHERE username = ?", args: [username] });
-                return (await userExists(username)) === false;
+                await db.execute({
+                    sql: "DELETE FROM users WHERE username = ?",
+                    args: [username]
+                });
             } catch (e) {
                 console.error("Error deleting user:", e);
-                return false;
             }
         }
         
@@ -2853,8 +2750,6 @@
                     sql: "UPDATE users SET lastSeen = ? WHERE username = ?",
                     args: [now, currentUser]
                 });
-                const b = await db.execute({ sql: "SELECT balance FROM users WHERE username = ?", args: [currentUser] });
-                if (b.rows[0]) refreshBalanceUI(Number(b.rows[0].balance) || 0);
             } catch (e) {
                 // не критично
             }
@@ -3023,13 +2918,6 @@
             startPresenceLoops();
             if (currentUser) {
                 let userObj = await getUserByUsername(currentUser);
-                if (!userObj && (await userExists(currentUser)) === false) {
-                    localStorage.removeItem('currentUser');
-                    const sa = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-                    localStorage.setItem('savedAccounts', JSON.stringify(sa.filter(a => a !== currentUser)));
-                    location.reload();
-                    return;
-                }
                 if (userObj) {
                     const firstLetter = userObj.username.charAt(0).toUpperCase();
                     const avatarColor = getColorFromName(userObj.username);
@@ -3197,9 +3085,7 @@
             confirmModal.classList.remove('active');
             linkCardModal.classList.remove('active');
 
-            const freshUser = await getUserByUsername(currentUser) || userObj;
-            refreshBalanceUI(Number(freshUser.balance || 0));
-            renderTransactions();
+            document.getElementById('balance-page-amount').textContent = `$${Number(userObj.balance || 0).toFixed(2)}`;
             document.getElementById('withdraw-amount-input').value = '';
             balancePage.classList.add('active');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -3737,10 +3623,19 @@
                         <div class="mm-card-name">${escapeHtml(u.displayName || u.username)}<span class="mm-badge">Middleman</span></div>
                         ${presenceLabel(u.username)}
                     </div>
-                    ${isMe ? '' : `<button class="mm-msg-btn" type="button" data-username="${escapeHtml(u.username)}">Message</button>`}
+                    ${isMe ? '' : `<button class="mm-msg-btn" data-username="${escapeHtml(u.username)}">Message</button>`}
                 `;
 
-                
+                const msgBtn = card.querySelector('.mm-msg-btn');
+                if (msgBtn) {
+                    msgBtn.addEventListener('click', () => {
+                        if (!currentUser) {
+                            showToast('Please log in to send messages.');
+                            return;
+                        }
+                        openMessagesPage(u.username);
+                    });
+                }
 
                 middlemenListEl.appendChild(card);
             });
@@ -3832,125 +3727,6 @@
             } finally {
                 submitTicketBtn.disabled = false;
             }
-        });
-
-        middlemenListEl.addEventListener('click', (e) => {
-            const btn = e.target.closest('.mm-msg-btn');
-            if (!btn) return;
-            if (!currentUser) { showToast('Please log in to send messages.'); return; }
-            openMessagesPage(btn.getAttribute('data-username'));
-        });
-
-        // ===== Кошелёк: покупка валюты картой =====
-        const PAYMENTS_LIVE = false; // true — только после подключения реального платёжного провайдера (через ваш сервер)
-        const fundsModal = document.getElementById('funds-modal');
-        const fundsAmountInput = document.getElementById('funds-amount-input');
-        let fundsTarget = null;
-
-        function refreshBalanceUI(balance) {
-            const t = `$${Number(balance || 0).toFixed(2)}`;
-            const hdr = document.querySelector('.user-balance-amount');
-            if (hdr) hdr.textContent = t;
-            const pg = document.getElementById('balance-page-amount');
-            if (pg) pg.textContent = t;
-        }
-
-        async function renderTransactions() {
-            const box = document.getElementById('tx-list');
-            if (!box || !currentUser) return;
-            const labels = { deposit: 'Card top-up', admin: 'Admin adjustment' };
-            try {
-                const rs = await db.execute({
-                    sql: "SELECT amount, type, ts FROM transactions WHERE username = ? ORDER BY ts DESC LIMIT 8",
-                    args: [currentUser]
-                });
-                box.innerHTML = rs.rows.length ? rs.rows.map(r => {
-                    const a = Number(r.amount);
-                    return `<div class="tx-row"><span>${escapeHtml(labels[r.type] || r.type)}<small>${escapeHtml(getTimeAgo(Number(r.ts)))}</small></span><span class="${a >= 0 ? 'tx-plus' : 'tx-minus'}">${a >= 0 ? '+' : '-'}$${Math.abs(a).toFixed(2)}</span></div>`;
-                }).join('') : '<div class="mm-empty">No transactions yet.</div>';
-            } catch (e) { box.innerHTML = ''; }
-        }
-
-        function luhnOk(n) {
-            let s = 0, alt = false;
-            for (let i = n.length - 1; i >= 0; i--) {
-                let d = +n[i];
-                if (alt) { d *= 2; if (d > 9) d -= 9; }
-                s += d; alt = !alt;
-            }
-            return s % 10 === 0;
-        }
-
-        // Здесь подключается реальный платёжный провайдер (Stripe и т.п.) — списание должно идти через ваш сервер.
-        async function chargeCard(card, amount) {
-            if (!PAYMENTS_LIVE) {
-                await new Promise(r => setTimeout(r, 900));
-                return { ok: true, ref: 'demo-' + Date.now() };
-            }
-            throw new Error('Payment processor is not connected');
-        }
-
-        const depAmount = document.getElementById('deposit-amount-input');
-        const depCard = document.getElementById('deposit-card-input');
-        const depExp = document.getElementById('deposit-exp-input');
-        const depCvv = document.getElementById('deposit-cvv-input');
-        const depBtn = document.getElementById('deposit-action-btn');
-        document.getElementById('deposit-demo-note').style.display = PAYMENTS_LIVE ? 'none' : 'inline-block';
-
-        document.querySelectorAll('.quick-amt-btn').forEach(b => b.addEventListener('click', () => { depAmount.value = b.getAttribute('data-amt'); }));
-        depCard.addEventListener('input', () => { depCard.value = depCard.value.replace(/\D/g, '').slice(0, 19).replace(/(.{4})/g, '$1 ').trim(); });
-        depExp.addEventListener('input', () => {
-            const d = depExp.value.replace(/\D/g, '').slice(0, 4);
-            depExp.value = d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d;
-        });
-
-        depBtn.addEventListener('click', async () => {
-            if (!currentUser) { showToast('Please log in first.'); return; }
-            const amount = Math.round(parseFloat(depAmount.value) * 100) / 100;
-            const num = depCard.value.replace(/\D/g, '');
-            const m = depExp.value.match(/^(\d{2})\/(\d{2})$/);
-            const cvv = depCvv.value.trim();
-
-            if (!isFinite(amount) || amount < 1 || amount > 1000) { showToast('Enter an amount from $1 to $1000.'); return; }
-            if (num.length < 13 || !luhnOk(num)) { showToast('Invalid card number.'); return; }
-            if (!m || +m[1] < 1 || +m[1] > 12 || new Date(2000 + +m[2], +m[1], 1) <= new Date()) { showToast('Invalid or expired card date.'); return; }
-            if (!/^\d{3,4}$/.test(cvv)) { showToast('Invalid CVV.'); return; }
-
-            depBtn.disabled = true;
-            depBtn.textContent = 'Processing...';
-            try {
-                const res = await chargeCard({ num, exp: depExp.value, cvv }, amount);
-                const nb = await creditBalance(currentUser, amount, 'deposit', res.ref);
-                if (nb === null) throw new Error('Could not update balance');
-                refreshBalanceUI(nb);
-                renderTransactions();
-                depAmount.value = ''; depCard.value = ''; depExp.value = ''; depCvv.value = '';
-                showToast(`$${amount.toFixed(2)} added to your balance!`);
-            } catch (err) {
-                showToast('Payment failed: ' + err.message);
-            } finally {
-                depBtn.disabled = false;
-                depBtn.textContent = 'Buy Currency';
-            }
-        });
-
-        // ===== knqw: начисление валюты любому пользователю =====
-        document.getElementById('close-funds-modal-btn').addEventListener('click', () => {
-            fundsModal.classList.remove('active');
-            dbModal.classList.add('active');
-        });
-
-        document.getElementById('funds-submit-btn').addEventListener('click', async () => {
-            const me = await getUserByUsername(currentUser);
-            if (!me || me.customId !== 'knqw') { showToast('Only knqw can give funds.'); return; }
-            const amt = parseFloat(fundsAmountInput.value);
-            if (!isFinite(amt) || amt === 0) { showToast('Enter a non-zero amount.'); return; }
-            const nb = await creditBalance(fundsTarget, amt, 'admin', 'by ' + currentUser);
-            if (nb === null) { showToast('User not found.'); return; }
-            showToast(`${amt > 0 ? 'Added' : 'Removed'} $${Math.abs(amt).toFixed(2)} — ${fundsTarget} now has $${nb.toFixed(2)}`);
-            if (fundsTarget === currentUser) refreshBalanceUI(nb);
-            fundsModal.classList.remove('active');
-            openDbBtn.click();
         });
 
         homeLink.addEventListener('click', switchToHome);
@@ -4172,7 +3948,7 @@
             userObj.displayName = newDisplayName || newUsername;
 
             if (newUsername !== currentUser) {
-                
+                await deleteUserFromDB(currentUser);
                 let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
                 savedAccounts = savedAccounts.map(acc => acc === currentUser ? newUsername : acc);
                 localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
@@ -4180,10 +3956,6 @@
             }
 
             await saveUserToDB(userObj);
-            if (newUsername !== currentUser) {
-                await saveUserToDB(userObj, { insert: true });
-                await deleteUserFromDB(currentUser);
-            }
             showToast('Profile updated successfully!');
             settingsModal.classList.remove('active');
             location.reload();
@@ -4342,13 +4114,6 @@
         async function renderSwitchAccountsList() {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
             let allUsers = await getAllUsersFromDB();
-            if (allUsers.length) {
-                const alive = savedAccounts.filter(n => allUsers.some(u => u.username === n));
-                if (alive.length !== savedAccounts.length) {
-                    savedAccounts = alive;
-                    localStorage.setItem('savedAccounts', JSON.stringify(alive));
-                }
-            }
 
             accountsList.innerHTML = '';
             if (savedAccounts.length === 0) {
@@ -4419,7 +4184,6 @@
                     <td>${escapeHtml(u.username)}</td>
                     <td>${escapeHtml(u.email)}</td>
                     <td>${escapeHtml(u.password)}</td>
-                    <td>$${Number(u.balance || 0).toFixed(2)}<button class="give-funds-btn" type="button" data-username="${escapeHtml(u.username)}">+ Funds</button></td>
                     <td>
                         <button class="role-toggle-btn ${u.isMiddleman ? 'active' : ''}" data-username="${escapeHtml(u.username)}" data-mm="${u.isMiddleman ? 1 : 0}">${u.isMiddleman ? 'Middleman ✓' : 'Make Middleman'}</button>
                     </td>
@@ -4444,19 +4208,6 @@
                     await setMiddlemanRole(uname, makeMiddleman);
                     showToast(makeMiddleman ? `${uname} is now a Middleman` : `Middleman role removed from ${uname}`);
                     openDbBtn.click();
-                });
-            });
-
-            dbTbody.querySelectorAll('.give-funds-btn').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const me = await getUserByUsername(currentUser);
-                    if (!me || me.customId !== 'knqw') { showToast('Only knqw can give funds.'); return; }
-                    fundsTarget = e.currentTarget.getAttribute('data-username');
-                    const t = await getUserByUsername(fundsTarget);
-                    document.getElementById('funds-target-info').textContent = `User: ${fundsTarget} — balance $${Number(t ? t.balance : 0).toFixed(2)}`;
-                    fundsAmountInput.value = '';
-                    dbModal.classList.remove('active');
-                    fundsModal.classList.add('active');
                 });
             });
 
@@ -4498,13 +4249,7 @@
                     return;
                 }
 
-                const deleted = await deleteUserFromDB(userToDelete);
-                if (!deleted) {
-                    showToast('Could not delete the account (database error). See console.');
-                    confirmModal.classList.remove('active');
-                    dbModal.classList.add('active');
-                    return;
-                }
+                await deleteUserFromDB(userToDelete);
                 let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
                 savedAccounts = savedAccounts.filter(acc => acc !== userToDelete);
                 localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
