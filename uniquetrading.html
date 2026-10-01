@@ -1366,6 +1366,8 @@
 
         .select-game-modal-content {
             width: 400px;
+            max-height: 85vh;
+            overflow-y: auto;
             text-align: left;
             display: flex;
             flex-direction: column;
@@ -2143,6 +2145,16 @@
                     <button class="game-tag-btn active" data-tag="All">All items</button>
                     <button class="game-tag-btn" data-tag="Murder Mystery 2">Murder Mystery 2</button>
                     <button class="game-tag-btn" data-tag="Steal a brainrot">Steal a brainrot</button>
+                    <button class="game-tag-btn" data-tag="Blade Ball">Blade Ball</button>
+                    <button class="game-tag-btn" data-tag="Adopt Me">Adopt Me</button>
+                    <button class="game-tag-btn" data-tag="Pet Simulator 99">Pet Simulator 99</button>
+                    <button class="game-tag-btn" data-tag="Steal an Egg">Steal an Egg</button>
+                    <button class="game-tag-btn" data-tag="Grow a Garden">Grow a Garden</button>
+                    <button class="game-tag-btn" data-tag="Farming and Friends">Farming and Friends</button>
+                    <button class="game-tag-btn" data-tag="Grow a Garden 2">Grow a Garden 2</button>
+                    <button class="game-tag-btn" data-tag="Blox Fruits">Blox Fruits</button>
+                    <button class="game-tag-btn" data-tag="Fisch">Fisch</button>
+                    <button class="game-tag-btn" data-tag="Bee Swarm Simulator">Bee Swarm Simulator</button>
                 </div>
                 <div class="sort-select-wrapper">
                     <span class="sort-label">Sort by:</span>
@@ -2410,17 +2422,78 @@
             <button class="close-modal" id="close-select-game-btn">&times;</button>
             <div class="select-game-title">Select Game</div>
             
-            <div class="game-card-item" id="select-mm2-btn">
-                <img src="thumbnails/MM2.webp" class="game-card-thumb" alt="MM2">
+            <div class="game-card-item" data-game="Murder Mystery 2">
+                <img src="thumbnails/MM2.webp" class="game-card-thumb" alt="Murder Mystery 2">
                 <span style="flex:1; text-align: left;">Murder Mystery 2</span>
                 <span>&rarr;</span>
             </div>
             
-            <div class="game-card-item" id="select-sab-btn">
-                <img src="thumbnails/SAB.webp" class="game-card-thumb" alt="SAB">
+            <div class="game-card-item" data-game="Steal a brainrot">
+                <img src="thumbnails/SAB.webp" class="game-card-thumb" alt="Steal a brainrot">
                 <span style="flex:1; text-align: left;">Steal a brainrot</span>
                 <span>&rarr;</span>
             </div>
+            
+            <div class="game-card-item" data-game="Blade Ball">
+                <img src="thumbnails/BladeBall.webp" class="game-card-thumb" alt="Blade Ball">
+                <span style="flex:1; text-align: left;">Blade Ball</span>
+                <span>&rarr;</span>
+            </div>
+            
+            <div class="game-card-item" data-game="Adopt Me">
+                <img src="thumbnails/AdoptMe.webp" class="game-card-thumb" alt="Adopt Me">
+                <span style="flex:1; text-align: left;">Adopt Me</span>
+                <span>&rarr;</span>
+            </div>
+            
+            <div class="game-card-item" data-game="Pet Simulator 99">
+                <img src="thumbnails/PS99.webp" class="game-card-thumb" alt="Pet Simulator 99">
+                <span style="flex:1; text-align: left;">Pet Simulator 99</span>
+                <span>&rarr;</span>
+            </div>
+            
+            <div class="game-card-item" data-game="Steal an Egg">
+                <img src="thumbnails/StealAnEgg.webp" class="game-card-thumb" alt="Steal an Egg">
+                <span style="flex:1; text-align: left;">Steal an Egg</span>
+                <span>&rarr;</span>
+            </div>
+            
+            <div class="game-card-item" data-game="Grow a Garden">
+                <img src="thumbnails/GrowAGarden.webp" class="game-card-thumb" alt="Grow a Garden">
+                <span style="flex:1; text-align: left;">Grow a Garden</span>
+                <span>&rarr;</span>
+            </div>
+            
+            <div class="game-card-item" data-game="Farming and Friends">
+                <img src="thumbnails/FarmingAndFriends.webp" class="game-card-thumb" alt="Farming and Friends">
+                <span style="flex:1; text-align: left;">Farming and Friends</span>
+                <span>&rarr;</span>
+            </div>
+            
+            <div class="game-card-item" data-game="Grow a Garden 2">
+                <img src="thumbnails/GrowAGarden2.webp" class="game-card-thumb" alt="Grow a Garden 2">
+                <span style="flex:1; text-align: left;">Grow a Garden 2</span>
+                <span>&rarr;</span>
+            </div>
+            
+            <div class="game-card-item" data-game="Blox Fruits">
+                <img src="thumbnails/BloxFruits.webp" class="game-card-thumb" alt="Blox Fruits">
+                <span style="flex:1; text-align: left;">Blox Fruits</span>
+                <span>&rarr;</span>
+            </div>
+            
+            <div class="game-card-item" data-game="Fisch">
+                <img src="thumbnails/Fisch.webp" class="game-card-thumb" alt="Fisch">
+                <span style="flex:1; text-align: left;">Fisch</span>
+                <span>&rarr;</span>
+            </div>
+            
+            <div class="game-card-item" data-game="Bee Swarm Simulator">
+                <img src="thumbnails/BeeSwarm.webp" class="game-card-thumb" alt="Bee Swarm Simulator">
+                <span style="flex:1; text-align: left;">Bee Swarm Simulator</span>
+                <span>&rarr;</span>
+            </div>
+            
         </div>
     </div>
 
@@ -2471,6 +2544,36 @@
                     </label>
                     <label class="checkbox-label">
                         <input type="checkbox" class="game-checkbox" value="sab" checked> Steal a brainrot
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="bladeball" checked> Blade Ball
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="adoptme" checked> Adopt Me
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="ps99" checked> Pet Simulator 99
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="stealanegg" checked> Steal an Egg
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="gag" checked> Grow a Garden
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="faf" checked> Farming and Friends
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="gag2" checked> Grow a Garden 2
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="bloxfruits" checked> Blox Fruits
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="fisch" checked> Fisch
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="bss" checked> Bee Swarm Simulator
                     </label>
                 </div>
 
@@ -2919,8 +3022,6 @@
         const selectGameModal = document.getElementById('select-game-modal');
         const openSelectGameBtn = document.getElementById('open-select-game-btn');
         const closeSelectGameBtn = document.getElementById('close-select-game-btn');
-        const selectMm2Btn = document.getElementById('select-mm2-btn');
-        const selectSabBtn = document.getElementById('select-sab-btn');
 
         const createItemModal = document.getElementById('create-item-modal');
         const closeCreateItemBtn = document.getElementById('close-create-item-btn');
@@ -2974,6 +3075,36 @@
 
         let userToDelete = null;
         let uploadedItemPhotoData = null;
+        const GAMES = [{ key: "mm2", name: "Murder Mystery 2", thumb: "MM2" },
+            { key: "sab", name: "Steal a brainrot", thumb: "SAB" },
+            { key: "bladeball", name: "Blade Ball", thumb: "BladeBall" },
+            { key: "adoptme", name: "Adopt Me", thumb: "AdoptMe" },
+            { key: "ps99", name: "Pet Simulator 99", thumb: "PS99" },
+            { key: "stealanegg", name: "Steal an Egg", thumb: "StealAnEgg" },
+            { key: "gag", name: "Grow a Garden", thumb: "GrowAGarden" },
+            { key: "faf", name: "Farming and Friends", thumb: "FarmingAndFriends" },
+            { key: "gag2", name: "Grow a Garden 2", thumb: "GrowAGarden2" },
+            { key: "bloxfruits", name: "Blox Fruits", thumb: "BloxFruits" },
+            { key: "fisch", name: "Fisch", thumb: "Fisch" },
+            { key: "bss", name: "Bee Swarm Simulator", thumb: "BeeSwarm" }];
+        function getGameThumb(gameName) {
+            const g = GAMES.find(x => x.name === gameName) || GAMES[0];
+            return 'thumbnails/' + g.thumb + '.webp';
+        }
+        // Если картинки игры нет — подставляем заглушку с инициалами
+        document.addEventListener('error', (e) => {
+            const img = e.target;
+            if (!img || img.tagName !== 'IMG' || img.dataset.fallbackDone) return;
+            const m = (img.getAttribute('src') || '').match(/thumbnails\/([^\/]+)\.webp$/);
+            if (!m) return;
+            const g = GAMES.find(x => x.thumb === m[1]);
+            if (!g) return;
+            const initials = g.name.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase();
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="#2a2a2a"/><text x="50%" y="50%" fill="#ff7300" font-family="Arial,sans-serif" font-size="56" font-weight="700" text-anchor="middle" dominant-baseline="central">${initials}</text></svg>`;
+            img.dataset.fallbackDone = '1';
+            img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        }, true);
+
         let selectedGameForListing = 'Murder Mystery 2';
         let currentSellerUsername = null;
         let currentActiveItem = null;
@@ -3127,7 +3258,7 @@
 
                 let photoSrc = item.photo;
                 if (!photoSrc) {
-                    photoSrc = (item.game === 'Steal a brainrot') ? 'thumbnails/SAB.webp' : 'thumbnails/MM2.webp';
+                    photoSrc = getGameThumb(item.game);
                 }
 
                 let imgHtml = `<img class="global-item-img" src="${photoSrc}" alt="Item">`;
@@ -3361,7 +3492,7 @@
 
             let photoSrc = item.photo;
             if (!photoSrc) {
-                photoSrc = (item.game === 'Steal a brainrot') ? 'thumbnails/SAB.webp' : 'thumbnails/MM2.webp';
+                photoSrc = getGameThumb(item.game);
             }
             detailMainImg.innerHTML = `<img src="${photoSrc}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;" alt="Item">`;
 
@@ -4036,7 +4167,7 @@
 
                 let photoSrc = item.photo;
                 if (!photoSrc) {
-                    photoSrc = (item.game === 'Steal a brainrot') ? 'thumbnails/SAB.webp' : 'thumbnails/MM2.webp';
+                    photoSrc = getGameThumb(item.game);
                 }
 
                 let priceText = item.tag === 'selling' ? `$${item.price}` : 'Offers';
@@ -4219,16 +4350,12 @@
             selectGameModal.classList.remove('active');
         });
 
-        selectMm2Btn.addEventListener('click', () => {
-            selectedGameForListing = 'Murder Mystery 2';
-            selectGameModal.classList.remove('active');
-            openCreateItemModal();
-        });
-
-        selectSabBtn.addEventListener('click', () => {
-            selectedGameForListing = 'Steal a brainrot';
-            selectGameModal.classList.remove('active');
-            openCreateItemModal();
+        document.querySelectorAll('#select-game-modal .game-card-item').forEach(card => {
+            card.addEventListener('click', () => {
+                selectedGameForListing = card.dataset.game;
+                selectGameModal.classList.remove('active');
+                openCreateItemModal();
+            });
         });
 
         function openCreateItemModal() {
@@ -4274,7 +4401,7 @@
 
             let photoSrc = uploadedItemPhotoData;
             if (!photoSrc) {
-                photoSrc = (selectedGameForListing === 'Steal a brainrot') ? 'thumbnails/SAB.webp' : 'thumbnails/MM2.webp';
+                photoSrc = getGameThumb(selectedGameForListing);
             }
             previewCardImg.innerHTML = `<img src="${photoSrc}" style="width:100%; height:100%; border-radius:8px; object-fit:cover;" alt="Preview">`;
         }
