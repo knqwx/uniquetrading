@@ -40,7 +40,7 @@
         .nav-left {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 8px;
         }
 
         .site-brand {
@@ -65,25 +65,28 @@
         .nav-home, .nav-middlemen, .nav-marketplace, .nav-trading {
             color: #888888;
             text-decoration: none;
-            font-size: 15px;
-            font-weight: 500;
-            transition: color 0.2s;
+            font-size: 17px;
+            font-weight: 600;
+            transition: color 0.2s, background-color 0.2s;
             cursor: pointer;
             background: none;
             border: none;
             font-family: 'Inter', sans-serif;
-            padding: 0;
+            padding: 10px 16px;
+            border-radius: 10px;
+            line-height: 1.2;
         }
 
         .nav-home:hover, .nav-middlemen:hover, .nav-marketplace:hover, .nav-trading:hover,
         .nav-home.active, .nav-middlemen.active, .nav-marketplace.active, .nav-trading.active {
             color: #ffffff;
+            background-color: #262626;
         }
 
         @media (max-width: 900px) {
             .top-bar { padding: 0 16px; }
-            .nav-left { gap: 12px; }
-            .nav-home, .nav-middlemen, .nav-marketplace, .nav-trading { font-size: 13px; }
+            .nav-left { gap: 2px; }
+            .nav-home, .nav-middlemen, .nav-marketplace, .nav-trading { font-size: 14px; padding: 8px 9px; }
         }
 
         .auth-buttons {
@@ -520,8 +523,31 @@
         .user-picker-selected { margin-top: 8px; color: #aaa; font-size: 13px; }
         .user-picker-selected b { color: #ff7300; }
 
-        /* Compact balances (1.1k / 1.1m), click to expand */
-        [data-bal] { cursor: pointer; user-select: none; }
+
+        /* ===== Tickets ===== */
+        .mm-tickets-panel { margin-bottom: 24px; }
+        .mm-ticket-list { display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 2px; }
+        .mm-ticket {
+            background-color: #1f1f1f; border: 1px solid #333333; border-radius: 10px; padding: 12px 14px;
+        }
+        .mm-ticket.claimed { border-color: rgba(61,220,132,0.4); }
+        .mm-ticket-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+        .mm-ticket-users { color: #ffffff; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .mm-ticket-users i { color: #ff7300; font-style: normal; margin: 0 6px; }
+        .mm-ticket-time { color: #777; font-size: 12px; white-space: nowrap; }
+        .mm-ticket-desc { color: #bbbbbb; font-size: 13px; line-height: 1.45; margin-bottom: 10px; word-break: break-word; white-space: pre-wrap; max-height: 78px; overflow-y: auto; }
+        .mm-ticket-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .mm-ticket-btn {
+            border: 1px solid #3d3d3d; background-color: #2a2a2a; color: #dddddd; border-radius: 8px;
+            padding: 7px 12px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mm-ticket-btn:hover { border-color: #666; color: #fff; }
+        .mm-ticket-btn.primary { background-color: #ff7300; border-color: #ff7300; color: #fff; }
+        .mm-ticket-btn.primary:hover { opacity: 0.85; }
+        .mm-ticket-btn.danger { color: #ff4d4d; border-color: rgba(255,77,77,0.4); }
+        .mm-ticket-status { color: #3ddc84; font-size: 12px; font-weight: 600; }
+        #ticket-user-list { max-height: 180px; }
 
         /* Модальные окна */
         .modal-overlay {
@@ -2225,9 +2251,9 @@
         </a>
         <div class="nav-left">
             <a class="nav-home active" id="home-link">Home</a>
-            <button class="nav-middlemen" id="middlemen-nav-btn">Middlemen</button>
             <button class="nav-marketplace" id="marketplace-nav-btn">Marketplace</button>
             <button class="nav-trading" id="trading-nav-btn">Trading</button>
+            <button class="nav-middlemen" id="middlemen-nav-btn">Middlemen</button>
         </div>
         <div class="auth-buttons" id="auth-container">
             <a href="login.html" class="btn btn-login">Log in</a>
@@ -2242,7 +2268,7 @@
             <div class="listing-search-row">
                 <div class="search-field" id="listing-search-field">
                     <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                    <input type="text" id="listing-search-input" placeholder="Search items, games or sellers..." autocomplete="off">
+                    <input type="text" id="listing-search-input" placeholder="Search items by name..." autocomplete="off">
                     <button type="button" class="search-clear" id="listing-search-clear" title="Clear">&times;</button>
                 </div>
             </div>
@@ -2286,7 +2312,7 @@
             <button class="detail-back-btn" id="balance-back-btn" style="margin-bottom: 20px;">&larr; Back</button>
             <div class="balance-title">Wallet</div>
             <div class="setting-hint" style="margin-bottom: 6px;">Available Balance</div>
-            <div class="balance-amount-display" id="balance-page-amount" data-bal="0" title="Click to show full amount">$0.00</div>
+            <div class="balance-amount-display" id="balance-page-amount">$0</div>
 
             <div class="wallet-grid">
                 <!-- Левая колонка: покупка валюты -->
@@ -2364,6 +2390,10 @@
     <div class="middlemen-page" id="middlemen-page">
         <div class="middlemen-container">
             <button class="mm-create-ticket-btn" id="create-ticket-btn">Create a ticket</button>
+            <div class="mm-panel mm-tickets-panel" id="mm-tickets-panel" style="display: none;">
+                <div class="mm-panel-title">Tickets <span id="mm-tickets-count"></span></div>
+                <div class="mm-ticket-list" id="mm-ticket-list"></div>
+            </div>
             <div class="mm-panel">
                 <div class="mm-panel-title">Middlemen <span id="mm-count"></span></div>
                 <div class="mm-list" id="middlemen-list"></div>
@@ -2690,13 +2720,19 @@
             <div class="settings-title">Create a Ticket</div>
 
             <div class="setting-group">
-                <label class="setting-label">Middleman</label>
-                <select class="setting-select" id="ticket-middleman-select"></select>
+                <label class="setting-label">Who are you trading with?</label>
+                <div class="search-field" id="ticket-search-field">
+                    <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="ticket-user-search" placeholder="Search by name or @username..." autocomplete="off">
+                    <button type="button" class="search-clear" id="ticket-search-clear" title="Clear">&times;</button>
+                </div>
+                <div class="user-picker-list" id="ticket-user-list"></div>
+                <div class="user-picker-selected" id="ticket-user-selected">No user selected</div>
             </div>
 
             <div class="setting-group">
                 <label class="setting-label">Trade details</label>
-                <textarea class="setting-textarea" id="ticket-desc-input" placeholder="Who are you trading with and what items are involved?"></textarea>
+                <textarea class="setting-textarea" id="ticket-desc-input" placeholder="What items are involved in the trade?"></textarea>
             </div>
 
             <button class="save-settings-btn" id="submit-ticket-btn">Send Ticket</button>
@@ -2805,6 +2841,18 @@
                         // Колонка уже существует
                     }
                 }
+
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS tickets (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        creator TEXT,
+                        partner TEXT,
+                        description TEXT,
+                        status TEXT DEFAULT 'open',
+                        claimedBy TEXT,
+                        createdAt INTEGER
+                    )
+                `);
             } catch (e) {
                 console.error("DB init error:", e);
             }
@@ -3247,7 +3295,7 @@
                     authContainer.innerHTML = `
                         <div class="user-balance-box" id="header-balance-box" title="Wallet & Withdrawal">
                             <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
-                            <span class="user-balance-amount" id="header-balance-amount" data-bal="${userBalanceRaw}" title="Click to show full amount">${fmtBal(userBalanceRaw)}</span>
+                            <span class="user-balance-amount" id="header-balance-amount">${fmtBal(userBalanceRaw)}</span>
                         </div>
                         <button class="messages-icon-btn" id="header-messages-btn" title="Messages">
                             <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
@@ -3339,11 +3387,7 @@
                 .toLowerCase().split(/\s+/).filter(Boolean);
             if (searchTerms.length) {
                 allItems = allItems.filter(item => {
-                    const hay = [
-                        item.name, item.description, item.game || 'Murder Mystery 2',
-                        item.sellerUsername, item.sellerDisplayName,
-                        item.tag === 'selling' ? 'selling marketplace $' + item.price : 'trading offers'
-                    ].join(' ').toLowerCase();
+                    const hay = String(item.name || '').toLowerCase();
                     return searchTerms.every(t => hay.includes(t));
                 });
             }
@@ -3474,53 +3518,17 @@
 
         function fmtMoney(n) { return `$${Number(n || 0).toFixed(2)}`; }
 
-        // Compact: $1.1k / $1.1m / $1.1b (truncated, never overstated). Under 1,000 shows normally.
+        // Balance format: $3,100,000 (cents only shown when the amount has them)
         function fmtBal(n) {
             n = Number(n || 0);
-            const abs = Math.abs(n);
-            const units = [[1e9, 'b'], [1e6, 'm'], [1e3, 'k']];
-            for (const [size, suffix] of units) {
-                if (abs >= size) {
-                    const v = Math.floor((abs / size) * 10) / 10;
-                    return `${n < 0 ? '-' : ''}$${v.toFixed(1).replace(/\.0$/, '')}${suffix}`;
-                }
-            }
-            return fmtMoney(n);
-        }
-        // Full: $1,100 / $1,100,000 (cents shown only when present)
-        function fmtBalFull(n) {
-            n = Number(n || 0);
-            if (Math.abs(n) < 1000) return fmtMoney(n);
             const whole = Math.abs(n % 1) < 0.005;
-            return '$' + n.toLocaleString('en-US', { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 });
+            return (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US', {
+                minimumFractionDigits: whole ? 0 : 2,
+                maximumFractionDigits: whole ? 0 : 2
+            });
         }
-        // Set a balance element's value; keeps whichever view (compact/full) it is currently in
         function setBal(el, value) {
-            if (!el) return;
-            el.dataset.bal = Number(value || 0);
-            el.textContent = el.dataset.full === '1' ? fmtBalFull(value) : fmtBal(value);
-            el.title = el.dataset.full === '1' ? 'Click for short view' : 'Click to show full amount';
-        }
-        // Click any [data-bal] element to toggle compact <-> full
-        document.addEventListener('click', (e) => {
-            const el = e.target.closest && e.target.closest('[data-bal]');
-            if (!el) return;
-            e.stopPropagation(); // don't trigger parent clicks (open wallet, select user row)
-            el.dataset.full = el.dataset.full === '1' ? '0' : '1';
-            setBal(el, el.dataset.bal);
-        }, true);
-
-        // Атомарное изменение баланса (не перезаписывает остальные поля пользователя)
-        async function adjustBalance(username, delta) {
-            await db.execute({
-                sql: "UPDATE users SET balance = ROUND(MAX(0, COALESCE(balance, 0) + ?), 2) WHERE username = ?",
-                args: [delta, username]
-            });
-            const rs = await db.execute({
-                sql: "SELECT balance FROM users WHERE username = ?",
-                args: [username]
-            });
-            return rs.rows.length ? Number(rs.rows[0].balance) : null;
+            if (el) el.textContent = fmtBal(value);
         }
 
         function showMyBalance(value) {
@@ -3615,7 +3623,7 @@
                 row.dataset.username = r.username;
                 row.innerHTML = `
                     <div class="user-picker-name">${escapeHtml(r.displayName && r.displayName !== r.username ? r.displayName : '@' + r.username)}${r.displayName && r.displayName !== r.username ? `<small>@${escapeHtml(r.username)}</small>` : ''}</div>
-                    <div class="user-balance-amount" data-bal="${Number(r.balance || 0)}">${fmtBal(r.balance)}</div>
+                    <div class="user-balance-amount">${fmtBal(r.balance)}</div>
                 `;
                 row.addEventListener('click', () => selectAdminUser(r.username));
                 adminUserList.appendChild(row);
@@ -4157,10 +4165,16 @@
         // ===== Вкладка Middlemen =====
         const middlemenListEl = document.getElementById('middlemen-list');
         const mmCountEl = document.getElementById('mm-count');
-        const ticketSelect = document.getElementById('ticket-middleman-select');
         const ticketDescInput = document.getElementById('ticket-desc-input');
         const submitTicketBtn = document.getElementById('submit-ticket-btn');
-        let ticketMiddlemen = [];
+        const ticketUserSearch = document.getElementById('ticket-user-search');
+        const ticketUserList = document.getElementById('ticket-user-list');
+        const ticketUserSelected = document.getElementById('ticket-user-selected');
+        const ticketsPanel = document.getElementById('mm-tickets-panel');
+        const ticketListEl = document.getElementById('mm-ticket-list');
+        const ticketsCountEl = document.getElementById('mm-tickets-count');
+        let ticketCandidates = [];
+        let ticketPartner = '';
 
         async function switchToMiddlemen() {
             currentViewMode = 'middlemen';
@@ -4177,6 +4191,7 @@
             middlemenPage.classList.add('active');
             window.scrollTo({ top: 0, behavior: 'smooth' });
             await renderMiddlemenList();
+            await renderTickets();
         }
 
         function sortMiddlemen(list) {
@@ -4254,6 +4269,59 @@
             }
         }
 
+        // ----- Ticket creation: pick the person you trade with (no middleman choice) -----
+        function ticketUserName(u) {
+            return u.displayName && u.displayName !== u.username ? u.displayName : '@' + u.username;
+        }
+
+        function renderTicketUserList() {
+            const raw = ticketUserSearch.value;
+            document.getElementById('ticket-search-field').classList.toggle('has-value', raw.length > 0);
+            const terms = raw.toLowerCase().replace(/@/g, '').split(/\s+/).filter(Boolean);
+            const matches = ticketCandidates.filter(u => {
+                const hay = [u.username, u.displayName].join(' ').toLowerCase();
+                return terms.every(t => hay.includes(t));
+            });
+            ticketUserList.innerHTML = '';
+            if (!matches.length) {
+                ticketUserList.innerHTML = '<div class="user-picker-empty">No users found.</div>';
+            }
+            matches.forEach(u => {
+                const row = document.createElement('div');
+                row.className = 'user-picker-item' + (u.username === ticketPartner ? ' selected' : '');
+                row.dataset.username = u.username;
+                const hasDisplay = u.displayName && u.displayName !== u.username;
+                row.innerHTML = `
+                    <div class="user-picker-name">${escapeHtml(ticketUserName(u))}${hasDisplay ? `<small>@${escapeHtml(u.username)}</small>` : ''}</div>
+                    ${presenceLabel(u.username)}
+                `;
+                row.addEventListener('click', () => selectTicketPartner(u.username));
+                ticketUserList.appendChild(row);
+            });
+        }
+
+        function selectTicketPartner(username) {
+            ticketPartner = username;
+            ticketUserList.querySelectorAll('.user-picker-item').forEach(el => {
+                el.classList.toggle('selected', el.dataset.username === username);
+            });
+            const u = ticketCandidates.find(x => x.username === username);
+            ticketUserSelected.innerHTML = u ? `Trading with: <b>${escapeHtml(ticketUserName(u))}</b> (@${escapeHtml(u.username)})` : 'No user selected';
+        }
+
+        ticketUserSearch.addEventListener('input', renderTicketUserList);
+        ticketUserSearch.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const first = ticketUserList.querySelector('.user-picker-item');
+                if (first) selectTicketPartner(first.dataset.username);
+            }
+        });
+        document.getElementById('ticket-search-clear').addEventListener('click', () => {
+            ticketUserSearch.value = '';
+            renderTicketUserList();
+            ticketUserSearch.focus();
+        });
+
         async function openTicketModal() {
             if (!currentUser) {
                 showToast('Please log in to create a ticket.');
@@ -4261,23 +4329,15 @@
             }
 
             const users = await getAllUsersFromDB();
-            ticketMiddlemen = sortMiddlemen(users.filter(u => u.isMiddleman && u.username !== currentUser));
+            ticketCandidates = users
+                .filter(u => u.username !== currentUser)
+                .sort((a, b) => ticketUserName(a).localeCompare(ticketUserName(b)));
 
-            if (ticketMiddlemen.length === 0) {
-                showToast('No middlemen available yet.');
-                return;
-            }
-
-            ticketSelect.innerHTML = '';
-            if (ticketMiddlemen.some(u => isOnline(u.username))) {
-                ticketSelect.appendChild(new Option('Any online middleman', '__any'));
-            }
-            ticketMiddlemen.forEach(u => {
-                const label = `${u.displayName || u.username} — ${isOnline(u.username) ? 'Online' : 'Offline'}`;
-                ticketSelect.appendChild(new Option(label, u.username));
-            });
-
+            ticketPartner = '';
+            ticketUserSearch.value = '';
+            ticketUserSelected.textContent = 'No user selected';
             ticketDescInput.value = '';
+            renderTicketUserList();
             ticketModal.classList.add('active');
         }
 
@@ -4288,33 +4348,146 @@
         });
 
         submitTicketBtn.addEventListener('click', async () => {
+            if (!currentUser) { showToast('Please log in to create a ticket.'); return; }
+            if (!ticketPartner || !ticketCandidates.some(u => u.username === ticketPartner)) {
+                showToast('Search and select who you are trading with.');
+                return;
+            }
             const desc = ticketDescInput.value.trim();
             if (!desc) {
                 showToast('Please describe your trade.');
                 return;
             }
 
-            let target = ticketSelect.value;
-            if (target === '__any') {
-                await refreshPresence();
-                const online = ticketMiddlemen.filter(u => isOnline(u.username));
-                if (online.length === 0) {
-                    showToast('No middlemen are online right now.');
-                    return;
-                }
-                target = online[Math.floor(Math.random() * online.length)].username;
-            }
-
             submitTicketBtn.disabled = true;
             try {
-                await sendDirectMessage(target, `🎫 New ticket: ${desc}`);
+                await db.execute({
+                    sql: "INSERT INTO tickets (creator, partner, description, status, createdAt) VALUES (?, ?, ?, 'open', ?)",
+                    args: [currentUser, ticketPartner, desc.slice(0, 1000), Date.now()]
+                });
                 ticketModal.classList.remove('active');
-                showToast('Ticket sent!');
-                await openMessagesPage(target);
+                showToast('Ticket created! A middleman will pick it up.');
+                await renderTickets();
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to create ticket. Try again.');
             } finally {
                 submitTicketBtn.disabled = false;
             }
         });
+
+        // ----- Ticket window for middlemen -----
+        async function renderTickets() {
+            const me = currentUser ? await getUserByUsername(currentUser) : null;
+            if (!me || !me.isMiddleman) {
+                ticketsPanel.style.display = 'none';
+                return;
+            }
+            ticketsPanel.style.display = 'block';
+
+            let rows = [];
+            try {
+                const rs = await db.execute({
+                    sql: "SELECT id, creator, partner, description, status, claimedBy, createdAt FROM tickets WHERE status = 'open' OR (status = 'claimed' AND claimedBy = ?) ORDER BY createdAt DESC LIMIT 100",
+                    args: [currentUser]
+                });
+                rows = rs.rows;
+            } catch (e) {
+                console.error(e);
+            }
+
+            const users = await getAllUsersFromDB();
+            const nameOf = (uname) => {
+                const u = users.find(x => x.username === uname);
+                return u ? ticketUserName(u) : '@' + uname;
+            };
+
+            ticketsCountEl.textContent = rows.length ? `(${rows.length})` : '';
+            ticketListEl.innerHTML = '';
+            if (!rows.length) {
+                ticketListEl.innerHTML = '<div class="mm-empty">No open tickets.</div>';
+                return;
+            }
+
+            rows.forEach(t => {
+                const id = Number(t.id);
+                const involved = t.creator === currentUser || t.partner === currentUser;
+                const claimedByMe = t.status === 'claimed' && t.claimedBy === currentUser;
+                const card = document.createElement('div');
+                card.className = 'mm-ticket' + (claimedByMe ? ' claimed' : '');
+                card.innerHTML = `
+                    <div class="mm-ticket-top">
+                        <div class="mm-ticket-users">${escapeHtml(nameOf(t.creator))}<i>&harr;</i>${escapeHtml(nameOf(t.partner))}</div>
+                        <div class="mm-ticket-time">${escapeHtml(getTimeAgo(Number(t.createdAt)))}</div>
+                    </div>
+                    <div class="mm-ticket-desc">${escapeHtml(t.description)}</div>
+                    <div class="mm-ticket-actions">
+                        ${claimedByMe
+                            ? `<span class="mm-ticket-status">Claimed by you</span>
+                               <button class="mm-ticket-btn" data-act="msg" data-user="${escapeHtml(t.creator)}">Message ${escapeHtml(nameOf(t.creator))}</button>
+                               <button class="mm-ticket-btn" data-act="msg" data-user="${escapeHtml(t.partner)}">Message ${escapeHtml(nameOf(t.partner))}</button>
+                               <button class="mm-ticket-btn danger" data-act="close">Close</button>`
+                            : (involved
+                                ? '<span class="mm-ticket-time">Your own ticket</span>'
+                                : `<button class="mm-ticket-btn primary" data-act="claim">Claim</button>`)}
+                    </div>
+                `;
+                card.querySelectorAll('[data-act]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const act = btn.getAttribute('data-act');
+                        if (act === 'msg') {
+                            openMessagesPage(btn.getAttribute('data-user'));
+                        } else if (act === 'claim') {
+                            await claimTicket(id);
+                        } else if (act === 'close') {
+                            await closeTicket(id);
+                        }
+                    });
+                });
+                ticketListEl.appendChild(card);
+            });
+        }
+
+        async function claimTicket(id) {
+            const me = await getUserByUsername(currentUser);
+            if (!me || !me.isMiddleman) { showToast('Only middlemen can claim tickets.'); return; }
+            try {
+                const rs = await db.execute({
+                    sql: "UPDATE tickets SET status = 'claimed', claimedBy = ? WHERE id = ? AND status = 'open' AND creator != ? AND partner != ?",
+                    args: [currentUser, id, currentUser, currentUser]
+                });
+                if (!rs.rowsAffected) {
+                    showToast('This ticket is no longer available.');
+                } else {
+                    showToast('Ticket claimed.');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to claim ticket.');
+            }
+            await renderTickets();
+        }
+
+        async function closeTicket(id) {
+            try {
+                await db.execute({
+                    sql: "UPDATE tickets SET status = 'closed' WHERE id = ? AND claimedBy = ?",
+                    args: [id, currentUser]
+                });
+                showToast('Ticket closed.');
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to close ticket.');
+            }
+            await renderTickets();
+        }
+
+        // Keep the ticket window fresh while a middleman is looking at it
+        setInterval(() => {
+            if (currentViewMode === 'middlemen' && middlemenPage.classList.contains('active') && !document.hidden) {
+                renderTickets();
+            }
+        }, 8000);
 
         homeLink.addEventListener('click', switchToHome);
         homeBrandLink.addEventListener('click', switchToHome);
