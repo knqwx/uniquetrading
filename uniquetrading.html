@@ -475,6 +475,54 @@
             font-size: 15px;
         }
 
+
+        /* ===== Search system ===== */
+        .search-field { position: relative; width: 100%; }
+        .search-field .search-icon {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            width: 16px; height: 16px; fill: #777; pointer-events: none;
+        }
+        .search-field input {
+            width: 100%; box-sizing: border-box; background-color: #1f1f1f;
+            border: 1px solid #383838; border-radius: 10px; padding: 11px 38px 11px 40px;
+            color: #ffffff; font-family: 'Inter', sans-serif; font-size: 14px; outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-field input:focus { border-color: #ff7300; }
+        .search-field input::placeholder { color: #666; }
+        .search-clear {
+            position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+            width: 24px; height: 24px; border: none; border-radius: 50%; background: transparent;
+            color: #888; font-size: 18px; line-height: 1; cursor: pointer; display: none;
+        }
+        .search-clear:hover { color: #fff; background: #333; }
+        .search-field.has-value .search-clear { display: block; }
+        .listing-search-row { margin-bottom: 16px; max-width: 520px; }
+        .db-search-field { width: 280px; max-width: 45%; margin-right: 40px; }
+        .db-no-results td { text-align: center; color: #777 !important; padding: 28px 15px !important; }
+
+        /* Admin user picker */
+        .user-picker-list {
+            margin-top: 10px; max-height: 220px; overflow-y: auto;
+            border: 1px solid #383838; border-radius: 8px; background: #1a1a1a;
+        }
+        .user-picker-item {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            padding: 10px 14px; cursor: pointer; border-top: 1px solid #2c2c2c;
+            transition: background-color 0.15s;
+        }
+        .user-picker-item:first-child { border-top: none; }
+        .user-picker-item:hover { background-color: #262626; }
+        .user-picker-item.selected { background-color: rgba(255,115,0,0.12); box-shadow: inset 3px 0 0 #ff7300; }
+        .user-picker-name { color: #fff; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .user-picker-name small { color: #888; font-weight: 500; margin-left: 6px; }
+        .user-picker-empty { padding: 18px; text-align: center; color: #777; font-size: 14px; }
+        .user-picker-selected { margin-top: 8px; color: #aaa; font-size: 13px; }
+        .user-picker-selected b { color: #ff7300; }
+
+        /* Compact balances (1.1k / 1.1m), click to expand */
+        [data-bal] { cursor: pointer; user-select: none; }
+
         /* Модальные окна */
         .modal-overlay {
             position: fixed;
@@ -2191,6 +2239,13 @@
     <main id="main-content-area">
         <div class="main-header-section">
             <h1 class="all-games-main-title" id="page-main-title">Live Listings</h1>
+            <div class="listing-search-row">
+                <div class="search-field" id="listing-search-field">
+                    <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="listing-search-input" placeholder="Search items, games or sellers..." autocomplete="off">
+                    <button type="button" class="search-clear" id="listing-search-clear" title="Clear">&times;</button>
+                </div>
+            </div>
             <div class="filters-panel" id="filters-panel">
                 <div class="games-tags-group" id="tags-group">
                     <button class="game-tag-btn active" data-tag="All">All items</button>
@@ -2231,7 +2286,7 @@
             <button class="detail-back-btn" id="balance-back-btn" style="margin-bottom: 20px;">&larr; Back</button>
             <div class="balance-title">Wallet</div>
             <div class="setting-hint" style="margin-bottom: 6px;">Available Balance</div>
-            <div class="balance-amount-display" id="balance-page-amount">$0.00</div>
+            <div class="balance-amount-display" id="balance-page-amount" data-bal="0" title="Click to show full amount">$0.00</div>
 
             <div class="wallet-grid">
                 <!-- Левая колонка: покупка валюты -->
@@ -2283,7 +2338,14 @@
                 <div class="wallet-card-title">Admin: Manage Balances</div>
                 <div class="setting-group">
                     <label class="setting-label">User</label>
-                    <select class="setting-select" id="admin-user-select"></select>
+                    <div class="search-field" id="admin-search-field">
+                        <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        <input type="text" id="admin-user-search" placeholder="Search by name, @username or ID..." autocomplete="off">
+                        <button type="button" class="search-clear" id="admin-search-clear" title="Clear">&times;</button>
+                    </div>
+                    <input type="hidden" id="admin-user-select">
+                    <div class="user-picker-list" id="admin-user-list"></div>
+                    <div class="user-picker-selected" id="admin-user-selected">No user selected</div>
                 </div>
                 <div class="setting-group">
                     <label class="setting-label">Amount ($)</label>
@@ -2660,6 +2722,11 @@
             <button class="close-modal" id="close-db-modal-btn">&times;</button>
             <div class="db-header-row">
                 <div class="db-title">Database Accounts</div>
+                <div class="search-field db-search-field" id="db-search-field">
+                    <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="db-search-input" placeholder="Search ID, username, email..." autocomplete="off">
+                    <button type="button" class="search-clear" id="db-search-clear" title="Clear">&times;</button>
+                </div>
             </div>
             <div class="db-table-container">
                 <table class="db-table">
@@ -3170,7 +3237,7 @@
                 if (userObj) {
                     const firstLetter = userObj.username.charAt(0).toUpperCase();
                     const avatarColor = getColorFromName(userObj.username);
-                    const userBalance = Number(userObj.balance || 0).toFixed(2);
+                    const userBalanceRaw = Number(userObj.balance || 0);
 
                     let avatarInner = `<div class="user-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>`;
                     if (userObj.avatar) {
@@ -3180,7 +3247,7 @@
                     authContainer.innerHTML = `
                         <div class="user-balance-box" id="header-balance-box" title="Wallet & Withdrawal">
                             <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
-                            <span class="user-balance-amount">$${userBalance}</span>
+                            <span class="user-balance-amount" id="header-balance-amount" data-bal="${userBalanceRaw}" title="Click to show full amount">${fmtBal(userBalanceRaw)}</span>
                         </div>
                         <button class="messages-icon-btn" id="header-messages-btn" title="Messages">
                             <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
@@ -3268,6 +3335,19 @@
                 allItems = allItems.filter(item => item.tag !== 'selling');
             }
 
+            const searchTerms = (document.getElementById('listing-search-input')?.value || '')
+                .toLowerCase().split(/\s+/).filter(Boolean);
+            if (searchTerms.length) {
+                allItems = allItems.filter(item => {
+                    const hay = [
+                        item.name, item.description, item.game || 'Murder Mystery 2',
+                        item.sellerUsername, item.sellerDisplayName,
+                        item.tag === 'selling' ? 'selling marketplace $' + item.price : 'trading offers'
+                    ].join(' ').toLowerCase();
+                    return searchTerms.every(t => hay.includes(t));
+                });
+            }
+
             const sortBy = sortSelect.value;
             if (sortBy === 'recently') {
                 allItems.sort((a, b) => (b.id || 0) - (a.id || 0));
@@ -3287,7 +3367,9 @@
 
             globalItemsGrid.innerHTML = '';
             if (allItems.length === 0) {
-                globalItemsGrid.innerHTML = '<div class="no-global-items">No items available at the moment.</div>';
+                globalItemsGrid.innerHTML = searchTerms.length
+                    ? '<div class="no-global-items">No items match your search.</div>'
+                    : '<div class="no-global-items">No items available at the moment.</div>';
                 return;
             }
 
@@ -3341,10 +3423,12 @@
             linkCardModal.classList.remove('active');
 
             const freshUser = (await getUserByUsername(currentUser)) || userObj;
-            document.getElementById('balance-page-amount').textContent = `$${Number(freshUser.balance || 0).toFixed(2)}`;
+            setBal(document.getElementById('balance-page-amount'), freshUser.balance || 0);
+            setBal(document.getElementById('header-balance-amount'), freshUser.balance || 0);
             document.getElementById('withdraw-amount-input').value = '';
             resetTopUpForm();
             document.getElementById('admin-amount-input').value = '';
+            adminUserSearch.value = '';
             const adminCard = document.getElementById('admin-wallet-card');
             if (freshUser.customId === 'knqw') {
                 adminCard.style.display = 'block';
@@ -3390,6 +3474,42 @@
 
         function fmtMoney(n) { return `$${Number(n || 0).toFixed(2)}`; }
 
+        // Compact: $1.1k / $1.1m / $1.1b (truncated, never overstated). Under 1,000 shows normally.
+        function fmtBal(n) {
+            n = Number(n || 0);
+            const abs = Math.abs(n);
+            const units = [[1e9, 'b'], [1e6, 'm'], [1e3, 'k']];
+            for (const [size, suffix] of units) {
+                if (abs >= size) {
+                    const v = Math.floor((abs / size) * 10) / 10;
+                    return `${n < 0 ? '-' : ''}$${v.toFixed(1).replace(/\.0$/, '')}${suffix}`;
+                }
+            }
+            return fmtMoney(n);
+        }
+        // Full: $1,100 / $1,100,000 (cents shown only when present)
+        function fmtBalFull(n) {
+            n = Number(n || 0);
+            if (Math.abs(n) < 1000) return fmtMoney(n);
+            const whole = Math.abs(n % 1) < 0.005;
+            return '$' + n.toLocaleString('en-US', { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 });
+        }
+        // Set a balance element's value; keeps whichever view (compact/full) it is currently in
+        function setBal(el, value) {
+            if (!el) return;
+            el.dataset.bal = Number(value || 0);
+            el.textContent = el.dataset.full === '1' ? fmtBalFull(value) : fmtBal(value);
+            el.title = el.dataset.full === '1' ? 'Click for short view' : 'Click to show full amount';
+        }
+        // Click any [data-bal] element to toggle compact <-> full
+        document.addEventListener('click', (e) => {
+            const el = e.target.closest && e.target.closest('[data-bal]');
+            if (!el) return;
+            e.stopPropagation(); // don't trigger parent clicks (open wallet, select user row)
+            el.dataset.full = el.dataset.full === '1' ? '0' : '1';
+            setBal(el, el.dataset.bal);
+        }, true);
+
         // Атомарное изменение баланса (не перезаписывает остальные поля пользователя)
         async function adjustBalance(username, delta) {
             await db.execute({
@@ -3404,9 +3524,8 @@
         }
 
         function showMyBalance(value) {
-            document.getElementById('balance-page-amount').textContent = fmtMoney(value);
-            const headerAmount = document.querySelector('.user-balance-amount');
-            if (headerAmount) headerAmount.textContent = fmtMoney(value);
+            setBal(document.getElementById('balance-page-amount'), value);
+            setBal(document.getElementById('header-balance-amount'), value);
         }
 
         function updateBuyButtonLabel() {
@@ -3469,16 +3588,79 @@
             }
         });
 
+        let adminUsersCache = [];
+        const adminUserSearch = document.getElementById('admin-user-search');
+        const adminUserList = document.getElementById('admin-user-list');
+        const adminUserSelected = document.getElementById('admin-user-selected');
+
+        function adminUserLabel(r) {
+            return r.displayName && r.displayName !== r.username ? `${r.displayName} (@${r.username})` : `@${r.username}`;
+        }
+
+        function renderAdminUserList() {
+            const raw = adminUserSearch.value;
+            document.getElementById('admin-search-field').classList.toggle('has-value', raw.length > 0);
+            const terms = raw.toLowerCase().replace(/@/g, '').split(/\s+/).filter(Boolean);
+            const matches = adminUsersCache.filter(r => {
+                const hay = [r.username, r.displayName, r.customId].join(' ').toLowerCase();
+                return terms.every(t => hay.includes(t));
+            });
+            adminUserList.innerHTML = '';
+            if (!matches.length) {
+                adminUserList.innerHTML = '<div class="user-picker-empty">No users found.</div>';
+            }
+            matches.forEach(r => {
+                const row = document.createElement('div');
+                row.className = 'user-picker-item' + (r.username === adminUserSelect.value ? ' selected' : '');
+                row.dataset.username = r.username;
+                row.innerHTML = `
+                    <div class="user-picker-name">${escapeHtml(r.displayName && r.displayName !== r.username ? r.displayName : '@' + r.username)}${r.displayName && r.displayName !== r.username ? `<small>@${escapeHtml(r.username)}</small>` : ''}</div>
+                    <div class="user-balance-amount" data-bal="${Number(r.balance || 0)}">${fmtBal(r.balance)}</div>
+                `;
+                row.addEventListener('click', () => selectAdminUser(r.username));
+                adminUserList.appendChild(row);
+            });
+            updateAdminSelectedLabel();
+        }
+
+        function updateAdminSelectedLabel() {
+            const r = adminUsersCache.find(x => x.username === adminUserSelect.value);
+            adminUserSelected.innerHTML = r
+                ? `Selected: <b>${escapeHtml(adminUserLabel(r))}</b> &middot; ${escapeHtml(fmtBal(r.balance))}`
+                : 'No user selected';
+        }
+
+        function selectAdminUser(username) {
+            adminUserSelect.value = username;
+            adminUserList.querySelectorAll('.user-picker-item').forEach(el => {
+                el.classList.toggle('selected', el.dataset.username === username);
+            });
+            updateAdminSelectedLabel();
+        }
+
         async function loadAdminUserList(selectUsername) {
             const keep = selectUsername || adminUserSelect.value;
-            const rs = await db.execute("SELECT username, displayName, balance FROM users ORDER BY username");
-            adminUserSelect.innerHTML = '';
-            rs.rows.forEach(r => {
-                const name = r.displayName && r.displayName !== r.username ? `${r.displayName} (@${r.username})` : `@${r.username}`;
-                adminUserSelect.appendChild(new Option(`${name} — ${fmtMoney(r.balance)}`, r.username));
-            });
-            if (keep) adminUserSelect.value = keep;
+            const rs = await db.execute("SELECT customId, username, displayName, balance FROM users ORDER BY username");
+            adminUsersCache = rs.rows.map(r => ({
+                customId: r.customId, username: r.username, displayName: r.displayName,
+                balance: r.balance !== undefined && r.balance !== null ? Number(r.balance) : 0
+            }));
+            adminUserSelect.value = adminUsersCache.some(r => r.username === keep) ? keep : '';
+            renderAdminUserList();
         }
+
+        adminUserSearch.addEventListener('input', renderAdminUserList);
+        adminUserSearch.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const first = adminUserList.querySelector('.user-picker-item');
+                if (first) selectAdminUser(first.dataset.username);
+            }
+        });
+        document.getElementById('admin-search-clear').addEventListener('click', () => {
+            adminUserSearch.value = '';
+            renderAdminUserList();
+            adminUserSearch.focus();
+        });
 
         async function adminAdjust(sign) {
             // Повторная проверка прав по базе перед каждым действием
@@ -3487,7 +3669,7 @@
 
             const target = adminUserSelect.value;
             const amount = Math.round(parseFloat(adminAmountInput.value) * 100) / 100;
-            if (!target) { showToast('Select a user.'); return; }
+            if (!target) { showToast('Search and select a user first.'); return; }
             if (!amount || isNaN(amount) || amount <= 0) { showToast('Enter a valid amount.'); return; }
 
             adminAddBtn.disabled = adminSubBtn.disabled = true;
@@ -4168,6 +4350,25 @@
 
         sortSelect.addEventListener('change', renderGlobalItems);
 
+        // ===== Listing search =====
+        (function setupListingSearch() {
+            const input = document.getElementById('listing-search-input');
+            const field = document.getElementById('listing-search-field');
+            const clear = document.getElementById('listing-search-clear');
+            let timer = null;
+            input.addEventListener('input', () => {
+                field.classList.toggle('has-value', input.value.length > 0);
+                clearTimeout(timer);
+                timer = setTimeout(renderGlobalItems, 150);
+            });
+            clear.addEventListener('click', () => {
+                input.value = '';
+                field.classList.remove('has-value');
+                renderGlobalItems();
+                input.focus();
+            });
+        })();
+
         document.querySelectorAll('.game-tag-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.game-tag-btn').forEach(b => b.classList.remove('active'));
@@ -4604,6 +4805,9 @@
             allUsers.forEach(u => {
                 const isProtected = u.customId === 'knqw';
                 const tr = document.createElement('tr');
+                tr.className = 'db-user-row';
+                tr.dataset.search = [u.customId || '1', u.username, u.displayName, u.email,
+                    u.isMiddleman ? 'middleman' : 'user'].join(' ').toLowerCase();
                 tr.innerHTML = `
                     <td>${escapeHtml(u.customId || '1')}</td>
                     <td>${escapeHtml(u.username)}</td>
@@ -4647,7 +4851,35 @@
                 });
             });
 
+            applyDbFilter();
             dbModal.classList.add('active');
+        });
+
+        function applyDbFilter() {
+            const input = document.getElementById('db-search-input');
+            const terms = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+            document.getElementById('db-search-field').classList.toggle('has-value', input.value.length > 0);
+            let visible = 0;
+            const rows = dbTbody.querySelectorAll('.db-user-row');
+            rows.forEach(tr => {
+                const show = terms.every(t => tr.dataset.search.includes(t));
+                tr.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+            const old = dbTbody.querySelector('.db-no-results');
+            if (old) old.remove();
+            if (rows.length && visible === 0) {
+                const tr = document.createElement('tr');
+                tr.className = 'db-no-results';
+                tr.innerHTML = '<td colspan="6">No accounts match your search.</td>';
+                dbTbody.appendChild(tr);
+            }
+        }
+        document.getElementById('db-search-input').addEventListener('input', applyDbFilter);
+        document.getElementById('db-search-clear').addEventListener('click', () => {
+            document.getElementById('db-search-input').value = '';
+            applyDbFilter();
+            document.getElementById('db-search-input').focus();
         });
 
         closeDbModalBtn.addEventListener('click', () => {
