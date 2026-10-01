@@ -44,19 +44,25 @@
         }
 
         .site-brand {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
             text-decoration: none;
+            cursor: pointer;
         }
 
         .site-brand img {
-            width: 28px;
-            height: 28px;
+            width: 52px;
+            height: 52px;
             object-fit: contain;
+            display: block;
         }
 
-        .nav-home, .nav-middlemen {
+        .nav-home, .nav-middlemen, .nav-marketplace, .nav-trading {
             color: #888888;
             text-decoration: none;
             font-size: 15px;
@@ -69,8 +75,15 @@
             padding: 0;
         }
 
-        .nav-home:hover, .nav-middlemen:hover, .nav-home.active, .nav-middlemen.active {
+        .nav-home:hover, .nav-middlemen:hover, .nav-marketplace:hover, .nav-trading:hover,
+        .nav-home.active, .nav-middlemen.active, .nav-marketplace.active, .nav-trading.active {
             color: #ffffff;
+        }
+
+        @media (max-width: 900px) {
+            .top-bar { padding: 0 16px; }
+            .nav-left { gap: 12px; }
+            .nav-home, .nav-middlemen, .nav-marketplace, .nav-trading { font-size: 13px; }
         }
 
         .auth-buttons {
@@ -520,7 +533,8 @@
 
         /* Окно профиля */
         .profile-modal-content {
-            width: 900px;
+            width: 1000px;
+            max-width: 96vw;
             height: 560px;
             display: flex;
             flex-direction: row;
@@ -639,13 +653,18 @@
             border: 1px solid #383838;
             border-radius: 10px;
             padding: 15px;
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 15px;
-            align-items: flex-start;
-            justify-content: flex-start;
+            align-content: start;
             overflow-y: auto;
             box-sizing: border-box;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .items-container::-webkit-scrollbar {
+            display: none;
         }
 
         .no-items-text {
@@ -653,10 +672,13 @@
             font-size: 14px;
             font-weight: 500;
             margin: auto;
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 0;
         }
 
         .item-card {
-            width: 150px;
+            width: 100%;
             background-color: #262626;
             border: 1px solid #383838;
             border-radius: 10px;
@@ -2150,12 +2172,14 @@
 
     <!-- Верхняя линия -->
     <header class="top-bar">
+        <a class="site-brand" id="home-brand-link" title="Home">
+            <img src="unique.png" alt="Unique Trading">
+        </a>
         <div class="nav-left">
-            <a class="site-brand" id="home-brand-link">
-                <img src="unique.png" alt="Unique Trading">
-            </a>
             <a class="nav-home active" id="home-link">Home</a>
             <button class="nav-middlemen" id="middlemen-nav-btn">Middlemen</button>
+            <button class="nav-marketplace" id="marketplace-nav-btn">Marketplace</button>
+            <button class="nav-trading" id="trading-nav-btn">Trading</button>
         </div>
         <div class="auth-buttons" id="auth-container">
             <a href="login.html" class="btn btn-login">Log in</a>
@@ -2987,6 +3011,8 @@
         const homeLink = document.getElementById('home-link');
         const homeBrandLink = document.getElementById('home-brand-link');
         const middlemenNavBtn = document.getElementById('middlemen-nav-btn');
+        const marketplaceNavBtn = document.getElementById('marketplace-nav-btn');
+        const tradingNavBtn = document.getElementById('trading-nav-btn');
         const pageMainTitle = document.getElementById('page-main-title');
         const filtersPanel = document.getElementById('filters-panel');
         const mainContentArea = document.getElementById('main-content-area');
@@ -3116,6 +3142,7 @@
         let currentActiveItem = null;
         let editingItemId = null;
         let activeGameTag = 'All';
+        let listingMode = 'all'; // 'all' | 'marketplace' | 'trading'
         let currentViewMode = 'home';
         let currentItemTimestamp = null;
         let isExactTimeFormat = false;
@@ -3235,6 +3262,12 @@
                 allItems = allItems.filter(item => (item.game || 'Murder Mystery 2') === activeGameTag);
             }
 
+            if (listingMode === 'marketplace') {
+                allItems = allItems.filter(item => item.tag === 'selling');
+            } else if (listingMode === 'trading') {
+                allItems = allItems.filter(item => item.tag !== 'selling');
+            }
+
             const sortBy = sortSelect.value;
             if (sortBy === 'recently') {
                 allItems.sort((a, b) => (b.id || 0) - (a.id || 0));
@@ -3277,7 +3310,7 @@
                     <div class="global-item-name">${escapeHtml(item.name)}</div>
                     <div class="global-item-footer">
                         <div class="global-item-price">${escapeHtml(priceText)}</div>
-                        <div class="global-item-time">${escapeHtml(timeAgo)}</div>
+                        <div class="global-item-time" data-ts="${Number(item.id) || 0}">${escapeHtml(timeAgo)}</div>
                     </div>
                 `;
 
@@ -3293,7 +3326,7 @@
             currentViewMode = 'balance';
             mainContentArea.style.display = 'none';
             middlemenPage.classList.remove('active');
-            middlemenNavBtn.classList.remove('active');
+            middlemenNavBtn.classList.remove('active'); marketplaceNavBtn.classList.remove('active'); tradingNavBtn.classList.remove('active');
             homeLink.classList.remove('active');
             itemDetailPage.classList.remove('active');
             messagesPage.classList.remove('active');
@@ -3553,8 +3586,9 @@
 
         function switchToHome() {
             currentViewMode = 'home';
+            listingMode = 'all';
             homeLink.classList.add('active');
-            middlemenNavBtn.classList.remove('active');
+            middlemenNavBtn.classList.remove('active'); marketplaceNavBtn.classList.remove('active'); tradingNavBtn.classList.remove('active');
             
             pageMainTitle.textContent = 'Live Listings';
             filtersPanel.style.display = 'flex';
@@ -3619,7 +3653,7 @@
             linkCardModal.classList.remove('active');
 
             homeLink.classList.remove('active');
-            middlemenNavBtn.classList.remove('active');
+            middlemenNavBtn.classList.remove('active'); marketplaceNavBtn.classList.remove('active'); tradingNavBtn.classList.remove('active');
 
             messagesPage.classList.add('active');
             await renderChatsList(targetUsername);
@@ -3949,6 +3983,8 @@
         async function switchToMiddlemen() {
             currentViewMode = 'middlemen';
             middlemenNavBtn.classList.add('active');
+            marketplaceNavBtn.classList.remove('active');
+            tradingNavBtn.classList.remove('active');
             homeLink.classList.remove('active');
             mainContentArea.style.display = 'none';
 
@@ -4101,6 +4137,30 @@
         homeLink.addEventListener('click', switchToHome);
         homeBrandLink.addEventListener('click', switchToHome);
         middlemenNavBtn.addEventListener('click', switchToMiddlemen);
+
+        function switchToListing(mode) {
+            switchToHome();
+            listingMode = mode;
+            homeLink.classList.remove('active');
+            (mode === 'marketplace' ? marketplaceNavBtn : tradingNavBtn).classList.add('active');
+            pageMainTitle.textContent = mode === 'marketplace' ? 'Marketplace' : 'Trading';
+            renderGlobalItems();
+        }
+        marketplaceNavBtn.addEventListener('click', () => switchToListing('marketplace'));
+        tradingNavBtn.addEventListener('click', () => switchToListing('trading'));
+
+        // Live-updating times on listing cards (no reload needed)
+        function refreshCardTimes() {
+            document.querySelectorAll('.global-item-time[data-ts]').forEach(el => {
+                const txt = getTimeAgo(Number(el.getAttribute('data-ts')));
+                if (el.textContent !== txt) el.textContent = txt;
+            });
+            if (itemDetailPage.classList.contains('active') && !isExactTimeFormat && currentItemTimestamp) {
+                const t = getTimeAgo(currentItemTimestamp);
+                if (detailTimeVal.textContent !== t) detailTimeVal.textContent = t;
+            }
+        }
+        setInterval(refreshCardTimes, 5000);
 
         document.getElementById('detail-back-btn').addEventListener('click', () => {
             itemDetailPage.classList.remove('active');
