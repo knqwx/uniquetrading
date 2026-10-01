@@ -1365,48 +1365,75 @@
         }
 
         .select-game-modal-content {
-            width: 400px;
-            max-height: 85vh;
+            width: 880px;
+            max-width: 95vw;
+            max-height: 90vh;
             overflow-y: auto;
             text-align: left;
             display: flex;
             flex-direction: column;
             gap: 12px;
+            padding: 36px;
         }
 
         .select-game-title {
             color: #ffffff;
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 600;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+        }
+
+        .select-game-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 18px;
         }
 
         .game-card-item {
             background-color: #1f1f1f;
             border: 1px solid #383838;
-            border-radius: 10px;
-            padding: 12px 16px;
+            border-radius: 12px;
+            padding: 14px;
             color: #ffffff;
-            font-size: 15px;
-            font-weight: 500;
+            font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s, border-color 0.2s;
+            transition: background-color 0.2s, border-color 0.2s, transform 0.1s;
             display: flex;
-            align-items: center;
-            gap: 15px;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+            min-width: 0;
         }
 
         .game-card-item:hover {
             background-color: #2a2a2a;
             border-color: #ff7300;
+            transform: translateY(-2px);
         }
 
         .game-card-thumb {
-            width: 45px;
-            height: 45px;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            height: auto;
             border-radius: 8px;
             object-fit: cover;
             background-color: #333;
+        }
+
+        .game-card-name {
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @media (max-width: 760px) {
+            .select-game-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        @media (max-width: 480px) {
+            .select-game-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
         .create-item-modal-content {
@@ -2422,78 +2449,57 @@
             <button class="close-modal" id="close-select-game-btn">&times;</button>
             <div class="select-game-title">Select Game</div>
             
-            <div class="game-card-item" data-game="Murder Mystery 2">
-                <img src="thumbnails/MM2.webp" class="game-card-thumb" alt="Murder Mystery 2">
-                <span style="flex:1; text-align: left;">Murder Mystery 2</span>
-                <span>&rarr;</span>
+
+            <div class="select-game-grid">
+                <div class="game-card-item" data-game="Murder Mystery 2" title="Murder Mystery 2">
+                    <img src="thumbnails/MM2.webp" class="game-card-thumb" alt="Murder Mystery 2">
+                    <span class="game-card-name">Murder Mystery 2</span>
+                </div>
+                <div class="game-card-item" data-game="Steal a brainrot" title="Steal a brainrot">
+                    <img src="thumbnails/SAB.webp" class="game-card-thumb" alt="Steal a brainrot">
+                    <span class="game-card-name">Steal a brainrot</span>
+                </div>
+                <div class="game-card-item" data-game="Blade Ball" title="Blade Ball">
+                    <img src="thumbnails/BladeBall.webp" class="game-card-thumb" alt="Blade Ball">
+                    <span class="game-card-name">Blade Ball</span>
+                </div>
+                <div class="game-card-item" data-game="Adopt Me" title="Adopt Me">
+                    <img src="thumbnails/AdoptMe.webp" class="game-card-thumb" alt="Adopt Me">
+                    <span class="game-card-name">Adopt Me</span>
+                </div>
+                <div class="game-card-item" data-game="Pet Simulator 99" title="Pet Simulator 99">
+                    <img src="thumbnails/PS99.webp" class="game-card-thumb" alt="Pet Simulator 99">
+                    <span class="game-card-name">Pet Simulator 99</span>
+                </div>
+                <div class="game-card-item" data-game="Steal an Egg" title="Steal an Egg">
+                    <img src="thumbnails/StealAnEgg.webp" class="game-card-thumb" alt="Steal an Egg">
+                    <span class="game-card-name">Steal an Egg</span>
+                </div>
+                <div class="game-card-item" data-game="Grow a Garden" title="Grow a Garden">
+                    <img src="thumbnails/GrowAGarden.webp" class="game-card-thumb" alt="Grow a Garden">
+                    <span class="game-card-name">Grow a Garden</span>
+                </div>
+                <div class="game-card-item" data-game="Farming and Friends" title="Farming and Friends">
+                    <img src="thumbnails/FarmingAndFriends.webp" class="game-card-thumb" alt="Farming and Friends">
+                    <span class="game-card-name">Farming and Friends</span>
+                </div>
+                <div class="game-card-item" data-game="Grow a Garden 2" title="Grow a Garden 2">
+                    <img src="thumbnails/GrowAGarden2.webp" class="game-card-thumb" alt="Grow a Garden 2">
+                    <span class="game-card-name">Grow a Garden 2</span>
+                </div>
+                <div class="game-card-item" data-game="Blox Fruits" title="Blox Fruits">
+                    <img src="thumbnails/BloxFruits.webp" class="game-card-thumb" alt="Blox Fruits">
+                    <span class="game-card-name">Blox Fruits</span>
+                </div>
+                <div class="game-card-item" data-game="Fisch" title="Fisch">
+                    <img src="thumbnails/Fisch.webp" class="game-card-thumb" alt="Fisch">
+                    <span class="game-card-name">Fisch</span>
+                </div>
+                <div class="game-card-item" data-game="Bee Swarm Simulator" title="Bee Swarm Simulator">
+                    <img src="thumbnails/BeeSwarm.webp" class="game-card-thumb" alt="Bee Swarm Simulator">
+                    <span class="game-card-name">Bee Swarm Simulator</span>
+                </div>
             </div>
-            
-            <div class="game-card-item" data-game="Steal a brainrot">
-                <img src="thumbnails/SAB.webp" class="game-card-thumb" alt="Steal a brainrot">
-                <span style="flex:1; text-align: left;">Steal a brainrot</span>
-                <span>&rarr;</span>
-            </div>
-            
-            <div class="game-card-item" data-game="Blade Ball">
-                <img src="thumbnails/BladeBall.webp" class="game-card-thumb" alt="Blade Ball">
-                <span style="flex:1; text-align: left;">Blade Ball</span>
-                <span>&rarr;</span>
-            </div>
-            
-            <div class="game-card-item" data-game="Adopt Me">
-                <img src="thumbnails/AdoptMe.webp" class="game-card-thumb" alt="Adopt Me">
-                <span style="flex:1; text-align: left;">Adopt Me</span>
-                <span>&rarr;</span>
-            </div>
-            
-            <div class="game-card-item" data-game="Pet Simulator 99">
-                <img src="thumbnails/PS99.webp" class="game-card-thumb" alt="Pet Simulator 99">
-                <span style="flex:1; text-align: left;">Pet Simulator 99</span>
-                <span>&rarr;</span>
-            </div>
-            
-            <div class="game-card-item" data-game="Steal an Egg">
-                <img src="thumbnails/StealAnEgg.webp" class="game-card-thumb" alt="Steal an Egg">
-                <span style="flex:1; text-align: left;">Steal an Egg</span>
-                <span>&rarr;</span>
-            </div>
-            
-            <div class="game-card-item" data-game="Grow a Garden">
-                <img src="thumbnails/GrowAGarden.webp" class="game-card-thumb" alt="Grow a Garden">
-                <span style="flex:1; text-align: left;">Grow a Garden</span>
-                <span>&rarr;</span>
-            </div>
-            
-            <div class="game-card-item" data-game="Farming and Friends">
-                <img src="thumbnails/FarmingAndFriends.webp" class="game-card-thumb" alt="Farming and Friends">
-                <span style="flex:1; text-align: left;">Farming and Friends</span>
-                <span>&rarr;</span>
-            </div>
-            
-            <div class="game-card-item" data-game="Grow a Garden 2">
-                <img src="thumbnails/GrowAGarden2.webp" class="game-card-thumb" alt="Grow a Garden 2">
-                <span style="flex:1; text-align: left;">Grow a Garden 2</span>
-                <span>&rarr;</span>
-            </div>
-            
-            <div class="game-card-item" data-game="Blox Fruits">
-                <img src="thumbnails/BloxFruits.webp" class="game-card-thumb" alt="Blox Fruits">
-                <span style="flex:1; text-align: left;">Blox Fruits</span>
-                <span>&rarr;</span>
-            </div>
-            
-            <div class="game-card-item" data-game="Fisch">
-                <img src="thumbnails/Fisch.webp" class="game-card-thumb" alt="Fisch">
-                <span style="flex:1; text-align: left;">Fisch</span>
-                <span>&rarr;</span>
-            </div>
-            
-            <div class="game-card-item" data-game="Bee Swarm Simulator">
-                <img src="thumbnails/BeeSwarm.webp" class="game-card-thumb" alt="Bee Swarm Simulator">
-                <span style="flex:1; text-align: left;">Bee Swarm Simulator</span>
-                <span>&rarr;</span>
-            </div>
-            
         </div>
     </div>
 
