@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unique Trading - Auth</title>
+    <!-- Иконка сайта -->
+    <link rel="icon" href="unique.png" type="image/png">
     <!-- Подключаем современный шрифт Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -22,15 +24,29 @@
             width: 380px;
             background-color: #262626;
             border-radius: 12px;
-            padding: 40px 30px;
+            padding: 30px 30px;
             box-sizing: border-box;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             position: relative;
         }
 
+        .brand-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .brand-icon {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+        }
+
         h2 {
             color: #ffffff;
-            margin: 0 0 20px 0;
+            margin: 0;
             font-size: 24px;
             font-weight: 600;
             text-align: center;
@@ -92,6 +108,55 @@
             border-color: #ff7300;
         }
 
+        /* Стили для блока капчи */
+        .captcha-group {
+            margin-bottom: 16px;
+        }
+
+        .captcha-group label {
+            display: block;
+            color: #b0b0b0;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .captcha-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .captcha-question {
+            background-color: #1a1a1a;
+            border: 1px solid #383838;
+            border-radius: 8px;
+            padding: 12px 15px;
+            color: #ff7300;
+            font-size: 15px;
+            font-weight: 600;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        .captcha-box input {
+            width: 100%;
+            background-color: #1a1a1a;
+            border: 1px solid #383838;
+            border-radius: 8px;
+            padding: 12px 15px;
+            color: #ffffff;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        .captcha-box input:focus {
+            border-color: #ff7300;
+        }
+
         .submit-btn {
             width: 100%;
             background-color: #ff7300;
@@ -143,7 +208,10 @@
 <body>
 
     <div class="auth-container" id="container">
-        <h2 id="form-title">Log in</h2>
+        <div class="brand-header">
+            <img src="unique.png" alt="Unique Logo" class="brand-icon">
+            <h2 id="form-title">Log in</h2>
+        </div>
         
         <div class="error-message" id="error-msg"></div>
 
@@ -161,6 +229,15 @@
             <div class="input-group">
                 <label>Password</label>
                 <input type="password" id="password-input" placeholder="Enter your password">
+            </div>
+
+            <!-- Математическая капча -->
+            <div class="captcha-group">
+                <label>Security verification</label>
+                <div class="captcha-box">
+                    <div class="captcha-question" id="captcha-question">? + ? =</div>
+                    <input type="text" id="captcha-input" placeholder="Answer">
+                </div>
             </div>
 
             <button type="submit" class="submit-btn" id="submit-btn">Log in</button>
@@ -208,6 +285,8 @@
         const mainLabel = document.getElementById('main-label');
         const mainInput = document.getElementById('main-input');
         const passwordInput = document.getElementById('password-input');
+        const captchaQuestion = document.getElementById('captcha-question');
+        const captchaInput = document.getElementById('captcha-input');
         const submitBtn = document.getElementById('submit-btn');
         const footerText = document.getElementById('footer-text');
         const toggleBtn = document.getElementById('toggle-btn');
@@ -215,10 +294,23 @@
         const errorMsg = document.getElementById('error-msg');
 
         let isLoginMode = true;
+        let correctAnswer = 0;
+
+        // Генерация новой капчи
+        function generateCaptcha() {
+            const num1 = Math.floor(Math.random() * 10) + 1;
+            const num2 = Math.floor(Math.random() * 10) + 1;
+            correctAnswer = num1 + num2;
+            captchaQuestion.textContent = `${num1} + ${num2} =`;
+            captchaInput.value = '';
+        }
+
+        generateCaptcha();
 
         function setMode(loginMode) {
             isLoginMode = loginMode;
             errorMsg.style.display = 'none';
+            generateCaptcha();
 
             if (!isLoginMode) {
                 formTitle.textContent = 'Sign up';
@@ -251,11 +343,19 @@
         function showError(msg) {
             errorMsg.textContent = msg;
             errorMsg.style.display = 'block';
+            generateCaptcha(); // Обновляем капчу при ошибке для безопасности
         }
 
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             errorMsg.style.display = 'none';
+
+            // Проверка капчи (защита от ботов)
+            const userCaptchaAnswer = parseInt(captchaInput.value.trim(), 10);
+            if (isNaN(userCaptchaAnswer) || userCaptchaAnswer !== correctAnswer) {
+                showError('Incorrect security answer. Please try again.');
+                return;
+            }
 
             if (!isLoginMode) {
                 const username = usernameInput.value.trim();
