@@ -535,6 +535,7 @@
         .mm-ticket-users { color: #ffffff; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .mm-ticket-users i { color: #ff7300; font-style: normal; margin: 0 6px; }
         .mm-ticket-time { color: #777; font-size: 12px; white-space: nowrap; }
+        .ticket-left { color: #ff9a44; font-weight: 600; }
         .mm-ticket-desc { color: #bbbbbb; font-size: 13px; line-height: 1.45; margin-bottom: 10px; word-break: break-word; white-space: pre-wrap; max-height: 78px; overflow-y: auto; }
         .mm-ticket-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
         .mm-ticket-btn {
@@ -2380,7 +2381,7 @@
             font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
             transition: color 0.2s, background-color 0.2s, border-color 0.2s;
         }
-        .side-admin-btn { border-radius: 0 10px 10px 0; border-left: none; border-right: 1px solid #2a2a2a; }
+        .side-admin-btn { writing-mode: horizontal-tb; padding: 10px 18px; border-radius: 0 10px 10px 0; border-left: none; border-right: 1px solid #2a2a2a; }
         .side-admin-btn:hover, .side-admin-btn.active { color: #ffffff; background-color: #262626; border-color: #ff7300; }
 
         .chats-list-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -2476,6 +2477,7 @@
         .deal-rate { margin-top: 12px; padding-top: 12px; border-top: 1px solid #383838; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
         .deal-rate-label { color: #bbbbbb; font-size: 12px; font-weight: 600; }
         .chat-header-spacer { flex: 1; }
+        .chat-ttl-note { align-self: center; text-align: center; color: #777777; font-size: 12px; background-color: #1f1f1f; border: 1px solid #2f2f2f; border-radius: 20px; padding: 6px 14px; margin-bottom: 4px; }
         .chat-delete-btn { background: none; border: 1px solid #4a4a4a; color: #bbbbbb; border-radius: 8px; padding: 7px 12px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
         .chat-delete-btn:hover { border-color: #ff4d4d; color: #ff4d4d; }
     </style>
@@ -2530,12 +2532,8 @@ Your Copyright text goes here.
             <button class="close-modal" data-close-info="terms-modal">&times;</button>
             <div class="info-modal-title">Terms of Service</div>
             <div class="info-modal-text" id="terms-text">
-Terms of Service
-Scams & Fraud: We are not responsible or liable for any losses if you get scammed by another user. Trade at your own risk.
-
-Bans & Suspensions: You will be banned for scamming, inflating of rating or vouches, racism, spamming messages or spam listing.
-
-Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fee). If you attempt to scam or deceive a seller, your funds will not be refunded, and your account will be banned.
+<!-- ====== PUT YOUR TERMS OF SERVICE TEXT HERE ====== -->
+Your Terms of Service text goes here.
             </div>
         </div>
     </div>
@@ -2677,7 +2675,7 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
         <div class="middlemen-container">
             <button class="mm-create-ticket-btn" id="create-ticket-btn">Create a ticket</button>
             <div class="mm-panel mm-tickets-panel" id="mm-tickets-panel" style="display: none;">
-                <div class="mm-panel-title">Tickets <span id="mm-tickets-count"></span></div>
+                <div class="mm-panel-title"><span id="mm-tickets-title">Tickets</span> <span id="mm-tickets-count"></span></div>
                 <div class="mm-ticket-list" id="mm-ticket-list"></div>
             </div>
             <div class="mm-panel">
@@ -2819,6 +2817,12 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
             <div class="setting-group">
                 <label class="setting-label">Password</label>
                 <input type="password" class="setting-input" id="setting-password-input" placeholder="New password">
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Roblox Account</label>
+                <div id="roblox-container-wrapper"></div>
+                <div class="setting-hint">Enter your Roblox username. It is saved when you press Save Changes.</div>
             </div>
 
             <div class="setting-group">
@@ -3208,7 +3212,7 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
         </div>
     </div>
 
-    <div class="modal-overlay" id="deal-confirm-modal" style="z-index: 260;">
+    <div class="modal-overlay" id="deal-confirm-modal" style="z-index: 290;">
         <div class="modal-content deal-modal">
             <div class="confirm-title" id="deal-confirm-title">Confirm</div>
             <div class="confirm-text" id="deal-confirm-text"></div>
@@ -3262,7 +3266,8 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
                     "ALTER TABLE users ADD COLUMN banReason TEXT;",
                     "ALTER TABLE users ADD COLUMN appeal TEXT;",
                     "ALTER TABLE users ADD COLUMN appealAt INTEGER DEFAULT 0;",
-                    "ALTER TABLE users ADD COLUMN appealStatus TEXT;"
+                    "ALTER TABLE users ADD COLUMN appealStatus TEXT;",
+                    "ALTER TABLE users ADD COLUMN roblox TEXT;"
                 ];
 
                 for (const sqlQuery of columnsToVerify) {
@@ -3347,6 +3352,7 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
                 `);
                 await purgeExpiredBans();
                 await purgeOldChats();
+                try { await db.execute({ sql: "DELETE FROM tickets WHERE createdAt < ?", args: [Date.now() - 24 * 60 * 60 * 1000] }); } catch (e) {}
             } catch (e) {
                 console.error("DB init error:", e);
             }
@@ -3367,6 +3373,7 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
                     lastDisplayNameChange: row.lastDisplayNameChange,
                     items: row.items ? JSON.parse(row.items) : [],
                     lastItemTime: row.lastItemTime || 0,
+                    roblox: row.roblox || '',
                     messages: row.messages ? JSON.parse(row.messages) : [],
                     card: row.card || null,
                     isMiddleman: Number(row.isMiddleman) === 1,
@@ -3403,6 +3410,7 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
                     lastDisplayNameChange: row.lastDisplayNameChange,
                     items: row.items ? JSON.parse(row.items) : [],
                     lastItemTime: row.lastItemTime || 0,
+                    roblox: row.roblox || '',
                     messages: row.messages ? JSON.parse(row.messages) : [],
                     card: row.card || null,
                     isMiddleman: Number(row.isMiddleman) === 1,
@@ -4654,6 +4662,7 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
                     <button class="chat-delete-btn" id="chat-delete-btn" type="button" title="Removes this chat only for you. Chats are also deleted automatically after 2 weeks.">Delete chat</button>
                 </div>
                 <div class="chat-messages-container" id="chat-messages-scroll">
+                    <div class="chat-ttl-note">This conversation will be automatically deleted in 14 days.</div>
                     ${chatMsgs.length === 0 && dealsHere.length === 0 ? '<div class="no-chat-selected">No messages yet. Send a message to start conversation!</div>' : ''}
                     ${bubblesHtml}
                 </div>
@@ -4716,6 +4725,8 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
                         deleteBtn.textContent = 'Delete';
                         deleteBtn.onclick = async () => {
                             menu.remove();
+                            const okDel = await askDealConfirm('Delete message?', 'This message will be deleted for both of you. This can\'t be undone.', 'Delete', true);
+                            if (!okDel) return;
                             await deleteMessageInDB(targetUsername, msgTimestamp);
                         };
                         menu.appendChild(deleteBtn);
@@ -5563,20 +5574,49 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
         });
 
         // ----- Ticket window for middlemen -----
+        // Tickets are deleted automatically after 24 hours
+        const TICKET_TTL_MS = 24 * 60 * 60 * 1000;
+        function fmtTicketLeft(ms) {
+            if (ms <= 0) return 'expired';
+            const t = Math.floor(ms / 1000);
+            const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+            return h > 0 ? `${h}h ${m}m left` : `${m}m ${String(sec).padStart(2, '0')}s left`;
+        }
+        setInterval(() => {
+            let expired = false;
+            document.querySelectorAll('.ticket-left[data-expires]').forEach(el => {
+                const left = Number(el.dataset.expires) - Date.now();
+                const txt = fmtTicketLeft(left);
+                if (el.textContent !== txt) el.textContent = txt;
+                if (left <= 0) expired = true;
+            });
+            if (expired && !document.hidden) renderTickets();
+        }, 1000);
+
         async function renderTickets() {
             const me = currentUser ? await getUserByUsername(currentUser) : null;
-            if (!me || !me.isMiddleman) {
+            if (!me) {
                 ticketsPanel.style.display = 'none';
                 return;
             }
+            const isMM = !!me.isMiddleman;
             ticketsPanel.style.display = 'block';
+            document.getElementById('mm-tickets-title').textContent = isMM ? 'Tickets' : 'Your tickets';
+
+            const cutoff = Date.now() - TICKET_TTL_MS;
+            try { await db.execute({ sql: "DELETE FROM tickets WHERE createdAt < ?", args: [cutoff] }); } catch (e) { /* not critical */ }
 
             let rows = [];
             try {
-                const rs = await db.execute({
-                    sql: "SELECT id, creator, partner, description, status, claimedBy, createdAt FROM tickets WHERE status = 'open' OR (status = 'claimed' AND claimedBy = ?) ORDER BY createdAt DESC LIMIT 100",
-                    args: [currentUser]
-                });
+                const rs = isMM
+                    ? await db.execute({
+                        sql: "SELECT id, creator, partner, description, status, claimedBy, createdAt FROM tickets WHERE createdAt > ? AND (status = 'open' OR (status = 'claimed' AND (claimedBy = ? OR creator = ? OR partner = ?))) ORDER BY createdAt DESC LIMIT 100",
+                        args: [cutoff, currentUser, currentUser, currentUser]
+                    })
+                    : await db.execute({
+                        sql: "SELECT id, creator, partner, description, status, claimedBy, createdAt FROM tickets WHERE createdAt > ? AND status IN ('open', 'claimed') AND (creator = ? OR partner = ?) ORDER BY createdAt DESC LIMIT 100",
+                        args: [cutoff, currentUser, currentUser]
+                    });
                 rows = rs.rows;
             } catch (e) {
                 console.error(e);
@@ -5591,7 +5631,7 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
             ticketsCountEl.textContent = rows.length ? `(${rows.length})` : '';
             ticketListEl.innerHTML = '';
             if (!rows.length) {
-                ticketListEl.innerHTML = '<div class="mm-empty">No open tickets.</div>';
+                ticketListEl.innerHTML = `<div class="mm-empty">${isMM ? 'No open tickets.' : 'You have no active tickets.'}</div>`;
                 return;
             }
 
@@ -5604,7 +5644,7 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
                 card.innerHTML = `
                     <div class="mm-ticket-top">
                         <div class="mm-ticket-users">${escapeHtml(nameOf(t.creator))}${t.partner ? `<i>&harr;</i>${escapeHtml(nameOf(t.partner))}` : ''}</div>
-                        <div class="mm-ticket-time">${escapeHtml(getTimeAgo(Number(t.createdAt)))}</div>
+                        <div class="mm-ticket-time">${escapeHtml(getTimeAgo(Number(t.createdAt)))} &middot; <span class="ticket-left" data-expires="${Number(t.createdAt) + TICKET_TTL_MS}">${escapeHtml(fmtTicketLeft(Number(t.createdAt) + TICKET_TTL_MS - Date.now()))}</span></div>
                     </div>
                     <div class="mm-ticket-desc">${escapeHtml(t.description)}</div>
                     <div class="mm-ticket-actions">
@@ -5614,7 +5654,9 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
                                ${t.partner ? `<button class="mm-ticket-btn" data-act="msg" data-user="${escapeHtml(t.partner)}">Message ${escapeHtml(nameOf(t.partner))}</button>` : ''}
                                <button class="mm-ticket-btn danger" data-act="close">Close</button>`
                             : (involved
-                                ? '<span class="mm-ticket-time">Your own ticket</span>'
+                                ? (t.status === 'claimed' && t.claimedBy
+                                    ? `<span class="mm-ticket-status">Claimed by ${escapeHtml(nameOf(t.claimedBy))}</span><button class="mm-ticket-btn" data-act="msg" data-user="${escapeHtml(t.claimedBy)}">Message ${escapeHtml(nameOf(t.claimedBy))}</button>`
+                                    : '<span class="mm-ticket-time">Your own ticket - waiting for a middleman</span>')
                                 : `<button class="mm-ticket-btn primary" data-act="claim">Claim</button>`)}
                     </div>
                 `;
@@ -5859,14 +5901,48 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
             settingEmailInput.value = userObj.email || '';
             settingPasswordInput.value = '';
             activeUserCard = userObj.card || null;
+            activeRoblox = userObj.roblox || '';
 
             renderCardSectionInSettings();
+            renderRobloxSection();
             accountSettingsModal.classList.add('active');
         }
 
         closeAccountSettingsModalBtn.addEventListener('click', () => {
             accountSettingsModal.classList.remove('active');
         });
+
+        let activeRoblox = '';
+        function renderRobloxSection() {
+            const box = document.getElementById('roblox-container-wrapper');
+            if (activeRoblox) {
+                box.innerHTML = `
+                    <div class="card-linked-box">
+                        <div class="card-info-text">&#127918; ${escapeHtml(activeRoblox)}</div>
+                        <button class="remove-card-btn" id="roblox-unlink-btn" type="button">Unlink</button>
+                    </div>`;
+                document.getElementById('roblox-unlink-btn').addEventListener('click', () => {
+                    activeRoblox = '';
+                    renderRobloxSection();
+                    showToast('Roblox account unlinked');
+                });
+            } else {
+                box.innerHTML = `
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" class="setting-input" id="roblox-input" maxlength="20" placeholder="Roblox username" style="flex:1;">
+                        <button class="upload-file-btn" id="roblox-link-btn" type="button" style="padding: 0 16px;">Link</button>
+                    </div>`;
+                const doLink = () => {
+                    const v = document.getElementById('roblox-input').value.trim();
+                    if (!/^[A-Za-z0-9_]{3,20}$/.test(v)) { showToast('Enter a valid Roblox username (3-20 letters, numbers or _).'); return; }
+                    activeRoblox = v;
+                    renderRobloxSection();
+                    showToast('Roblox account linked. Press Save Changes to keep it.');
+                };
+                document.getElementById('roblox-link-btn').addEventListener('click', doLink);
+                document.getElementById('roblox-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLink(); });
+            }
+        }
 
         function renderCardSectionInSettings() {
             if (activeUserCard) {
@@ -5974,6 +6050,7 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
             userObj.card = activeUserCard;
 
             await saveUserToDB(userObj);
+            try { await db.execute({ sql: "UPDATE users SET roblox = ? WHERE username = ?", args: [activeRoblox || null, currentUser] }); } catch (e) { console.error(e); }
             showToast('Account settings saved successfully!');
             accountSettingsModal.classList.remove('active');
             location.reload();
@@ -7050,9 +7127,12 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
                 await db.execute({ sql: "UPDATE chat_groups SET members = ? WHERE id = ?", args: [JSON.stringify(members), g.id] });
             };
             body.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', async () => {
+                const who = b.dataset.remove;
+                const okRemove = await askDealConfirm('Remove member?', `${who} will be removed from "${g.name}" and will no longer see the group chat.`, 'Remove', true);
+                if (!okRemove) return;
                 const fresh = await getGroup(g.id);
                 if (!fresh || fresh.owner !== currentUser) return;
-                await writeMembers(fresh.members.filter(m => m !== b.dataset.remove));
+                await writeMembers(fresh.members.filter(m => m !== who));
                 showToast(`${b.dataset.remove} was removed`);
                 openGroupMembersModal(g.id);
                 renderChatsList('g:' + g.id);
@@ -7131,6 +7211,7 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
                     <button class="chat-header-members-btn" id="group-members-btn" type="button">Members</button>
                 </div>
                 <div class="chat-messages-container" id="chat-messages-scroll">
+                    <div class="chat-ttl-note">This conversation will be automatically deleted in 14 days.</div>
                     ${msgs.length ? bubbles : '<div class="no-chat-selected">No messages yet. Say hi to the group!</div>'}
                 </div>
                 <div class="chat-input-row">
@@ -7163,6 +7244,23 @@ Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fe
             });
         }
     
+        // ===== Live listings: refresh for everyone when anybody lists / removes an item =====
+        let listingsSigLast = null;
+        async function getListingsSig() {
+            const rs = await db.execute("SELECT username, COALESCE(length(items), 0) AS l, COALESCE(lastItemTime, 0) AS t, COALESCE(bannedUntil, 0) AS b FROM users");
+            return rs.rows.map(r => `${r.username}:${r.l}:${r.t}:${r.b}`).join('|');
+        }
+        setInterval(async () => {
+            if (document.hidden || currentViewMode !== 'home' || mainContentArea.style.display === 'none') return;
+            if (itemDetailPage.classList.contains('active')) return;
+            try {
+                const sig = await getListingsSig();
+                if (listingsSigLast !== null && sig !== listingsSigLast) await renderGlobalItems();
+                listingsSigLast = sig;
+            } catch (e) { /* try again next tick */ }
+        }, 5000);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden && listingsSigLast !== null) listingsSigLast = '__stale__'; });
+
         // ===== Help / Copyright / Terms =====
         [['help-btn', 'help-modal'], ['copyright-btn', 'copyright-modal'], ['terms-btn', 'terms-modal']].forEach(([b, m]) => {
             document.getElementById(b).addEventListener('click', () => document.getElementById(m).classList.add('active'));
