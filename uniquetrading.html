@@ -2374,13 +2374,13 @@
             display: flex; flex-direction: column; gap: 8px;
         }
         .side-admin-btn {
-            writing-mode: vertical-rl; transform: rotate(180deg);
+            writing-mode: vertical-rl;
             background-color: #171717; color: #888888; border: 1px solid #2a2a2a; border-left: none;
             border-radius: 0 10px 10px 0; padding: 16px 9px; font-family: 'Inter', sans-serif;
             font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
             transition: color 0.2s, background-color 0.2s, border-color 0.2s;
         }
-        .side-admin-btn { border-radius: 10px 0 0 10px; border-left: 1px solid #2a2a2a; border-right: none; }
+        .side-admin-btn { border-radius: 0 10px 10px 0; border-left: none; border-right: 1px solid #2a2a2a; }
         .side-admin-btn:hover, .side-admin-btn.active { color: #ffffff; background-color: #262626; border-color: #ff7300; }
 
         .chats-list-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -2445,6 +2445,39 @@
         .vouch-time { color: #777777; font-size: 12px; }
         .vouch-text { color: #cccccc; font-size: 13px; line-height: 1.45; word-break: break-word; white-space: pre-wrap; }
         .vouch-del { background: none; border: none; color: #ff4d4d; font-size: 12px; cursor: pointer; margin-left: 10px; font-family: 'Inter', sans-serif; }
+
+        /* ===== Help / Copyright / Terms (top bar, right of the logo) ===== */
+        .top-links { position: absolute; left: calc(50% + 44px); top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 2px; }
+        .top-link { background: none; border: none; color: #888888; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; padding: 8px 11px; border-radius: 10px; cursor: pointer; white-space: nowrap; transition: color 0.2s, background-color 0.2s; }
+        .top-link:hover { color: #ffffff; background-color: #262626; }
+        .top-link .short { display: none; }
+        @media (max-width: 1400px) { .top-link .long { display: none; } .top-link .short { display: inline; } .top-link { font-size: 14px; padding: 8px 8px; } }
+        @media (max-width: 900px) { .top-links { left: calc(50% + 36px); } .top-link { font-size: 12px; padding: 6px 5px; } }
+        .info-modal { width: 640px; max-width: 94vw; max-height: 86vh; overflow-y: auto; text-align: left; }
+        .info-modal-title { color: #ffffff; font-size: 24px; font-weight: 700; margin-bottom: 16px; padding-right: 30px; }
+        .info-modal-text { color: #cccccc; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+
+        /* ===== Clickable names, rating tools, chat delete ===== */
+        .user-link { cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,115,0,0.5); text-underline-offset: 2px; }
+        .user-link:hover { color: #ff9a44; }
+        .rating-admin-btn, .rate-remove-btn { background: none; border: 1px solid #4a4a4a; color: #bbbbbb; border-radius: 8px; padding: 5px 10px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; margin-top: 4px; transition: border-color 0.2s, color 0.2s; }
+        .rating-admin-btn { border-color: #ff7300; color: #ff7300; }
+        .rating-admin-btn:hover { background: #ff7300; color: #fff; }
+        .rate-remove-btn:hover { border-color: #ff4d4d; color: #ff4d4d; }
+        .rating-mgr { width: 460px; max-width: 94vw; max-height: 88vh; overflow-y: auto; text-align: left; }
+        .rating-mgr-list { border: 1px solid #383838; border-radius: 10px; background: #1f1f1f; max-height: 260px; overflow-y: auto; margin-bottom: 16px; }
+        .rating-mgr-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #2c2c2c; color: #fff; font-size: 13px; }
+        .rating-mgr-row:last-child { border-bottom: none; }
+        .rating-mgr-row .rm-who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .rating-mgr-row .rm-stars { color: #ffb020; letter-spacing: 1px; }
+        .rating-mgr-row .rm-time { color: #777; font-size: 11px; }
+        .rating-mgr-row .rm-del { background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; }
+        .rating-mgr-add { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .deal-rate { margin-top: 12px; padding-top: 12px; border-top: 1px solid #383838; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+        .deal-rate-label { color: #bbbbbb; font-size: 12px; font-weight: 600; }
+        .chat-header-spacer { flex: 1; }
+        .chat-delete-btn { background: none; border: 1px solid #4a4a4a; color: #bbbbbb; border-radius: 8px; padding: 7px 12px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+        .chat-delete-btn:hover { border-color: #ff4d4d; color: #ff4d4d; }
     </style>
 </head>
 <body>
@@ -2454,6 +2487,11 @@
         <a class="site-brand" id="home-brand-link" title="Home">
             <img src="unique.png" alt="Unique Trading">
         </a>
+        <nav class="top-links" aria-label="Info">
+            <button class="top-link" id="help-btn" type="button">Help</button>
+            <button class="top-link" id="copyright-btn" type="button">Copyright</button>
+            <button class="top-link" id="terms-btn" type="button"><span class="long">Terms of Service</span><span class="short">Terms</span></button>
+        </nav>
         <div class="nav-left">
             <a class="nav-home active" id="home-link">Home</a>
             <button class="nav-marketplace" id="marketplace-nav-btn">Marketplace</button>
@@ -2465,6 +2503,42 @@
             <a href="login.html?mode=signup" class="btn btn-signup">Sign up</a>
         </div>
     </header>
+
+    <!-- Help / Copyright / Terms of Service: put your text inside the .info-modal-text blocks -->
+    <div class="modal-overlay" id="help-modal" style="z-index: 270;">
+        <div class="modal-content info-modal">
+            <button class="close-modal" data-close-info="help-modal">&times;</button>
+            <div class="info-modal-title">Help</div>
+            <div class="info-modal-text" id="help-text">
+<!-- ====== PUT YOUR HELP TEXT HERE ====== -->
+Your Help text goes here.
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="copyright-modal" style="z-index: 270;">
+        <div class="modal-content info-modal">
+            <button class="close-modal" data-close-info="copyright-modal">&times;</button>
+            <div class="info-modal-title">Copyright</div>
+            <div class="info-modal-text" id="copyright-text">
+<!-- ====== PUT YOUR COPYRIGHT TEXT HERE ====== -->
+Your Copyright text goes here.
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="terms-modal" style="z-index: 270;">
+        <div class="modal-content info-modal">
+            <button class="close-modal" data-close-info="terms-modal">&times;</button>
+            <div class="info-modal-title">Terms of Service</div>
+            <div class="info-modal-text" id="terms-text">
+Terms of Service
+Scams & Fraud: We are not responsible or liable for any losses if you get scammed by another user. Trade at your own risk.
+
+Bans & Suspensions: You will be banned for scamming, inflating of rating or vouches, racism, spamming messages or spam listing.
+
+Payouts & Disputes: You will receive 90% of your sales earnings (10% platform fee). If you attempt to scam or deceive a seller, your funds will not be refunded, and your account will be banned.
+            </div>
+        </div>
+    </div>
 
     <!-- Admin shortcuts (knqw), middle-left of the screen -->
     <div class="side-admin-nav" id="side-admin-nav">
@@ -3263,7 +3337,16 @@
                         UNIQUE (middleman, author)
                     )
                 `);
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS chat_clears (
+                        user TEXT,
+                        other TEXT,
+                        clearedAt INTEGER,
+                        PRIMARY KEY (user, other)
+                    )
+                `);
                 await purgeExpiredBans();
+                await purgeOldChats();
             } catch (e) {
                 console.error("DB init error:", e);
             }
@@ -3587,6 +3670,39 @@
             });
         }
         // Permanent bans: the account is removed 30 days after the ban
+        // ===== Chats auto-delete after 2 weeks =====
+        const CHAT_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+        async function purgeOldChats(force) {
+            try {
+                const last = Number(localStorage.getItem('lastChatPurge')) || 0;
+                if (!force && Date.now() - last < 10 * 60 * 1000) return;
+                localStorage.setItem('lastChatPurge', String(Date.now()));
+                const cutoff = Date.now() - CHAT_TTL_MS;
+
+                // pairs with an unfinished or reported deal keep their chat (needed as evidence / for the money flow)
+                const open = await db.execute("SELECT buyer, seller FROM deals WHERE status IN ('requested','paid','not_received','reported')");
+                const keep = new Set();
+                open.rows.forEach(r => { keep.add(r.buyer + '|' + r.seller); keep.add(r.seller + '|' + r.buyer); });
+
+                const rs = await db.execute("SELECT username, messages FROM users WHERE messages IS NOT NULL AND messages != '[]'");
+                for (const row of rs.rows) {
+                    let msgs = [];
+                    try { msgs = JSON.parse(row.messages || '[]'); } catch (e) { continue; }
+                    const kept = msgs.filter(m => {
+                        if (!(Number(m.timestamp) < cutoff)) return true;
+                        const other = m.sender === row.username ? m.receiver : m.sender;
+                        return keep.has(row.username + '|' + other);
+                    });
+                    if (kept.length !== msgs.length) {
+                        await db.execute({ sql: "UPDATE users SET messages = ? WHERE username = ?", args: [JSON.stringify(kept), row.username] });
+                    }
+                }
+                await db.execute({ sql: "DELETE FROM group_messages WHERE timestamp < ?", args: [cutoff] });
+                await db.execute({ sql: "DELETE FROM deals WHERE status IN ('completed','cancelled') AND updatedAt < ?", args: [cutoff] });
+                await db.execute({ sql: "DELETE FROM chat_clears WHERE clearedAt < ?", args: [cutoff] });
+            } catch (e) { console.error('Chat purge error:', e); }
+        }
+
         async function purgeExpiredBans() {
             try {
                 await db.execute({
@@ -4359,6 +4475,7 @@
             middlemenNavBtn.classList.remove('active'); marketplaceNavBtn.classList.remove('active'); tradingNavBtn.classList.remove('active');
 
             messagesPage.classList.add('active');
+            await purgeOldChats();
             await renderChatsList(targetUsername);
             startChatPolling();
         }
@@ -4369,6 +4486,7 @@
                 if (!messagesPage.classList.contains('active') || document.hidden || !currentUser) return;
                 const me = await getUserByUsername(currentUser);
                 if (!me) return;
+                purgeOldChats();
                 const ds = await getDealSig(currentUser);
                 const gs = await getGroupSig();
                 if (chatSig(me.messages || []) !== chatSignature || ds !== dealSignature || gs !== groupSignature) {
@@ -4508,7 +4626,12 @@
                 headerAvatarHtml = `<img class="chat-header-avatar" src="${otherUser.avatar}" alt="Avatar">`;
             }
 
-            const dealsHere = await getDealsBetween(currentUser, targetUsername);
+            const clearedAt = await getChatClearedAt(currentUser, targetUsername);
+            const dealsHere = (await getDealsBetween(currentUser, targetUsername))
+                .filter(d => Math.max(d.updatedAt, d.createdAt) > clearedAt);
+            chatMyRating = await getMyRating(targetUsername);
+            const completedHere = dealsHere.filter(d => d.status === 'completed');
+            chatRateDealId = completedHere.length ? completedHere[completedHere.length - 1].id : 0;
             const canAskPayment = targetUsername !== currentUser && (me.items || []).some(i => i.tag === 'selling');
             const askBtnHtml = canAskPayment ? '<div class="deal-toolbar"><button class="ask-payment-btn" id="ask-payment-btn" type="button">Ask for payment</button></div>' : '';
             const msgEntries = chatMsgs.map(m => ({ t: m.timestamp, html: (() => {
@@ -4527,6 +4650,8 @@
                         <div class="chat-header-name">${escapeHtml(otherUser.displayName || targetUsername)}${otherUser.isMiddleman ? '<span class="mm-badge">Middleman</span>' : ''}</div>
                         ${presenceLabel(targetUsername)}
                     </div>
+                    <div class="chat-header-spacer"></div>
+                    <button class="chat-delete-btn" id="chat-delete-btn" type="button" title="Removes this chat only for you. Chats are also deleted automatically after 2 weeks.">Delete chat</button>
                 </div>
                 <div class="chat-messages-container" id="chat-messages-scroll">
                     ${chatMsgs.length === 0 && dealsHere.length === 0 ? '<div class="no-chat-selected">No messages yet. Send a message to start conversation!</div>' : ''}
@@ -4607,6 +4732,7 @@
             });
 
             bindDealControls(scrollContainer, targetUsername, me);
+            document.getElementById('chat-delete-btn').addEventListener('click', () => deleteChatForMe(targetUsername));
 
             const ctxCloseBtn = document.getElementById('chat-ctx-close');
             if (ctxCloseBtn) {
@@ -4723,6 +4849,63 @@
             await renderChatsList(targetUsername);
         }
 
+
+        // ===== Delete chat (only for me; gone forever when both sides deleted) =====
+        let chatMyRating = 0;
+        let chatRateDealId = 0;
+        async function getChatClearedAt(user, other) {
+            try {
+                const rs = await db.execute({ sql: "SELECT clearedAt FROM chat_clears WHERE user = ? AND other = ?", args: [user, other] });
+                return rs.rows.length ? Number(rs.rows[0].clearedAt) || 0 : 0;
+            } catch (e) { return 0; }
+        }
+        async function getMyRating(target) {
+            if (!currentUser) return 0;
+            try {
+                const rs = await db.execute({ sql: "SELECT stars FROM ratings WHERE rater = ? AND target = ?", args: [currentUser, target] });
+                return rs.rows.length ? Number(rs.rows[0].stars) || 0 : 0;
+            } catch (e) { return 0; }
+        }
+        async function deleteChatForMe(other) {
+            const open = await db.execute({
+                sql: "SELECT id FROM deals WHERE ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?)) AND status IN ('requested','paid','not_received','reported') LIMIT 1",
+                args: [currentUser, other, other, currentUser]
+            });
+            if (open.rows.length) { showToast('Finish or resolve the deal in this chat before deleting it.'); return; }
+            const ok = await askDealConfirm('Delete this chat?',
+                `The chat with ${other} will be removed only for you. ${other} will still see it until they delete it too - when both of you have deleted it, it is gone forever. Chats are also deleted automatically after 2 weeks.`,
+                'Delete chat', true);
+            if (!ok) return;
+            const now = Date.now();
+            const meObj = await getUserByUsername(currentUser);
+            if (meObj) {
+                meObj.messages = (meObj.messages || []).filter(m => !(m.sender === other || m.receiver === other));
+                await saveUserToDB(meObj);
+            }
+            await db.execute({
+                sql: "INSERT INTO chat_clears (user, other, clearedAt) VALUES (?, ?, ?) ON CONFLICT(user, other) DO UPDATE SET clearedAt = excluded.clearedAt",
+                args: [currentUser, other, now]
+            });
+            // other side already deleted and has nothing left of this chat -> delete forever
+            const theirs = await getChatClearedAt(other, currentUser);
+            const otherObj = await getUserByUsername(other);
+            const theirLeft = otherObj ? (otherObj.messages || []).some(m => m.sender === currentUser || m.receiver === currentUser) : false;
+            if (theirs && !theirLeft) {
+                await db.execute({
+                    sql: "DELETE FROM deals WHERE status IN ('completed','cancelled') AND ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?))",
+                    args: [currentUser, other, other, currentUser]
+                });
+                await db.execute({
+                    sql: "DELETE FROM chat_clears WHERE (user = ? AND other = ?) OR (user = ? AND other = ?)",
+                    args: [currentUser, other, other, currentUser]
+                });
+            }
+            if (pendingChatItem && pendingChatItem.sellerUsername === other) pendingChatItem = null;
+            activeChatUsername = null;
+            renderedChatUser = null;
+            showToast('Chat deleted');
+            await renderChatsList(null);
+        }
 
         // ===== Deals: ask for payment -> pay -> hold -> confirm delivery -> report =====
         const SELLER_SHARE = 0.9;      // seller gets 90%, 10% is the platform fee
@@ -4933,7 +5116,7 @@
             const amt = fmtMoney(d.amount), mine = fmtMoney(d.sellerAmount);
             const buyerN = escapeHtml(d.buyer), sellerN = escapeHtml(d.seller);
             const btn = (act, label, kind) => `<button class="deal-btn ${kind || ''}" data-deal-act="${act}" data-deal-id="${d.id}" type="button">${label}</button>`;
-            let cls = '', title = 'Payment request', text = '', q = '', actions = '';
+            let cls = '', title = 'Payment request', text = '', q = '', actions = '', rateHtml = '';
 
             switch (d.status) {
                 case 'requested':
@@ -4969,6 +5152,12 @@
                 case 'completed':
                     cls = 'done'; title = 'Deal completed';
                     text = isBuyer ? 'You confirmed that you received your items.' : `${buyerN} confirmed delivery. ${mine} was released to your balance.`;
+                    if (d.id === chatRateDealId) {
+                        const otherN = isBuyer ? sellerN : buyerN;
+                        rateHtml = `<div class="deal-rate"><span class="deal-rate-label">${chatMyRating ? `Your rating of ${otherN}` : `How was the deal? Rate ${otherN}`}</span>
+                            <div class="rate-input">${[1, 2, 3, 4, 5].map(n => `<button type="button" class="rate-star ${n <= chatMyRating ? 'on' : ''}" data-deal-rate="${n}" title="${n} star${n === 1 ? '' : 's'}">&#9733;</button>`).join('')}</div>
+                            ${chatMyRating ? '<button type="button" class="rate-remove-btn" data-deal-rate-remove="1">Remove rating</button>' : ''}</div>`;
+                    }
                     break;
                 case 'cancelled':
                     cls = 'muted'; title = 'Request cancelled';
@@ -4985,6 +5174,7 @@
                 <div class="deal-card-text">${text}</div>
                 ${q ? `<div class="deal-card-q">${q}</div>` : ''}
                 ${actions ? `<div class="deal-card-actions">${actions}</div>` : ''}
+                ${rateHtml}
             </div>`;
         }
 
@@ -5053,6 +5243,31 @@
                 });
             });
 
+            const rateBox = root.querySelector('.deal-rate .rate-input');
+            if (rateBox) {
+                const stars = [...rateBox.querySelectorAll('.rate-star')];
+                stars.forEach(b => {
+                    b.addEventListener('mouseenter', () => stars.forEach(x => x.classList.toggle('on', Number(x.dataset.dealRate) <= Number(b.dataset.dealRate))));
+                    b.addEventListener('click', async () => {
+                        const n = Number(b.dataset.dealRate);
+                        try {
+                            await db.execute({
+                                sql: "INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(rater, target) DO UPDATE SET stars = excluded.stars, createdAt = excluded.createdAt",
+                                args: [currentUser, targetUsername, n, Date.now()]
+                            });
+                            showToast(`You rated ${targetUsername} ${n} star${n === 1 ? '' : 's'}`);
+                        } catch (e) { showToast('Could not save your rating.'); }
+                        await renderChatsList(targetUsername);
+                    });
+                });
+                rateBox.addEventListener('mouseleave', () => stars.forEach(x => x.classList.toggle('on', Number(x.dataset.dealRate) <= chatMyRating)));
+            }
+            root.querySelectorAll('[data-deal-rate-remove]').forEach(b => b.addEventListener('click', async () => {
+                try { await db.execute({ sql: "DELETE FROM ratings WHERE rater = ? AND target = ?", args: [currentUser, targetUsername] }); showToast('Rating removed'); }
+                catch (e) { showToast('Could not remove your rating.'); }
+                await renderChatsList(targetUsername);
+            }));
+
             const ask = document.getElementById('ask-payment-btn');
             if (ask) {
                 ask.addEventListener('click', async () => {
@@ -5110,15 +5325,35 @@
             list.innerHTML = deals.map(d => `
                 <div class="mm-ticket">
                     <div class="mm-ticket-top">
-                        <div class="mm-ticket-users">${escapeHtml(d.buyer)}<i>&rarr;</i>${escapeHtml(d.seller)}</div>
+                        <div class="mm-ticket-users">${userLinkHtml(d.buyer)}<i>&rarr;</i>${userLinkHtml(d.seller)}</div>
                         <div class="mm-ticket-time" title="${escapeHtml(getExactDate(d.reportedAt))}">Reported ${escapeHtml(getTimeAgo(d.reportedAt))}</div>
                     </div>
-                    <div class="mm-ticket-desc">Item: ${escapeHtml(d.itemName || '-')}\nPaid: ${fmtMoney(d.amount)} &middot; Seller's share on hold: ${fmtMoney(d.sellerAmount)}\nReported by: ${escapeHtml(d.reportedBy || d.buyer)} (${(d.reportedBy || d.buyer) === d.seller ? 'seller' : 'buyer'})</div>
+                    <div class="mm-ticket-desc">Item: ${escapeHtml(d.itemName || '-')}\nPaid: ${fmtMoney(d.amount)} &middot; Seller's share on hold: ${fmtMoney(d.sellerAmount)}\nReported by: ${userLinkHtml(d.reportedBy || d.buyer)} (${(d.reportedBy || d.buyer) === d.seller ? 'seller' : 'buyer'})</div>
                     <div class="mm-ticket-actions"><button class="mm-ticket-btn primary" data-report-id="${d.id}" type="button">View chat</button></div>
                 </div>`).join('');
+            bindUserLinks(list);
             list.querySelectorAll('[data-report-id]').forEach(b => {
                 b.addEventListener('click', () => openReportChat(Number(b.dataset.reportId)));
             });
+        }
+
+        // ---- clickable usernames (reports) ----
+        function userLinkHtml(name) {
+            return `<span class="user-link" data-user-link="${escapeHtml(name)}" title="Open profile">${escapeHtml(name)}</span>`;
+        }
+        function bindUserLinks(root) {
+            root.querySelectorAll('[data-user-link]').forEach(el => el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openProfileOnTop(el.dataset.userLink);
+            }));
+        }
+        // the profile modal must sit above the report-chat modal
+        new MutationObserver(() => { if (!profileModal.classList.contains('active')) profileModal.style.zIndex = ''; })
+            .observe(profileModal, { attributes: true, attributeFilter: ['class'] });
+        async function openProfileOnTop(username) {
+            profileModal.style.zIndex = '275';
+            await openProfileByUsername(username);
+            if (!profileModal.classList.contains('active')) profileModal.style.zIndex = '';
         }
 
         async function openReportChat(id) {
@@ -5143,18 +5378,20 @@
             const msgs = [...live.values()].sort((a, b) => a.timestamp - b.timestamp);
             document.getElementById('report-chat-title').textContent = `Deal #${d.id}`;
             document.getElementById('report-chat-meta').innerHTML =
-                `<b>${escapeHtml(d.buyer)}</b> (buyer) &rarr; <b>${escapeHtml(d.seller)}</b> (seller)<br>` +
+                `<b>${userLinkHtml(d.buyer)}</b> (buyer) &rarr; <b>${userLinkHtml(d.seller)}</b> (seller)<br>` +
                 `Item: ${escapeHtml(d.itemName || '-')} &middot; Paid ${fmtMoney(d.amount)} &middot; On hold for seller ${fmtMoney(d.sellerAmount)}<br>` +
-                `Reported ${escapeHtml(getExactDate(d.reportedAt))} by <b>${escapeHtml(d.reportedBy || d.buyer)}</b> (${(d.reportedBy || d.buyer) === d.seller ? 'seller' : 'buyer'})`;
+                `Reported ${escapeHtml(getExactDate(d.reportedAt))} by <b>${userLinkHtml(d.reportedBy || d.buyer)}</b> (${(d.reportedBy || d.buyer) === d.seller ? 'seller' : 'buyer'})`;
+            bindUserLinks(document.getElementById('report-chat-meta'));
 
             const box = document.getElementById('report-chat-scroll');
             box.innerHTML = msgs.length ? msgs.map(m => {
                 let note = '';
                 if (m.removed) note = '<div class="rp-note">Deleted after the report</div>';
                 else if (m.originalText) note = `<div class="rp-note">Edited after the report. Original: ${escapeHtml(m.originalText)}</div>`;
-                return `<div class="message-bubble ${m.sender === d.buyer ? 'outgoing' : 'incoming'} rp-bubble${m.removed ? ' removed' : ''}"><div class="rp-sender">${escapeHtml(m.sender)} &middot; ${escapeHtml(getExactDate(m.timestamp))}</div>${escapeHtml(m.text)}${note}</div>`;
+                return `<div class="message-bubble ${m.sender === d.buyer ? 'outgoing' : 'incoming'} rp-bubble${m.removed ? ' removed' : ''}"><div class="rp-sender">${userLinkHtml(m.sender)} &middot; ${escapeHtml(getExactDate(m.timestamp))}</div>${escapeHtml(m.text)}${note}</div>`;
             }).join('') : '<div class="reports-empty">No messages between these users.</div>';
 
+            bindUserLinks(box);
             reportChatModal.classList.add('active');
             box.scrollTop = box.scrollHeight;
         }
@@ -6448,9 +6685,18 @@
             if (canRate) {
                 html += `<div class="profile-rate-box"><span class="profile-rate-label">${s.mine ? 'Your rating' : 'Rate this user'}</span><div class="rate-input">` +
                     [1, 2, 3, 4, 5].map(n => `<button type="button" class="rate-star ${n <= s.mine ? 'on' : ''}" data-stars="${n}" title="${n} star${n === 1 ? '' : 's'}">★</button>`).join('') +
-                    `</div></div>`;
+                    `</div>${s.mine ? '<button type="button" class="rate-remove-btn" id="rate-remove-mine">Remove my rating</button>' : ''}</div>`;
             }
+            const isAdminViewer = await isKnqw();
+            if (!profileViewUser || profileViewUser.username !== userObj.username) return;
+            if (isAdminViewer) html += '<button type="button" class="rating-admin-btn" id="rating-admin-btn">Manage ratings</button>';
             box.innerHTML = html;
+            document.getElementById('rate-remove-mine')?.addEventListener('click', async () => {
+                try { await db.execute({ sql: "DELETE FROM ratings WHERE rater = ? AND target = ?", args: [currentUser, userObj.username] }); showToast('Rating removed'); }
+                catch (e) { showToast('Could not remove your rating.'); }
+                renderProfileRating(userObj);
+            });
+            document.getElementById('rating-admin-btn')?.addEventListener('click', () => openRatingManager(userObj));
             box.querySelectorAll('.rate-star').forEach(b => {
                 b.addEventListener('mouseenter', () => {
                     const n = Number(b.dataset.stars);
@@ -6471,6 +6717,78 @@
             box.querySelector('.rate-input')?.addEventListener('mouseleave', () => {
                 box.querySelectorAll('.rate-star').forEach(x => x.classList.toggle('on', Number(x.dataset.stars) <= s.mine));
             });
+        }
+
+        // ---- knqw: add / remove ratings of any user ----
+        const ratingMgrEl = document.createElement('div');
+        ratingMgrEl.className = 'modal-overlay';
+        ratingMgrEl.id = 'rating-mgr-modal';
+        ratingMgrEl.style.zIndex = '280';
+        ratingMgrEl.innerHTML = `
+            <div class="modal-content rating-mgr">
+                <button class="close-modal" id="rating-mgr-close">&times;</button>
+                <div class="confirm-title" id="rating-mgr-title">Ratings</div>
+                <div class="rating-mgr-list" id="rating-mgr-list"></div>
+                <div class="setting-label" style="margin-bottom:8px;">Add a rating</div>
+                <div class="rating-mgr-add">
+                    <div class="rate-input" id="rating-mgr-stars"></div>
+                    <button class="ban-modal-btn primary" id="rating-mgr-add-btn" type="button">Add rating</button>
+                    <button class="ban-modal-btn" id="rating-mgr-clear-btn" type="button" style="margin-left:auto;">Remove all</button>
+                </div>
+            </div>`;
+        document.body.appendChild(ratingMgrEl);
+        document.getElementById('rating-mgr-close').addEventListener('click', () => ratingMgrEl.classList.remove('active'));
+        ratingMgrEl.addEventListener('click', e => { if (e.target === ratingMgrEl) ratingMgrEl.classList.remove('active'); });
+
+        async function openRatingManager(userObj) {
+            if (!(await isKnqw())) return;
+            const target = userObj.username;
+            let pick = 5;
+            const starsBox = document.getElementById('rating-mgr-stars');
+            const paintStars = (n) => { starsBox.innerHTML = [1, 2, 3, 4, 5].map(i => `<button type="button" class="rate-star ${i <= n ? 'on' : ''}" data-s="${i}">&#9733;</button>`).join(''); starsBox.querySelectorAll('.rate-star').forEach(b => b.addEventListener('click', () => { pick = Number(b.dataset.s); paintStars(pick); })); };
+            paintStars(pick);
+            document.getElementById('rating-mgr-title').textContent = `Ratings of ${userObj.displayName || target}`;
+
+            const refresh = async () => {
+                const list = document.getElementById('rating-mgr-list');
+                let rows = [];
+                try {
+                    const rs = await db.execute({ sql: "SELECT rater, stars, createdAt FROM ratings WHERE target = ? ORDER BY createdAt DESC", args: [target] });
+                    rows = rs.rows;
+                } catch (e) { console.error(e); }
+                list.innerHTML = rows.length ? rows.map(r => `
+                    <div class="rating-mgr-row">
+                        <span class="rm-who">${String(r.rater).startsWith('admin:') ? 'knqw (added)' : escapeHtml(r.rater)}</span>
+                        <span class="rm-stars">${'&#9733;'.repeat(Number(r.stars) || 0)}</span>
+                        <span class="rm-time">${escapeHtml(getTimeAgo(Number(r.createdAt)))}</span>
+                        <button class="rm-del" type="button" data-rater="${escapeHtml(r.rater)}">Remove</button>
+                    </div>`).join('') : '<div class="group-pick-empty">No ratings yet.</div>';
+                list.querySelectorAll('.rm-del').forEach(b => b.addEventListener('click', async () => {
+                    await db.execute({ sql: "DELETE FROM ratings WHERE rater = ? AND target = ?", args: [b.dataset.rater, target] });
+                    showToast('Rating removed');
+                    await refresh();
+                    renderProfileRating(userObj);
+                }));
+            };
+            document.getElementById('rating-mgr-add-btn').onclick = async () => {
+                await db.execute({
+                    sql: "INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?)",
+                    args: ['admin:' + Date.now() + Math.floor(Math.random() * 1000), target, pick, Date.now()]
+                });
+                showToast('Rating added');
+                await refresh();
+                renderProfileRating(userObj);
+            };
+            document.getElementById('rating-mgr-clear-btn').onclick = async () => {
+                const ok = await askDealConfirm('Remove all ratings?', `Every rating of ${userObj.displayName || target} will be deleted.`, 'Remove all', true);
+                if (!ok) return;
+                await db.execute({ sql: "DELETE FROM ratings WHERE target = ?", args: [target] });
+                showToast('All ratings removed');
+                await refresh();
+                renderProfileRating(userObj);
+            };
+            await refresh();
+            ratingMgrEl.classList.add('active');
         }
 
         function setProfileTab(tab) {
@@ -6660,6 +6978,7 @@
                 </div>`;
             document.getElementById('group-cancel-btn').onclick = () => groupModalEl.classList.remove('active');
             document.getElementById('group-create-btn').onclick = async (e) => {
+                const createBtn = e.currentTarget;
                 const name = document.getElementById('group-name-input').value.trim();
                 const picked = [...document.querySelectorAll('#group-pick-list input:checked')].map(i => i.value);
                 if (!name) { showToast('Enter a group name.'); return; }
@@ -6667,7 +6986,7 @@
                 const fresh = await getGroupCandidates();
                 const allowed = new Set(fresh.map(u => u.username));
                 if (picked.some(p => !allowed.has(p))) { showToast('You can only add people you have chats with.'); return; }
-                e.currentTarget.disabled = true;
+                createBtn.disabled = true;
                 try {
                     const rs = await db.execute({
                         sql: "INSERT INTO chat_groups (name, owner, members, createdAt) VALUES (?, ?, ?, ?)",
@@ -6679,7 +6998,7 @@
                 } catch (err) {
                     console.error(err);
                     showToast('Could not create the group.');
-                    e.currentTarget.disabled = false;
+                    createBtn.disabled = false;
                 }
             };
             groupModalEl.classList.add('active');
@@ -6843,6 +7162,16 @@
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
             });
         }
+    
+        // ===== Help / Copyright / Terms =====
+        [['help-btn', 'help-modal'], ['copyright-btn', 'copyright-modal'], ['terms-btn', 'terms-modal']].forEach(([b, m]) => {
+            document.getElementById(b).addEventListener('click', () => document.getElementById(m).classList.add('active'));
+        });
+        document.querySelectorAll('[data-close-info]').forEach(b => b.addEventListener('click', () => document.getElementById(b.dataset.closeInfo).classList.remove('active')));
+        ['help-modal', 'copyright-modal', 'terms-modal'].forEach(id => {
+            const el = document.getElementById(id);
+            el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
+        });
     </script>
 </body>
 </html>
