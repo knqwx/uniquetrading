@@ -2367,6 +2367,84 @@
 
         .detail-stock { color: #cccccc; font-size: 15px; font-weight: 600; margin-bottom: 12px; }
         .detail-stock.out { color: #ff4d4d; }
+    
+        /* ===== Side admin tabs, groups, ratings, vouches ===== */
+        .side-admin-nav {
+            position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 30;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .side-admin-btn {
+            writing-mode: vertical-rl; transform: rotate(180deg);
+            background-color: #171717; color: #888888; border: 1px solid #2a2a2a; border-left: none;
+            border-radius: 0 10px 10px 0; padding: 16px 9px; font-family: 'Inter', sans-serif;
+            font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
+            transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+        }
+        .side-admin-btn { border-radius: 10px 0 0 10px; border-left: 1px solid #2a2a2a; border-right: none; }
+        .side-admin-btn:hover, .side-admin-btn.active { color: #ffffff; background-color: #262626; border-color: #ff7300; }
+
+        .chats-list-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .new-group-btn {
+            background-color: #ff7300; color: #ffffff; border: none; border-radius: 8px; padding: 7px 12px;
+            font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+        }
+        .new-group-btn:hover { opacity: 0.85; }
+        .chat-list-label { color: #777777; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 12px 20px 4px; }
+        .chat-item-avatar.group-av { display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 700; font-size: 16px; border-radius: 12px; }
+        .chat-header-avatar.group-av { display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 700; font-size: 18px; border-radius: 12px; }
+        .group-tag { display: inline-block; font-size: 10px; font-weight: 700; color: #ff7300; background-color: rgba(255,115,0,0.15); border-radius: 4px; padding: 2px 6px; margin-left: 8px; vertical-align: middle; }
+        .chat-header-members-btn {
+            margin-left: auto; background-color: #313131; color: #ffffff; border: 1px solid #444444; border-radius: 8px;
+            padding: 8px 14px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+        .chat-header-members-btn:hover { background-color: #3d3d3d; }
+        .grp-sender { font-size: 11px; font-weight: 600; color: #ff7300; margin-bottom: 3px; cursor: pointer; }
+        .message-bubble.outgoing .grp-sender { display: none; }
+
+        .group-modal-content { width: 460px; max-width: 94vw; text-align: left; max-height: 90vh; overflow-y: auto; }
+        .group-pick-list { max-height: 220px; overflow-y: auto; border: 1px solid #383838; border-radius: 10px; background-color: #1f1f1f; }
+        .group-pick-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #2c2c2c; color: #ffffff; font-size: 14px; }
+        .group-pick-row:last-child { border-bottom: none; }
+        .group-pick-row:hover { background-color: #262626; }
+        .group-pick-row input { accent-color: #ff7300; width: 16px; height: 16px; }
+        .group-pick-row small { color: #777777; margin-left: auto; font-size: 11px; }
+        .group-pick-empty { color: #777777; font-size: 13px; padding: 14px; text-align: center; }
+        .group-member-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #303030; color: #ffffff; font-size: 14px; }
+        .group-member-row .gm-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+        .group-member-row .gm-role { color: #ff7300; font-size: 11px; font-weight: 700; }
+
+        .stars { position: relative; display: inline-block; letter-spacing: 2px; font-size: 18px; line-height: 1; color: #444444; white-space: nowrap; }
+        .stars-fg { position: absolute; left: 0; top: 0; overflow: hidden; white-space: nowrap; color: #ffb020; }
+        .profile-rating { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: -8px 0 16px; }
+        .profile-rating-text { color: #bbbbbb; font-size: 13px; font-weight: 600; }
+        .profile-rate-box { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 4px; }
+        .profile-rate-label { color: #777777; font-size: 11px; }
+        .rate-input { display: inline-flex; gap: 2px; }
+        .rate-star { background: none; border: none; font-size: 24px; line-height: 1; color: #444444; cursor: pointer; padding: 0 1px; transition: color 0.15s, transform 0.1s; }
+        .rate-star.on { color: #ffb020; }
+        .rate-star:hover { transform: scale(1.15); }
+        .mm-card-meta { display: flex; align-items: center; gap: 8px; color: #999999; font-size: 12px; margin-top: 2px; }
+        .mm-card-meta .stars { font-size: 12px; letter-spacing: 1px; }
+
+        .profile-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+        .profile-tab {
+            background-color: #262626; border: 1px solid #383838; color: #888888; border-radius: 8px; padding: 8px 16px;
+            font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .profile-tab:hover { color: #ffffff; }
+        .profile-tab.active { background-color: rgba(255,115,0,0.15); border-color: #ff7300; color: #ff7300; }
+        .vouches-container { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+        .vouches-container.active { display: flex; }
+        .vouch-form { margin-bottom: 12px; }
+        .vouch-form .setting-textarea { min-height: 56px; }
+        .vouch-form-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+        .vouch-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+        .vouch-card { background-color: #1f1f1f; border: 1px solid #333333; border-radius: 10px; padding: 12px 14px; }
+        .vouch-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+        .vouch-author { color: #ffffff; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .vouch-time { color: #777777; font-size: 12px; }
+        .vouch-text { color: #cccccc; font-size: 13px; line-height: 1.45; word-break: break-word; white-space: pre-wrap; }
+        .vouch-del { background: none; border: none; color: #ff4d4d; font-size: 12px; cursor: pointer; margin-left: 10px; font-family: 'Inter', sans-serif; }
     </style>
 </head>
 <body>
@@ -2381,14 +2459,18 @@
             <button class="nav-marketplace" id="marketplace-nav-btn">Marketplace</button>
             <button class="nav-trading" id="trading-nav-btn">Trading</button>
             <button class="nav-middlemen" id="middlemen-nav-btn">Middlemen</button>
-            <button class="nav-middlemen" id="reports-nav-btn" style="display: none;">Reports</button>
-            <button class="nav-middlemen" id="appeals-nav-btn" style="display: none;">Appeals</button>
         </div>
         <div class="auth-buttons" id="auth-container">
             <a href="login.html" class="btn btn-login">Log in</a>
             <a href="login.html?mode=signup" class="btn btn-signup">Sign up</a>
         </div>
     </header>
+
+    <!-- Admin shortcuts (knqw), middle-left of the screen -->
+    <div class="side-admin-nav" id="side-admin-nav">
+        <button class="side-admin-btn" id="reports-nav-btn" style="display: none;">Reports</button>
+        <button class="side-admin-btn" id="appeals-nav-btn" style="display: none;">Appeals</button>
+    </div>
 
     <!-- Главная страница (Live Listings) -->
     <main id="main-content-area">
@@ -2535,7 +2617,7 @@
     <div class="messages-page" id="messages-page">
         <div class="messages-layout">
             <div class="chats-list-col">
-                <div class="chats-list-header">Messages</div>
+                <div class="chats-list-header"><span>Messages</span><button class="new-group-btn" id="new-group-btn" type="button">+ New group</button></div>
                 <div class="chats-items" id="chats-items-container">
                     <!-- Список чатов -->
                 </div>
@@ -2596,6 +2678,7 @@
                     <span class="presence-text" id="modal-presence-text"></span>
                 </div>
                 <div class="modal-userid" id="modal-userid-text">ID: 1</div>
+                <div class="profile-rating" id="profile-rating"></div>
                 
                 <div class="profile-left-buttons">
                     <button class="settings-btn" id="open-settings-btn">Edit Profile</button>
@@ -2604,12 +2687,23 @@
             </div>
 
             <div class="profile-right-col">
-                <div class="your-items-header">
+                <div class="profile-tabs" id="profile-tabs" style="display: none;">
+                    <button class="profile-tab active" id="profile-tab-items" type="button">Items</button>
+                    <button class="profile-tab" id="profile-tab-vouches" type="button">Vouches <span id="profile-vouch-count"></span></button>
+                </div>
+                <div class="your-items-header" id="your-items-header-row">
                     <span class="your-items-title" id="your-items-title-text">Your Items</span>
                     <button class="add-item-btn" id="open-select-game-btn">+ Add Item</button>
                 </div>
                 <div class="items-container" id="items-container-box">
                     <div class="no-items-text">You don't have any items listed at the moment</div>
+                </div>
+                <div class="vouches-container" id="vouches-container">
+                    <div class="vouch-form" id="vouch-form">
+                        <textarea class="setting-textarea" id="vouch-input" maxlength="300" placeholder="Write a vouch for this middleman..."></textarea>
+                        <div class="vouch-form-actions"><button class="ban-modal-btn primary" id="vouch-send-btn" type="button">Post vouch</button></div>
+                    </div>
+                    <div class="vouch-list" id="vouch-list"></div>
                 </div>
             </div>
         </div>
@@ -2857,19 +2951,8 @@
             <div class="settings-title">Create a Ticket</div>
 
             <div class="setting-group">
-                <label class="setting-label">Who are you trading with?</label>
-                <div class="search-field" id="ticket-search-field">
-                    <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                    <input type="text" id="ticket-user-search" placeholder="Search by name or @username..." autocomplete="off">
-                    <button type="button" class="search-clear" id="ticket-search-clear" title="Clear">&times;</button>
-                </div>
-                <div class="user-picker-list" id="ticket-user-list"></div>
-                <div class="user-picker-selected" id="ticket-user-selected">No user selected</div>
-            </div>
-
-            <div class="setting-group">
-                <label class="setting-label">Trade details</label>
-                <textarea class="setting-textarea" id="ticket-desc-input" placeholder="What items are involved in the trade?"></textarea>
+                <label class="setting-label">Description (optional)</label>
+                <textarea class="setting-textarea" id="ticket-desc-input" placeholder="What items are involved in the trade? (you can leave this empty)"></textarea>
             </div>
 
             <button class="save-settings-btn" id="submit-ticket-btn">Send Ticket</button>
@@ -3140,6 +3223,44 @@
                         updatedAt INTEGER,
                         reportedAt INTEGER,
                         chatSnapshot TEXT
+                    )
+                `);
+                try { await db.execute("ALTER TABLE deals ADD COLUMN reportedBy TEXT"); } catch (e) { /* уже есть */ }
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS chat_groups (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT,
+                        owner TEXT,
+                        members TEXT,
+                        createdAt INTEGER
+                    )
+                `);
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS group_messages (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        groupId INTEGER,
+                        sender TEXT,
+                        text TEXT,
+                        timestamp INTEGER
+                    )
+                `);
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS ratings (
+                        rater TEXT,
+                        target TEXT,
+                        stars INTEGER,
+                        createdAt INTEGER,
+                        PRIMARY KEY (rater, target)
+                    )
+                `);
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS vouches (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        middleman TEXT,
+                        author TEXT,
+                        text TEXT,
+                        createdAt INTEGER,
+                        UNIQUE (middleman, author)
                     )
                 `);
                 await purgeExpiredBans();
@@ -3620,6 +3741,7 @@
         let renderedChatUser = null;
         let chatSignature = '';
         let dealSignature = '';
+        let groupSignature = '';
         let chatPollTimer = null;
         let editingMessageTimestamp = null;
         let activeUserCard = null;
@@ -4073,6 +4195,15 @@
         adminAddBtn.addEventListener('click', () => adminAdjust(1));
         adminSubBtn.addEventListener('click', () => adminAdjust(-1));
 
+        async function openProfileByUsername(username) {
+            const u = await getUserByUsername(username);
+            if (!u) { showToast('Account not found.'); return; }
+            openProfileModal(u);
+        }
+        detailSellerBox.addEventListener('click', () => {
+            if (currentSellerUsername) openProfileByUsername(currentSellerUsername);
+        });
+
         function openItemDetailPage(item) {
             currentActiveItem = item;
             currentSellerUsername = item.sellerUsername;
@@ -4239,7 +4370,8 @@
                 const me = await getUserByUsername(currentUser);
                 if (!me) return;
                 const ds = await getDealSig(currentUser);
-                if (chatSig(me.messages || []) !== chatSignature || ds !== dealSignature) {
+                const gs = await getGroupSig();
+                if (chatSig(me.messages || []) !== chatSignature || ds !== dealSignature || gs !== groupSignature) {
                     renderChatsList(activeChatUsername);
                 }
             }, 3000);
@@ -4256,6 +4388,8 @@
             let myMessages = me.messages || [];
             chatSignature = chatSig(myMessages);
             dealSignature = await getDealSig(currentUser);
+            const myGroups = await getMyGroups();
+            groupSignature = await getGroupSig();
             setBal(document.getElementById('header-balance-amount'), me.balance);
 
             let lastTime = {};
@@ -4264,24 +4398,52 @@
                 if (!(other in lastTime) || m.timestamp > lastTime[other]) lastTime[other] = m.timestamp;
             });
 
-            if (selectUsername && selectUsername !== currentUser && !(selectUsername in lastTime)) {
+            if (selectUsername && !String(selectUsername).startsWith('g:') && selectUsername !== currentUser && !(selectUsername in lastTime)) {
                 lastTime[selectUsername] = Infinity;
             }
 
             let interlocutors = Object.keys(lastTime).sort((a, b) => lastTime[b] - lastTime[a]);
 
             chatsContainer.innerHTML = '';
-            if (interlocutors.length === 0) {
+            if (interlocutors.length === 0 && myGroups.length === 0) {
                 chatsContainer.innerHTML = '<div style="color: #777; font-size: 13px; text-align: center; padding: 20px;">No conversations yet.</div>';
                 chatWindowCol.innerHTML = '<div class="no-chat-selected">Select a chat to start messaging</div>';
                 renderedChatUser = null;
                 return;
             }
 
-            if (selectUsername && interlocutors.includes(selectUsername)) {
+            const groupKeys = myGroups.map(g => 'g:' + g.id);
+            const allKeys = [...groupKeys, ...interlocutors];
+            if (selectUsername && allKeys.includes(selectUsername)) {
                 activeChatUsername = selectUsername;
-            } else if (!activeChatUsername || !interlocutors.includes(activeChatUsername)) {
-                activeChatUsername = interlocutors[0];
+            } else if (!activeChatUsername || !allKeys.includes(activeChatUsername)) {
+                activeChatUsername = allKeys[0];
+            }
+
+            if (myGroups.length) {
+                const lbl = document.createElement('div');
+                lbl.className = 'chat-list-label';
+                lbl.textContent = 'Groups';
+                chatsContainer.appendChild(lbl);
+                myGroups.forEach(g => {
+                    const key = 'g:' + g.id;
+                    const gi = document.createElement('div');
+                    gi.className = `chat-item ${activeChatUsername === key ? 'active' : ''}`;
+                    const gcolor = getColorFromName('group-' + g.id + g.name);
+                    gi.innerHTML = `<div class="chat-item-avatar group-av" style="background-color: ${gcolor};">${escapeHtml((g.name.charAt(0) || 'G').toUpperCase())}</div><div class="chat-item-info"><div class="chat-item-name">${escapeHtml(g.name)}<span class="group-tag">GROUP</span></div><div class="chat-item-last">${g.members.length} members</div></div>`;
+                    gi.addEventListener('click', () => {
+                        activeChatUsername = key;
+                        pendingChatItem = null;
+                        renderChatsList(key);
+                    });
+                    chatsContainer.appendChild(gi);
+                });
+                if (interlocutors.length) {
+                    const lbl2 = document.createElement('div');
+                    lbl2.className = 'chat-list-label';
+                    lbl2.textContent = 'Direct messages';
+                    chatsContainer.appendChild(lbl2);
+                }
             }
 
             interlocutors.forEach(username => {
@@ -4313,7 +4475,11 @@
             });
 
             if (activeChatUsername) {
-                renderActiveChatWindow(activeChatUsername, allUsers);
+                if (String(activeChatUsername).startsWith('g:')) {
+                    renderGroupWindow(Number(String(activeChatUsername).slice(2)), allUsers);
+                } else {
+                    renderActiveChatWindow(activeChatUsername, allUsers);
+                }
             }
         }
 
@@ -4376,6 +4542,8 @@
 
             const scrollContainer = document.getElementById('chat-messages-scroll');
             scrollContainer.scrollTop = scrollContainer.scrollHeight;
+            const hdrName = chatWindowCol.querySelector('.chat-header-name');
+            if (hdrName) { hdrName.style.cursor = 'pointer'; hdrName.addEventListener('click', () => openProfileByUsername(targetUsername)); }
 
             const messageBubbles = scrollContainer.querySelectorAll('.message-bubble');
             messageBubbles.forEach(bubble => {
@@ -4578,7 +4746,8 @@
                 id: Number(r.id), buyer: r.buyer, seller: r.seller, itemName: r.itemName || '',
                 amount: Number(r.amount) || 0, sellerAmount: Number(r.sellerAmount) || 0, status: r.status,
                 createdAt: Number(r.createdAt) || 0, updatedAt: Number(r.updatedAt) || 0,
-                reportedAt: Number(r.reportedAt) || 0, chatSnapshot: r.chatSnapshot || null
+                reportedAt: Number(r.reportedAt) || 0, chatSnapshot: r.chatSnapshot || null, reportedBy: r.reportedBy || ''
+
             };
         }
         async function getDeal(id) {
@@ -4679,15 +4848,16 @@
 
         async function reportDeal(id) {
             const d = await getDeal(id);
-            if (!d || d.buyer !== currentUser) return false;
-            const buyerObj = await getUserByUsername(d.buyer);
-            const snap = ((buyerObj && buyerObj.messages) || [])
-                .filter(m => m.sender === d.seller || m.receiver === d.seller)
+            if (!d || (d.buyer !== currentUser && d.seller !== currentUser)) return false;
+            const other = d.buyer === currentUser ? d.seller : d.buyer;
+            const meObj = await getUserByUsername(currentUser);
+            const snap = ((meObj && meObj.messages) || [])
+                .filter(m => m.sender === other || m.receiver === other)
                 .map(m => ({ sender: m.sender, receiver: m.receiver, text: m.text, timestamp: m.timestamp }));
             const now = Date.now();
             const rs = await db.execute({
-                sql: "UPDATE deals SET status = 'reported', reportedAt = ?, updatedAt = ?, chatSnapshot = ? WHERE id = ? AND status = 'not_received' AND buyer = ?",
-                args: [now, now, JSON.stringify(snap), id, currentUser]
+                sql: "UPDATE deals SET status = 'reported', reportedAt = ?, updatedAt = ?, chatSnapshot = ?, reportedBy = ? WHERE id = ? AND status = 'not_received' AND (buyer = ? OR seller = ?)",
+                args: [now, now, JSON.stringify(snap), currentUser, id, currentUser, currentUser]
             });
             if (!rs.rowsAffected) showToast('This deal was already updated.');
             return rs.rowsAffected > 0;
@@ -4786,12 +4956,15 @@
                         text = 'You said you did not receive your items. The money stays on hold.';
                         actions = btn('report', 'Report', 'danger') + btn('yes', 'I received it');
                     } else {
-                        text = `${buyerN} says the items were not received. Your ${mine} stays on hold.`;
+                        text = `${buyerN} says the items were not received. Your ${mine} stays on hold. If you delivered and the buyer refuses to confirm, you can report them.`;
+                        actions = btn('report', 'Report buyer', 'danger');
                     }
                     break;
                 case 'reported':
                     cls = 'bad'; title = 'Reported';
-                    text = 'This deal was reported and is under review. The money stays on hold.';
+                    text = d.reportedBy
+                        ? (d.reportedBy === me ? 'You reported this deal. It is under review and the money stays on hold.' : `${escapeHtml(d.reportedBy)} reported this deal. It is under review and the money stays on hold.`)
+                        : 'This deal was reported and is under review. The money stays on hold.';
                     break;
                 case 'completed':
                     cls = 'done'; title = 'Deal completed';
@@ -4848,10 +5021,13 @@
                 if (!ok) return;
                 await setDealStatus(d.id, 'paid', 'not_received');
             } else if (act === 'report') {
-                if (d.buyer !== currentUser) return;
-                const ok = await askDealConfirm('Report this deal?',
-                    `The deal and your chat with ${d.seller} will be sent to support for review. The money stays on hold meanwhile.`,
-                    'Report', true);
+                if (d.buyer !== currentUser && d.seller !== currentUser) return;
+                const asSeller = d.seller === currentUser;
+                const ok = await askDealConfirm(asSeller ? 'Report the buyer?' : 'Report this deal?',
+                    asSeller
+                        ? `The deal and your chat with ${d.buyer} will be sent to support for review because the buyer has not confirmed delivery. The money stays on hold meanwhile.`
+                        : `The deal and your chat with ${d.seller} will be sent to support for review. The money stays on hold meanwhile.`,
+                    asSeller ? 'Report buyer' : 'Report', true);
                 if (!ok) return;
                 if (await reportDeal(d.id)) showToast('Deal reported. Support will review it.');
             } else if (act === 'cancel') {
@@ -4937,7 +5113,7 @@
                         <div class="mm-ticket-users">${escapeHtml(d.buyer)}<i>&rarr;</i>${escapeHtml(d.seller)}</div>
                         <div class="mm-ticket-time" title="${escapeHtml(getExactDate(d.reportedAt))}">Reported ${escapeHtml(getTimeAgo(d.reportedAt))}</div>
                     </div>
-                    <div class="mm-ticket-desc">Item: ${escapeHtml(d.itemName || '-')}\nPaid: ${fmtMoney(d.amount)} &middot; Seller's share on hold: ${fmtMoney(d.sellerAmount)}\nReported by: ${escapeHtml(d.buyer)} (buyer)</div>
+                    <div class="mm-ticket-desc">Item: ${escapeHtml(d.itemName || '-')}\nPaid: ${fmtMoney(d.amount)} &middot; Seller's share on hold: ${fmtMoney(d.sellerAmount)}\nReported by: ${escapeHtml(d.reportedBy || d.buyer)} (${(d.reportedBy || d.buyer) === d.seller ? 'seller' : 'buyer'})</div>
                     <div class="mm-ticket-actions"><button class="mm-ticket-btn primary" data-report-id="${d.id}" type="button">View chat</button></div>
                 </div>`).join('');
             list.querySelectorAll('[data-report-id]').forEach(b => {
@@ -4969,7 +5145,7 @@
             document.getElementById('report-chat-meta').innerHTML =
                 `<b>${escapeHtml(d.buyer)}</b> (buyer) &rarr; <b>${escapeHtml(d.seller)}</b> (seller)<br>` +
                 `Item: ${escapeHtml(d.itemName || '-')} &middot; Paid ${fmtMoney(d.amount)} &middot; On hold for seller ${fmtMoney(d.sellerAmount)}<br>` +
-                `Reported ${escapeHtml(getExactDate(d.reportedAt))}`;
+                `Reported ${escapeHtml(getExactDate(d.reportedAt))} by <b>${escapeHtml(d.reportedBy || d.buyer)}</b> (${(d.reportedBy || d.buyer) === d.seller ? 'seller' : 'buyer'})`;
 
             const box = document.getElementById('report-chat-scroll');
             box.innerHTML = msgs.length ? msgs.map(m => {
@@ -4999,14 +5175,9 @@
         const mmCountEl = document.getElementById('mm-count');
         const ticketDescInput = document.getElementById('ticket-desc-input');
         const submitTicketBtn = document.getElementById('submit-ticket-btn');
-        const ticketUserSearch = document.getElementById('ticket-user-search');
-        const ticketUserList = document.getElementById('ticket-user-list');
-        const ticketUserSelected = document.getElementById('ticket-user-selected');
         const ticketsPanel = document.getElementById('mm-tickets-panel');
         const ticketListEl = document.getElementById('mm-ticket-list');
         const ticketsCountEl = document.getElementById('mm-tickets-count');
-        let ticketCandidates = [];
-        let ticketPartner = '';
 
         async function switchToMiddlemen() {
             currentViewMode = 'middlemen';
@@ -5037,6 +5208,7 @@
         async function renderMiddlemenList() {
             const users = await getAllUsersFromDB();
             const mms = sortMiddlemen(users.filter(u => u.isMiddleman && !isBanned(u)));
+            const ratingMeta = await getRatingMeta();
 
             mmCountEl.textContent = mms.length ? `(${mms.length})` : '';
             middlemenListEl.innerHTML = '';
@@ -5059,6 +5231,17 @@
                     </div>
                     ${isMe ? '' : `<button class="mm-msg-btn" data-username="${escapeHtml(u.username)}">Message</button>`}
                 `;
+
+                const mmMeta = ratingMeta[u.username] || { avg: 0, count: 0, vouches: 0 };
+                const infoEl = card.querySelector('.mm-card-info');
+                const metaEl = document.createElement('div');
+                metaEl.className = 'mm-card-meta';
+                metaEl.innerHTML = `${starsHtml(mmMeta.avg)}<span>${mmMeta.avg.toFixed(1)} (${mmMeta.count})</span><span>&middot; ${mmMeta.vouches} vouch${mmMeta.vouches === 1 ? '' : 'es'}</span>`;
+                infoEl.appendChild(metaEl);
+                infoEl.style.cursor = 'pointer';
+                card.querySelector('.av-wrap').style.cursor = 'pointer';
+                infoEl.addEventListener('click', () => openProfileByUsername(u.username));
+                card.querySelector('.av-wrap').addEventListener('click', () => openProfileByUsername(u.username));
 
                 const msgBtn = card.querySelector('.mm-msg-btn');
                 if (msgBtn) {
@@ -5106,70 +5289,12 @@
             return u.displayName && u.displayName !== u.username ? u.displayName : '@' + u.username;
         }
 
-        function renderTicketUserList() {
-            const raw = ticketUserSearch.value;
-            document.getElementById('ticket-search-field').classList.toggle('has-value', raw.length > 0);
-            const terms = raw.toLowerCase().replace(/@/g, '').split(/\s+/).filter(Boolean);
-            const matches = ticketCandidates.filter(u => {
-                const hay = [u.username, u.displayName].join(' ').toLowerCase();
-                return terms.every(t => hay.includes(t));
-            });
-            ticketUserList.innerHTML = '';
-            if (!matches.length) {
-                ticketUserList.innerHTML = '<div class="user-picker-empty">No users found.</div>';
-            }
-            matches.forEach(u => {
-                const row = document.createElement('div');
-                row.className = 'user-picker-item' + (u.username === ticketPartner ? ' selected' : '');
-                row.dataset.username = u.username;
-                const hasDisplay = u.displayName && u.displayName !== u.username;
-                row.innerHTML = `
-                    <div class="user-picker-name">${escapeHtml(ticketUserName(u))}${hasDisplay ? `<small>@${escapeHtml(u.username)}</small>` : ''}</div>
-                    ${presenceLabel(u.username)}
-                `;
-                row.addEventListener('click', () => selectTicketPartner(u.username));
-                ticketUserList.appendChild(row);
-            });
-        }
-
-        function selectTicketPartner(username) {
-            ticketPartner = username;
-            ticketUserList.querySelectorAll('.user-picker-item').forEach(el => {
-                el.classList.toggle('selected', el.dataset.username === username);
-            });
-            const u = ticketCandidates.find(x => x.username === username);
-            ticketUserSelected.innerHTML = u ? `Trading with: <b>${escapeHtml(ticketUserName(u))}</b> (@${escapeHtml(u.username)})` : 'No user selected';
-        }
-
-        ticketUserSearch.addEventListener('input', renderTicketUserList);
-        ticketUserSearch.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                const first = ticketUserList.querySelector('.user-picker-item');
-                if (first) selectTicketPartner(first.dataset.username);
-            }
-        });
-        document.getElementById('ticket-search-clear').addEventListener('click', () => {
-            ticketUserSearch.value = '';
-            renderTicketUserList();
-            ticketUserSearch.focus();
-        });
-
         async function openTicketModal() {
             if (!currentUser) {
                 showToast('Please log in to create a ticket.');
                 return;
             }
-
-            const users = await getAllUsersFromDB();
-            ticketCandidates = users
-                .filter(u => u.username !== currentUser)
-                .sort((a, b) => ticketUserName(a).localeCompare(ticketUserName(b)));
-
-            ticketPartner = '';
-            ticketUserSearch.value = '';
-            ticketUserSelected.textContent = 'No user selected';
             ticketDescInput.value = '';
-            renderTicketUserList();
             ticketModal.classList.add('active');
         }
 
@@ -5181,21 +5306,13 @@
 
         submitTicketBtn.addEventListener('click', async () => {
             if (!currentUser) { showToast('Please log in to create a ticket.'); return; }
-            if (!ticketPartner || !ticketCandidates.some(u => u.username === ticketPartner)) {
-                showToast('Search and select who you are trading with.');
-                return;
-            }
             const desc = ticketDescInput.value.trim();
-            if (!desc) {
-                showToast('Please describe your trade.');
-                return;
-            }
 
             submitTicketBtn.disabled = true;
             try {
                 await db.execute({
                     sql: "INSERT INTO tickets (creator, partner, description, status, createdAt) VALUES (?, ?, ?, 'open', ?)",
-                    args: [currentUser, ticketPartner, desc.slice(0, 1000), Date.now()]
+                    args: [currentUser, '', desc.slice(0, 1000) || 'No description', Date.now()]
                 });
                 ticketModal.classList.remove('active');
                 showToast('Ticket created! A middleman will pick it up.');
@@ -5249,7 +5366,7 @@
                 card.className = 'mm-ticket' + (claimedByMe ? ' claimed' : '');
                 card.innerHTML = `
                     <div class="mm-ticket-top">
-                        <div class="mm-ticket-users">${escapeHtml(nameOf(t.creator))}<i>&harr;</i>${escapeHtml(nameOf(t.partner))}</div>
+                        <div class="mm-ticket-users">${escapeHtml(nameOf(t.creator))}${t.partner ? `<i>&harr;</i>${escapeHtml(nameOf(t.partner))}` : ''}</div>
                         <div class="mm-ticket-time">${escapeHtml(getTimeAgo(Number(t.createdAt)))}</div>
                     </div>
                     <div class="mm-ticket-desc">${escapeHtml(t.description)}</div>
@@ -5257,7 +5374,7 @@
                         ${claimedByMe
                             ? `<span class="mm-ticket-status">Claimed by you</span>
                                <button class="mm-ticket-btn" data-act="msg" data-user="${escapeHtml(t.creator)}">Message ${escapeHtml(nameOf(t.creator))}</button>
-                               <button class="mm-ticket-btn" data-act="msg" data-user="${escapeHtml(t.partner)}">Message ${escapeHtml(nameOf(t.partner))}</button>
+                               ${t.partner ? `<button class="mm-ticket-btn" data-act="msg" data-user="${escapeHtml(t.partner)}">Message ${escapeHtml(nameOf(t.partner))}</button>` : ''}
                                <button class="mm-ticket-btn danger" data-act="close">Close</button>`
                             : (involved
                                 ? '<span class="mm-ticket-time">Your own ticket</span>'
@@ -5285,7 +5402,7 @@
             if (!me || !me.isMiddleman) { showToast('Only middlemen can claim tickets.'); return; }
             try {
                 const rs = await db.execute({
-                    sql: "UPDATE tickets SET status = 'claimed', claimedBy = ? WHERE id = ? AND status = 'open' AND creator != ? AND partner != ?",
+                    sql: "UPDATE tickets SET status = 'claimed', claimedBy = ? WHERE id = ? AND status = 'open' AND creator != ? AND COALESCE(partner, '') != ?",
                     args: [currentUser, id, currentUser, currentUser]
                 });
                 if (!rs.rowsAffected) {
@@ -5414,6 +5531,15 @@
             applyPresenceToDom();
             yourItemsTitleText.textContent = `${userObj.displayName || userObj.username}'s Items`;
 
+            profileViewUser = userObj;
+            const isSelfView = !!currentUser && userObj.username === currentUser;
+            openSettingsBtn.style.display = isSelfView ? '' : 'none';
+            openSelectGameBtn.style.display = isSelfView ? '' : 'none';
+            document.getElementById('profile-tabs').style.display = userObj.isMiddleman ? 'flex' : 'none';
+            setProfileTab('items');
+            renderProfileRating(userObj);
+            if (userObj.isMiddleman) refreshVouchCount(userObj.username);
+
             if (userObj.username === currentUser && displayId === 'knqw') {
                 openDbBtn.style.display = 'block';
             } else {
@@ -5429,7 +5555,10 @@
             const items = userObj.items || [];
 
             if (items.length === 0) {
-                itemsContainerBox.innerHTML = '<div class="no-items-text">You don\'t have any items listed at the moment</div>';
+                const own = !!currentUser && userObj.username === currentUser;
+                itemsContainerBox.innerHTML = own
+                    ? '<div class="no-items-text">You don\'t have any items listed at the moment</div>'
+                    : '<div class="no-items-text">No items listed at the moment</div>';
                 return;
             }
 
@@ -6271,6 +6400,449 @@
         setInterval(() => {
             if (appealsPage.classList.contains('active') && !document.hidden) renderAppeals();
         }, 8000);
+
+        // ===== Ratings & vouches =====
+        let profileViewUser = null;
+
+        function starsHtml(avg) {
+            const pct = Math.max(0, Math.min(100, (Number(avg) || 0) / 5 * 100));
+            return `<span class="stars">★★★★★<span class="stars-fg" style="width:${pct}%">★★★★★</span></span>`;
+        }
+
+        async function getRatingMeta() {
+            const meta = {};
+            try {
+                const r = await db.execute("SELECT target, AVG(stars) AS a, COUNT(*) AS c FROM ratings GROUP BY target");
+                r.rows.forEach(x => { meta[x.target] = { avg: Number(x.a) || 0, count: Number(x.c) || 0, vouches: 0 }; });
+                const v = await db.execute("SELECT middleman, COUNT(*) AS c FROM vouches GROUP BY middleman");
+                v.rows.forEach(x => {
+                    if (!meta[x.middleman]) meta[x.middleman] = { avg: 0, count: 0, vouches: 0 };
+                    meta[x.middleman].vouches = Number(x.c) || 0;
+                });
+            } catch (e) { console.error(e); }
+            return meta;
+        }
+
+        async function getRatingSummary(username) {
+            const out = { avg: 0, count: 0, mine: 0 };
+            try {
+                const r = await db.execute({ sql: "SELECT AVG(stars) AS a, COUNT(*) AS c FROM ratings WHERE target = ?", args: [username] });
+                out.avg = Number(r.rows[0].a) || 0;
+                out.count = Number(r.rows[0].c) || 0;
+                if (currentUser) {
+                    const m = await db.execute({ sql: "SELECT stars FROM ratings WHERE target = ? AND rater = ?", args: [username, currentUser] });
+                    if (m.rows.length) out.mine = Number(m.rows[0].stars) || 0;
+                }
+            } catch (e) { console.error(e); }
+            return out;
+        }
+
+        async function renderProfileRating(userObj) {
+            const box = document.getElementById('profile-rating');
+            const canRate = !!currentUser && userObj.username !== currentUser;
+            box.innerHTML = `${starsHtml(0)}<div class="profile-rating-text">0.0 (0 ratings)</div>`;
+            const s = await getRatingSummary(userObj.username);
+            if (!profileViewUser || profileViewUser.username !== userObj.username) return;
+
+            let html = `${starsHtml(s.avg)}<div class="profile-rating-text">${s.avg.toFixed(1)} (${s.count} rating${s.count === 1 ? '' : 's'})</div>`;
+            if (canRate) {
+                html += `<div class="profile-rate-box"><span class="profile-rate-label">${s.mine ? 'Your rating' : 'Rate this user'}</span><div class="rate-input">` +
+                    [1, 2, 3, 4, 5].map(n => `<button type="button" class="rate-star ${n <= s.mine ? 'on' : ''}" data-stars="${n}" title="${n} star${n === 1 ? '' : 's'}">★</button>`).join('') +
+                    `</div></div>`;
+            }
+            box.innerHTML = html;
+            box.querySelectorAll('.rate-star').forEach(b => {
+                b.addEventListener('mouseenter', () => {
+                    const n = Number(b.dataset.stars);
+                    box.querySelectorAll('.rate-star').forEach(x => x.classList.toggle('on', Number(x.dataset.stars) <= n));
+                });
+                b.addEventListener('click', async () => {
+                    const n = Number(b.dataset.stars);
+                    try {
+                        await db.execute({
+                            sql: "INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(rater, target) DO UPDATE SET stars = excluded.stars, createdAt = excluded.createdAt",
+                            args: [currentUser, userObj.username, n, Date.now()]
+                        });
+                        showToast(`You rated ${userObj.displayName || userObj.username} ${n} star${n === 1 ? '' : 's'}`);
+                    } catch (e) { showToast('Could not save your rating.'); }
+                    renderProfileRating(userObj);
+                });
+            });
+            box.querySelector('.rate-input')?.addEventListener('mouseleave', () => {
+                box.querySelectorAll('.rate-star').forEach(x => x.classList.toggle('on', Number(x.dataset.stars) <= s.mine));
+            });
+        }
+
+        function setProfileTab(tab) {
+            const vouches = tab === 'vouches';
+            document.getElementById('profile-tab-items').classList.toggle('active', !vouches);
+            document.getElementById('profile-tab-vouches').classList.toggle('active', vouches);
+            document.getElementById('your-items-header-row').style.display = vouches ? 'none' : '';
+            itemsContainerBox.style.display = vouches ? 'none' : '';
+            document.getElementById('vouches-container').classList.toggle('active', vouches);
+            if (vouches && profileViewUser) renderVouches(profileViewUser);
+        }
+        document.getElementById('profile-tab-items').addEventListener('click', () => setProfileTab('items'));
+        document.getElementById('profile-tab-vouches').addEventListener('click', () => setProfileTab('vouches'));
+
+        async function refreshVouchCount(username) {
+            try {
+                const r = await db.execute({ sql: "SELECT COUNT(*) AS c FROM vouches WHERE middleman = ?", args: [username] });
+                const c = Number(r.rows[0].c) || 0;
+                document.getElementById('profile-vouch-count').textContent = `(${c})`;
+            } catch (e) { /* не критично */ }
+        }
+
+        async function renderVouches(userObj) {
+            const list = document.getElementById('vouch-list');
+            const form = document.getElementById('vouch-form');
+            const canVouch = !!currentUser && userObj.username !== currentUser;
+            form.style.display = canVouch ? '' : 'none';
+            let rows = [];
+            try {
+                const rs = await db.execute({ sql: "SELECT id, author, text, createdAt FROM vouches WHERE middleman = ? ORDER BY createdAt DESC", args: [userObj.username] });
+                rows = rs.rows;
+            } catch (e) { console.error(e); }
+            const admin = await isKnqw();
+            document.getElementById('profile-vouch-count').textContent = `(${rows.length})`;
+            if (canVouch) {
+                const mine = rows.find(r => r.author === currentUser);
+                document.getElementById('vouch-input').value = mine ? mine.text : '';
+                document.getElementById('vouch-send-btn').textContent = mine ? 'Update vouch' : 'Post vouch';
+            }
+            if (!rows.length) { list.innerHTML = '<div class="reports-empty">No vouches yet.</div>'; return; }
+            list.innerHTML = rows.map(r => `
+                <div class="vouch-card">
+                    <div class="vouch-top">
+                        <span class="vouch-author" data-author="${escapeHtml(r.author)}">${escapeHtml(r.author)}</span>
+                        <span class="vouch-time" title="${escapeHtml(getExactDate(Number(r.createdAt)))}">${escapeHtml(getTimeAgo(Number(r.createdAt)))}${(admin || r.author === currentUser) ? `<button class="vouch-del" data-vid="${Number(r.id)}" type="button">Delete</button>` : ''}</span>
+                    </div>
+                    <div class="vouch-text">${escapeHtml(r.text)}</div>
+                </div>`).join('');
+            list.querySelectorAll('.vouch-author').forEach(el => el.addEventListener('click', () => openProfileByUsername(el.dataset.author)));
+            list.querySelectorAll('.vouch-del').forEach(b => b.addEventListener('click', async () => {
+                await db.execute({
+                    sql: "DELETE FROM vouches WHERE id = ? AND (author = ? OR ?)",
+                    args: [Number(b.dataset.vid), currentUser, admin ? 1 : 0]
+                });
+                renderVouches(userObj);
+            }));
+        }
+
+        document.getElementById('vouch-send-btn').addEventListener('click', async () => {
+            if (!currentUser) { showToast('Please log in to vouch.'); return; }
+            const mm = profileViewUser;
+            if (!mm || !mm.isMiddleman || mm.username === currentUser) return;
+            const text = document.getElementById('vouch-input').value.trim();
+            if (text.length < 3) { showToast('Write at least 3 characters.'); return; }
+            try {
+                await db.execute({
+                    sql: "INSERT INTO vouches (middleman, author, text, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(middleman, author) DO UPDATE SET text = excluded.text, createdAt = excluded.createdAt",
+                    args: [mm.username, currentUser, text.slice(0, 300), Date.now()]
+                });
+                showToast('Vouch saved');
+            } catch (e) { showToast('Could not save your vouch.'); }
+            renderVouches(mm);
+        });
+
+        // ===== Groups =====
+        // Who can I add? People I have chats with + the middleman who accepted one of my tickets.
+        async function getGroupCandidates() {
+            const me = await getUserByUsername(currentUser);
+            if (!me) return [];
+            const tags = {};
+            (me.messages || []).forEach(m => {
+                const other = m.sender === currentUser ? m.receiver : m.sender;
+                if (other && other !== currentUser) tags[other] = 'chat';
+            });
+            try {
+                const rs = await db.execute({
+                    sql: "SELECT DISTINCT claimedBy FROM tickets WHERE (creator = ? OR partner = ?) AND claimedBy IS NOT NULL AND claimedBy != '' AND status IN ('claimed', 'closed')",
+                    args: [currentUser, currentUser]
+                });
+                rs.rows.forEach(r => { if (r.claimedBy && r.claimedBy !== currentUser) tags[r.claimedBy] = 'middleman'; });
+            } catch (e) { console.error(e); }
+            const users = await getAllUsersFromDB();
+            return Object.keys(tags)
+                .map(name => ({ user: users.find(u => u.username === name), tag: tags[name] }))
+                .filter(x => x.user && !isBanned(x.user))
+                .map(x => ({ ...x.user, groupTag: x.tag }))
+                .sort((a, b) => (a.displayName || a.username).localeCompare(b.displayName || b.username));
+        }
+
+        function mapGroup(r) {
+            let members = [];
+            try { members = JSON.parse(r.members || '[]'); } catch (e) {}
+            return { id: Number(r.id), name: r.name || 'Group', owner: r.owner, members, createdAt: Number(r.createdAt) || 0 };
+        }
+        async function getGroup(id) {
+            const rs = await db.execute({ sql: "SELECT * FROM chat_groups WHERE id = ?", args: [id] });
+            return rs.rows.length ? mapGroup(rs.rows[0]) : null;
+        }
+        async function getMyGroups() {
+            if (!currentUser) return [];
+            try {
+                const rs = await db.execute({ sql: "SELECT * FROM chat_groups WHERE members LIKE ?", args: [`%"${currentUser.replace(/[%_"\\]/g, '')}"%`] });
+                const groups = rs.rows.map(mapGroup).filter(g => g.members.includes(currentUser));
+                if (!groups.length) return [];
+                const marks = groups.map(() => '?').join(',');
+                const last = await db.execute({
+                    sql: `SELECT groupId, MAX(timestamp) AS t FROM group_messages WHERE groupId IN (${marks}) GROUP BY groupId`,
+                    args: groups.map(g => g.id)
+                });
+                const lt = {};
+                last.rows.forEach(r => { lt[Number(r.groupId)] = Number(r.t) || 0; });
+                groups.forEach(g => { g.lastTime = lt[g.id] || g.createdAt; });
+                return groups.sort((a, b) => b.lastTime - a.lastTime);
+            } catch (e) { console.error(e); return []; }
+        }
+        async function getGroupSig() {
+            if (!currentUser) return '';
+            try {
+                const groups = await getMyGroups();
+                if (!groups.length) return '';
+                const marks = groups.map(() => '?').join(',');
+                const rs = await db.execute({
+                    sql: `SELECT COUNT(*) AS c, COALESCE(MAX(timestamp), 0) AS t FROM group_messages WHERE groupId IN (${marks})`,
+                    args: groups.map(g => g.id)
+                });
+                return groups.map(g => g.id + ':' + g.members.length + ':' + g.name).join(',') + '|' + Number(rs.rows[0].c) + ':' + Number(rs.rows[0].t);
+            } catch (e) { return ''; }
+        }
+        async function getGroupMessages(id) {
+            const rs = await db.execute({ sql: "SELECT sender, text, timestamp FROM group_messages WHERE groupId = ? ORDER BY timestamp ASC, id ASC LIMIT 500", args: [id] });
+            return rs.rows.map(r => ({ sender: r.sender, text: r.text, timestamp: Number(r.timestamp) }));
+        }
+
+        // ---- create group modal ----
+        const groupModalEl = document.createElement('div');
+        groupModalEl.className = 'modal-overlay';
+        groupModalEl.id = 'group-modal';
+        groupModalEl.style.zIndex = '260';
+        groupModalEl.innerHTML = `
+            <div class="modal-content group-modal-content">
+                <button class="close-modal" id="group-modal-close">&times;</button>
+                <div class="confirm-title" id="group-modal-title">New group</div>
+                <div id="group-modal-body"></div>
+            </div>`;
+        document.body.appendChild(groupModalEl);
+        groupModalEl.addEventListener('click', (e) => { if (e.target === groupModalEl) groupModalEl.classList.remove('active'); });
+        document.getElementById('group-modal-close').addEventListener('click', () => groupModalEl.classList.remove('active'));
+
+        function pickRowsHtml(cands) {
+            if (!cands.length) return '<div class="group-pick-empty">Nobody to add yet. You can add people you have chats with, or the middleman who accepted your ticket.</div>';
+            return cands.map(u => `
+                <label class="group-pick-row">
+                    <input type="checkbox" value="${escapeHtml(u.username)}">
+                    <span>${escapeHtml(u.displayName || u.username)} <span style="color:#777;">@${escapeHtml(u.username)}</span></span>
+                    <small>${u.groupTag === 'middleman' ? 'Your middleman' : 'Chat'}</small>
+                </label>`).join('');
+        }
+
+        async function openCreateGroupModal() {
+            if (!currentUser) { showToast('Please log in first.'); return; }
+            const cands = await getGroupCandidates();
+            document.getElementById('group-modal-title').textContent = 'New group';
+            const body = document.getElementById('group-modal-body');
+            body.innerHTML = `
+                <div class="setting-group">
+                    <label class="setting-label">Group name</label>
+                    <input type="text" class="setting-input" id="group-name-input" maxlength="40" placeholder="e.g. MM2 traders">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">Add people</label>
+                    <div class="group-pick-list" id="group-pick-list">${pickRowsHtml(cands)}</div>
+                    <div class="setting-hint">Only people you have chats with, or the middleman who accepted your ticket.</div>
+                </div>
+                <div class="ban-modal-actions">
+                    <button class="ban-modal-btn" id="group-cancel-btn" type="button">Cancel</button>
+                    <button class="ban-modal-btn primary" id="group-create-btn" type="button">Create group</button>
+                </div>`;
+            document.getElementById('group-cancel-btn').onclick = () => groupModalEl.classList.remove('active');
+            document.getElementById('group-create-btn').onclick = async (e) => {
+                const name = document.getElementById('group-name-input').value.trim();
+                const picked = [...document.querySelectorAll('#group-pick-list input:checked')].map(i => i.value);
+                if (!name) { showToast('Enter a group name.'); return; }
+                if (!picked.length) { showToast('Pick at least one person.'); return; }
+                const fresh = await getGroupCandidates();
+                const allowed = new Set(fresh.map(u => u.username));
+                if (picked.some(p => !allowed.has(p))) { showToast('You can only add people you have chats with.'); return; }
+                e.currentTarget.disabled = true;
+                try {
+                    const rs = await db.execute({
+                        sql: "INSERT INTO chat_groups (name, owner, members, createdAt) VALUES (?, ?, ?, ?)",
+                        args: [name, currentUser, JSON.stringify([currentUser, ...picked]), Date.now()]
+                    });
+                    groupModalEl.classList.remove('active');
+                    showToast('Group created');
+                    await renderChatsList('g:' + Number(rs.lastInsertRowid));
+                } catch (err) {
+                    console.error(err);
+                    showToast('Could not create the group.');
+                    e.currentTarget.disabled = false;
+                }
+            };
+            groupModalEl.classList.add('active');
+        }
+        document.getElementById('new-group-btn').addEventListener('click', openCreateGroupModal);
+
+        // ---- members modal ----
+        async function openGroupMembersModal(groupId) {
+            const g = await getGroup(groupId);
+            if (!g || !g.members.includes(currentUser)) { showToast('Group not found.'); return; }
+            const isOwner = g.owner === currentUser;
+            const users = await getAllUsersFromDB();
+            document.getElementById('group-modal-title').textContent = g.name;
+            const body = document.getElementById('group-modal-body');
+
+            let addHtml = '';
+            if (isOwner) {
+                const cands = (await getGroupCandidates()).filter(u => !g.members.includes(u.username));
+                addHtml = `
+                    <div class="setting-group" style="margin-top:16px;">
+                        <label class="setting-label">Add people</label>
+                        <div class="group-pick-list" id="group-pick-list">${pickRowsHtml(cands)}</div>
+                        <div class="setting-hint">Only people you have chats with, or the middleman who accepted your ticket.</div>
+                        ${cands.length ? '<div class="ban-modal-actions"><button class="ban-modal-btn primary" id="group-add-btn" type="button">Add selected</button></div>' : ''}
+                    </div>`;
+            }
+            body.innerHTML = `
+                <div class="setting-label" style="margin-bottom:6px;">Members (${g.members.length})</div>
+                <div>${g.members.map(m => {
+                    const u = users.find(x => x.username === m);
+                    return `<div class="group-member-row">
+                        <span class="gm-name" data-user="${escapeHtml(m)}">${escapeHtml((u && u.displayName) || m)} <span style="color:#777;">@${escapeHtml(m)}</span></span>
+                        ${m === g.owner ? '<span class="gm-role">OWNER</span>' : ''}
+                        ${isOwner && m !== g.owner ? `<button class="mm-ticket-btn danger" data-remove="${escapeHtml(m)}" type="button">Remove</button>` : ''}
+                    </div>`;
+                }).join('')}</div>
+                ${addHtml}
+                <div class="ban-modal-actions">
+                    ${isOwner
+                        ? '<button class="ban-modal-btn danger" id="group-delete-btn" type="button">Delete group</button>'
+                        : '<button class="ban-modal-btn danger" id="group-leave-btn" type="button">Leave group</button>'}
+                </div>`;
+
+            body.querySelectorAll('.gm-name').forEach(el => el.addEventListener('click', () => {
+                groupModalEl.classList.remove('active');
+                openProfileByUsername(el.dataset.user);
+            }));
+            const writeMembers = async (members) => {
+                await db.execute({ sql: "UPDATE chat_groups SET members = ? WHERE id = ?", args: [JSON.stringify(members), g.id] });
+            };
+            body.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', async () => {
+                const fresh = await getGroup(g.id);
+                if (!fresh || fresh.owner !== currentUser) return;
+                await writeMembers(fresh.members.filter(m => m !== b.dataset.remove));
+                showToast(`${b.dataset.remove} was removed`);
+                openGroupMembersModal(g.id);
+                renderChatsList('g:' + g.id);
+            }));
+            const addBtn = document.getElementById('group-add-btn');
+            if (addBtn) addBtn.onclick = async () => {
+                const picked = [...document.querySelectorAll('#group-pick-list input:checked')].map(i => i.value);
+                if (!picked.length) { showToast('Pick at least one person.'); return; }
+                const allowed = new Set((await getGroupCandidates()).map(u => u.username));
+                if (picked.some(p => !allowed.has(p))) { showToast('You can only add people you have chats with.'); return; }
+                const fresh = await getGroup(g.id);
+                if (!fresh || fresh.owner !== currentUser) return;
+                await writeMembers([...new Set([...fresh.members, ...picked])]);
+                showToast('Members added');
+                openGroupMembersModal(g.id);
+                renderChatsList('g:' + g.id);
+            };
+            const leaveBtn = document.getElementById('group-leave-btn');
+            if (leaveBtn) leaveBtn.onclick = async () => {
+                const fresh = await getGroup(g.id);
+                if (fresh) await writeMembers(fresh.members.filter(m => m !== currentUser));
+                groupModalEl.classList.remove('active');
+                activeChatUsername = null; renderedChatUser = null;
+                showToast('You left the group');
+                renderChatsList();
+            };
+            const delBtn = document.getElementById('group-delete-btn');
+            if (delBtn) delBtn.onclick = async () => {
+                const ok = await askDealConfirm('Delete group?', `"${g.name}" and all of its messages will be deleted for everyone.`, 'Delete group', true);
+                if (!ok) return;
+                await db.execute({ sql: "DELETE FROM group_messages WHERE groupId = ?", args: [g.id] });
+                await db.execute({ sql: "DELETE FROM chat_groups WHERE id = ? AND owner = ?", args: [g.id, currentUser] });
+                groupModalEl.classList.remove('active');
+                activeChatUsername = null; renderedChatUser = null;
+                showToast('Group deleted');
+                renderChatsList();
+            };
+            groupModalEl.classList.add('active');
+        }
+
+        // ---- group chat window ----
+        async function renderGroupWindow(groupId, allUsers) {
+            const chatWindowCol = document.getElementById('chat-window-col');
+            const g = await getGroup(groupId);
+            if (!g || !g.members.includes(currentUser)) {
+                activeChatUsername = null; renderedChatUser = null;
+                chatWindowCol.innerHTML = '<div class="no-chat-selected">Select a chat to start messaging</div>';
+                return;
+            }
+            const key = 'g:' + g.id;
+            const prevInput = document.getElementById('chat-message-input');
+            const sameChat = renderedChatUser === key;
+            const keepDraft = (sameChat && prevInput) ? prevInput.value : '';
+            const hadFocus = sameChat && prevInput && document.activeElement === prevInput;
+            const prevScroll = document.getElementById('chat-messages-scroll');
+            const stick = !sameChat || !prevScroll || (prevScroll.scrollHeight - prevScroll.scrollTop - prevScroll.clientHeight < 60);
+            renderedChatUser = key;
+
+            const msgs = await getGroupMessages(g.id);
+            const nameOf = (uname) => { const u = allUsers.find(x => x.username === uname); return (u && u.displayName) || uname; };
+            const color = getColorFromName('group-' + g.id + g.name);
+
+            const bubbles = msgs.map(m => `
+                <div class="message-bubble ${m.sender === currentUser ? 'outgoing' : 'incoming'}" title="${escapeHtml(getExactDate(m.timestamp))}">
+                    <div class="grp-sender" data-user="${escapeHtml(m.sender)}">${escapeHtml(nameOf(m.sender))}</div>
+                    <span class="msg-text-content">${escapeHtml(m.text)}</span><span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))}</span>
+                </div>`).join('');
+
+            chatWindowCol.innerHTML = `
+                <div class="chat-header-row">
+                    <div class="chat-header-avatar group-av" style="background-color: ${color};">${escapeHtml((g.name.charAt(0) || 'G').toUpperCase())}</div>
+                    <div class="chat-header-meta">
+                        <div class="chat-header-name">${escapeHtml(g.name)}<span class="group-tag">GROUP</span></div>
+                        <div class="presence-text">${g.members.length} members</div>
+                    </div>
+                    <button class="chat-header-members-btn" id="group-members-btn" type="button">Members</button>
+                </div>
+                <div class="chat-messages-container" id="chat-messages-scroll">
+                    ${msgs.length ? bubbles : '<div class="no-chat-selected">No messages yet. Say hi to the group!</div>'}
+                </div>
+                <div class="chat-input-row">
+                    <textarea class="chat-input" id="chat-message-input" placeholder="Message the group...">${escapeHtml(keepDraft)}</textarea>
+                    <button class="chat-send-btn" id="chat-send-btn">Send</button>
+                </div>`;
+
+            const scroll = document.getElementById('chat-messages-scroll');
+            if (stick) scroll.scrollTop = scroll.scrollHeight; else scroll.scrollTop = prevScroll.scrollTop;
+            scroll.querySelectorAll('.grp-sender').forEach(el => el.addEventListener('click', () => openProfileByUsername(el.dataset.user)));
+            document.getElementById('group-members-btn').addEventListener('click', () => openGroupMembersModal(g.id));
+
+            const input = document.getElementById('chat-message-input');
+            if (hadFocus) { input.focus(); input.selectionStart = input.selectionEnd = input.value.length; }
+            const send = async () => {
+                const text = input.value.trim();
+                if (!text) return;
+                const fresh = await getGroup(g.id);
+                if (!fresh || !fresh.members.includes(currentUser)) { showToast('You are no longer in this group.'); renderChatsList(); return; }
+                input.value = '';
+                await db.execute({
+                    sql: "INSERT INTO group_messages (groupId, sender, text, timestamp) VALUES (?, ?, ?, ?)",
+                    args: [g.id, currentUser, text.slice(0, 2000), Date.now()]
+                });
+                await renderChatsList(key);
+            };
+            document.getElementById('chat-send-btn').addEventListener('click', send);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+            });
+        }
     </script>
 </body>
 </html>
