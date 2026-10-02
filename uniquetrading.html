@@ -2294,6 +2294,79 @@
         .rp-sender { font-size: 11px; opacity: 0.75; margin-bottom: 4px; }
         .rp-note { font-size: 11px; color: #ffd0d0; margin-top: 6px; }
         .reports-empty { color: #777; font-size: 14px; text-align: center; padding: 24px; }
+    
+        /* ===== Bans, appeals, stock, DB filters ===== */
+        .db-modal-content { width: 92vw; max-width: 1180px; }
+        .db-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -6px 0 16px; }
+        .db-filters-label { color: #888888; font-size: 13px; margin-right: 4px; }
+        .db-filter-chip {
+            background-color: #262626; border: 1px solid #3d3d3d; color: #888888; border-radius: 20px;
+            padding: 6px 14px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .db-filter-chip:hover { color: #ffffff; border-color: #666666; }
+        .db-filter-chip.active { background-color: rgba(255,115,0,0.15); border-color: #ff7300; color: #ff7300; }
+        .db-actions { display: flex; gap: 6px; align-items: center; }
+        .ban-user-btn, .unban-user-btn {
+            border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 13px; font-weight: 500;
+            transition: background-color 0.2s; white-space: nowrap; font-family: 'Inter', sans-serif;
+        }
+        .ban-user-btn { background-color: rgba(255,176,32,0.15); color: #ffb020; }
+        .ban-user-btn:hover { background-color: rgba(255,176,32,0.3); }
+        .ban-user-btn.disabled { background-color: #2a2a2a; color: #555555; cursor: not-allowed; pointer-events: none; }
+        .unban-user-btn { background-color: rgba(61,220,132,0.15); color: #3ddc84; }
+        .unban-user-btn:hover { background-color: rgba(61,220,132,0.3); }
+        .status-pill { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+        .status-pill.ok { background-color: rgba(61,220,132,0.15); color: #3ddc84; }
+        .status-pill.banned { background-color: rgba(255,77,77,0.15); color: #ff4d4d; }
+        .status-sub { color: #777777; font-size: 11px; margin-top: 4px; white-space: nowrap; }
+
+        .ban-modal-content { width: 440px; max-width: 92vw; text-align: left; }
+        .ban-modal-row { display: flex; gap: 10px; }
+        .ban-modal-row .setting-input, .ban-modal-row .setting-select { flex: 1; }
+        .ban-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+        .ban-modal-btn {
+            border: 1px solid #3d3d3d; background-color: #2a2a2a; color: #dddddd; border-radius: 8px;
+            padding: 10px 18px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .ban-modal-btn:hover { opacity: 0.85; }
+        .ban-modal-btn.danger { background-color: #ff4d4d; border-color: #ff4d4d; color: #ffffff; }
+        .ban-modal-btn.primary { background-color: #ff7300; border-color: #ff7300; color: #ffffff; }
+        .ban-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .ban-screen {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; background-color: #141414;
+            display: none; align-items: flex-start; justify-content: center; padding: 60px 20px; overflow-y: auto; box-sizing: border-box;
+        }
+        .ban-screen.active { display: flex; }
+        .ban-card { width: 520px; max-width: 100%; background-color: #1f1f1f; border: 1px solid #333333; border-radius: 16px; padding: 32px; color: #ffffff; box-sizing: border-box; }
+        .ban-icon {
+            width: 52px; height: 52px; border-radius: 50%; background-color: rgba(255,77,77,0.15); color: #ff4d4d;
+            display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 700; margin-bottom: 16px;
+        }
+        .ban-title { font-size: 22px; font-weight: 700; margin-bottom: 18px; }
+        .ban-row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-top: 1px solid #303030; font-size: 14px; }
+        .ban-row span:first-child { color: #888888; flex-shrink: 0; }
+        .ban-row span:last-child { color: #ffffff; text-align: right; word-break: break-word; }
+        .ban-delete-warning {
+            background-color: rgba(255,77,77,0.1); border: 1px solid rgba(255,77,77,0.35); color: #ff8a8a;
+            border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.5; margin-top: 14px;
+        }
+        .ban-appeal-area { margin-top: 20px; }
+        .ban-appeal-note { background-color: #262626; border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #bbbbbb; white-space: pre-wrap; word-break: break-word; margin-top: 8px; line-height: 1.5; }
+        .ban-appeal-status { font-size: 14px; font-weight: 600; }
+        .ban-appeal-status.pending { color: #ffb020; }
+        .ban-appeal-status.denied { color: #ff4d4d; }
+        .ban-footer { margin-top: 22px; display: flex; justify-content: flex-end; }
+
+        .mm-ticket-desc.appeal-desc { max-height: 240px; }
+        .appeal-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; margin-left: 8px; vertical-align: middle; }
+        .appeal-badge.pending { background-color: rgba(255,176,32,0.15); color: #ffb020; }
+        .appeal-badge.denied { background-color: rgba(255,77,77,0.15); color: #ff4d4d; }
+
+        .detail-stock { color: #cccccc; font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+        .detail-stock.out { color: #ff4d4d; }
     </style>
 </head>
 <body>
@@ -2309,6 +2382,7 @@
             <button class="nav-trading" id="trading-nav-btn">Trading</button>
             <button class="nav-middlemen" id="middlemen-nav-btn">Middlemen</button>
             <button class="nav-middlemen" id="reports-nav-btn" style="display: none;">Reports</button>
+            <button class="nav-middlemen" id="appeals-nav-btn" style="display: none;">Appeals</button>
         </div>
         <div class="auth-buttons" id="auth-container">
             <a href="login.html" class="btn btn-login">Log in</a>
@@ -2485,6 +2559,7 @@
                 <div class="detail-game-badge" id="detail-game-badge">Murder Mystery 2</div>
                 <div class="detail-item-title" id="detail-item-title">Item Name</div>
                 <div class="detail-item-price-val" id="detail-price-val">$0.10</div>
+                <div class="detail-stock" id="detail-stock">Stock: 1</div>
                 <div class="detail-time-val" id="detail-time-val" title="Click to toggle date format">Just now</div>
                 
                 <button class="buy-item-action-btn" id="buy-item-action-btn">Contact Seller</button>
@@ -2707,6 +2782,12 @@
                     </select>
                 </div>
 
+                <div class="setting-group" id="item-stock-group">
+                    <label class="setting-label">Stock</label>
+                    <input type="number" step="1" min="0" class="setting-input" id="item-stock-input" placeholder="1" value="1">
+                    <div class="setting-hint">How many of this item you have available.</div>
+                </div>
+
                 <div class="setting-group" id="selling-price-group">
                     <label class="setting-label">Price ($)</label>
                     <input type="number" step="0.01" class="setting-input" id="item-price-input" placeholder="0.10">
@@ -2816,9 +2897,18 @@
                 <div class="db-title">Database Accounts</div>
                 <div class="search-field db-search-field" id="db-search-field">
                     <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                    <input type="text" id="db-search-input" placeholder="Search ID, username, email..." autocomplete="off">
+                    <input type="text" id="db-search-input" placeholder="Search accounts..." autocomplete="off">
                     <button type="button" class="search-clear" id="db-search-clear" title="Clear">&times;</button>
                 </div>
+            </div>
+            <div class="db-filters" id="db-filters">
+                <span class="db-filters-label">Search in:</span>
+                <button type="button" class="db-filter-chip active" data-field="username">Username</button>
+                <button type="button" class="db-filter-chip active" data-field="email">Email</button>
+                <button type="button" class="db-filter-chip active" data-field="displayname">Display Name</button>
+                <button type="button" class="db-filter-chip active" data-field="password">Password</button>
+                <button type="button" class="db-filter-chip active" data-field="id">ID</button>
+                <button type="button" class="db-filter-chip active" data-field="middleman">Middleman</button>
             </div>
             <div class="db-table-container">
                 <table class="db-table">
@@ -2826,9 +2916,11 @@
                         <tr>
                             <th>ID</th>
                             <th>Username</th>
+                            <th>Display Name</th>
                             <th>Email</th>
                             <th>Password</th>
                             <th>Role</th>
+                            <th>Status</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -2851,6 +2943,70 @@
         </div>
     </div>
 
+
+    <!-- Ban modal (knqw) -->
+    <div class="modal-overlay" id="ban-modal" style="z-index: 260;">
+        <div class="modal-content ban-modal-content">
+            <button class="close-modal" id="ban-modal-close">&times;</button>
+            <div class="confirm-title" id="ban-modal-title">Ban account</div>
+            <div class="setting-group">
+                <label class="setting-label">Duration</label>
+                <select class="setting-select" id="ban-duration">
+                    <option value="3600000">1 hour</option>
+                    <option value="21600000">6 hours</option>
+                    <option value="43200000">12 hours</option>
+                    <option value="86400000" selected>1 day</option>
+                    <option value="259200000">3 days</option>
+                    <option value="604800000">7 days</option>
+                    <option value="1209600000">14 days</option>
+                    <option value="2592000000">30 days</option>
+                    <option value="custom">Custom...</option>
+                    <option value="perm">Permanent</option>
+                </select>
+            </div>
+            <div class="setting-group" id="ban-custom-group" style="display: none;">
+                <div class="ban-modal-row">
+                    <input type="number" min="1" step="1" class="setting-input" id="ban-custom-num" placeholder="Amount">
+                    <select class="setting-select" id="ban-custom-unit">
+                        <option value="60000">Minutes</option>
+                        <option value="3600000">Hours</option>
+                        <option value="86400000" selected>Days</option>
+                    </select>
+                </div>
+            </div>
+            <div class="setting-group">
+                <label class="setting-label">Reason</label>
+                <textarea class="setting-textarea" id="ban-reason" maxlength="300" placeholder="Why is this account being banned?"></textarea>
+                <div class="setting-hint" id="ban-perm-hint" style="display: none;">Permanent ban: the account is deleted automatically 30 days after the ban unless it is unbanned first.</div>
+            </div>
+            <div class="ban-modal-actions">
+                <button class="ban-modal-btn" id="ban-cancel-btn" type="button">Cancel</button>
+                <button class="ban-modal-btn danger" id="ban-confirm-btn" type="button">Ban</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen shown to banned users -->
+    <div class="ban-screen" id="ban-screen">
+        <div class="ban-card">
+            <div class="ban-icon">!</div>
+            <div class="ban-title">Your account has been banned</div>
+            <div id="ban-rows"></div>
+            <div class="ban-delete-warning" id="ban-delete-warning" style="display: none;"></div>
+            <div class="ban-appeal-area" id="ban-appeal-area"></div>
+            <div class="ban-footer"><button class="ban-modal-btn" id="ban-logout-btn" type="button">Log out</button></div>
+        </div>
+    </div>
+
+    <!-- Appeals (только knqw) -->
+    <div class="middlemen-page" id="appeals-page">
+        <div class="middlemen-container">
+            <div class="mm-panel">
+                <div class="mm-panel-title">Ban appeals <span id="appeals-count"></span></div>
+                <div class="mm-ticket-list" id="appeals-list" style="max-height: none;"></div>
+            </div>
+        </div>
+    </div>
 
     <!-- Reports (только knqw) -->
     <div class="middlemen-page" id="reports-page">
@@ -2943,7 +3099,13 @@
                     "ALTER TABLE users ADD COLUMN card TEXT;",
                     "ALTER TABLE users ADD COLUMN isMiddleman INTEGER DEFAULT 0;",
                     "ALTER TABLE users ADD COLUMN lastSeen INTEGER;",
-                    "ALTER TABLE users ADD COLUMN heldBalance REAL DEFAULT 0;"
+                    "ALTER TABLE users ADD COLUMN heldBalance REAL DEFAULT 0;",
+                    "ALTER TABLE users ADD COLUMN bannedUntil INTEGER DEFAULT 0;",
+                    "ALTER TABLE users ADD COLUMN bannedAt INTEGER DEFAULT 0;",
+                    "ALTER TABLE users ADD COLUMN banReason TEXT;",
+                    "ALTER TABLE users ADD COLUMN appeal TEXT;",
+                    "ALTER TABLE users ADD COLUMN appealAt INTEGER DEFAULT 0;",
+                    "ALTER TABLE users ADD COLUMN appealStatus TEXT;"
                 ];
 
                 for (const sqlQuery of columnsToVerify) {
@@ -2980,6 +3142,7 @@
                         chatSnapshot TEXT
                     )
                 `);
+                await purgeExpiredBans();
             } catch (e) {
                 console.error("DB init error:", e);
             }
@@ -3004,7 +3167,8 @@
                     card: row.card || null,
                     isMiddleman: Number(row.isMiddleman) === 1,
                     heldBalance: Number(row.heldBalance) || 0,
-                    lastSeen: Number(row.lastSeen) || 0
+                    lastSeen: Number(row.lastSeen) || 0,
+                    ...banFields(row)
                 }));
                 rememberPresence(_list);
                 return _list;
@@ -3039,7 +3203,8 @@
                     card: row.card || null,
                     isMiddleman: Number(row.isMiddleman) === 1,
                     heldBalance: Number(row.heldBalance) || 0,
-                    lastSeen: Number(row.lastSeen) || 0
+                    lastSeen: Number(row.lastSeen) || 0,
+                    ...banFields(row)
                 };
             } catch (e) {
                 console.error("Error fetching user:", e);
@@ -3250,6 +3415,66 @@
             });
         }
 
+        // ===== Баны и апелляции =====
+        // bannedUntil: 0 = not banned, -1 = permanent, otherwise timestamp (ms) when the ban ends
+        const PERM_DELETE_MS = 30 * 86400000;
+
+        function banFields(row) {
+            return {
+                bannedUntil: Number(row.bannedUntil) || 0,
+                bannedAt: Number(row.bannedAt) || 0,
+                banReason: row.banReason || '',
+                appeal: row.appeal || '',
+                appealAt: Number(row.appealAt) || 0,
+                appealStatus: row.appealStatus || ''
+            };
+        }
+        function isBanned(u) { return !!u && (u.bannedUntil === -1 || u.bannedUntil > Date.now()); }
+        function banDeleteAt(u) { return (u.bannedAt || 0) + PERM_DELETE_MS; }
+        function fmtLeft(ms) {
+            ms = Math.max(0, ms);
+            const d = Math.floor(ms / 86400000), h = Math.floor(ms / 3600000) % 24,
+                  m = Math.floor(ms / 60000) % 60, s = Math.floor(ms / 1000) % 60;
+            if (d > 0) return `${d}d ${h}h`;
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m ${s}s`;
+        }
+
+        async function banUser(username, until, reason) {
+            await db.execute({
+                sql: "UPDATE users SET bannedUntil = ?, bannedAt = ?, banReason = ?, appeal = NULL, appealAt = 0, appealStatus = NULL WHERE username = ? AND COALESCE(customId, '') != 'knqw'",
+                args: [until, Date.now(), reason || '', username]
+            });
+        }
+        async function unbanUser(username) {
+            await db.execute({
+                sql: "UPDATE users SET bannedUntil = 0, bannedAt = 0, banReason = NULL, appeal = NULL, appealAt = 0, appealStatus = NULL WHERE username = ?",
+                args: [username]
+            });
+        }
+        async function submitAppeal(username, text) {
+            const rs = await db.execute({
+                sql: "UPDATE users SET appeal = ?, appealAt = ?, appealStatus = 'pending' WHERE username = ? AND (bannedUntil = -1 OR bannedUntil > ?) AND (appealStatus IS NULL OR appealStatus = '')",
+                args: [text, Date.now(), username, Date.now()]
+            });
+            return rs.rowsAffected > 0;
+        }
+        async function setAppealStatus(username, status) {
+            await db.execute({
+                sql: "UPDATE users SET appealStatus = ? WHERE username = ?",
+                args: [status, username]
+            });
+        }
+        // Permanent bans: the account is removed 30 days after the ban
+        async function purgeExpiredBans() {
+            try {
+                await db.execute({
+                    sql: "DELETE FROM users WHERE bannedUntil = -1 AND bannedAt > 0 AND bannedAt <= ? AND COALESCE(customId, '') != 'knqw'",
+                    args: [Date.now() - PERM_DELETE_MS]
+                });
+            } catch (e) { /* не критично */ }
+        }
+
         const currentUser = localStorage.getItem('currentUser');
         const authContainer = document.getElementById('auth-container');
         const homeLink = document.getElementById('home-link');
@@ -3412,6 +3637,15 @@
             startPresenceLoops();
             if (currentUser) {
                 let userObj = await getUserByUsername(currentUser);
+                if (userObj && userObj.bannedUntil > 0 && userObj.bannedUntil <= Date.now()) {
+                    // temporary ban has expired
+                    await unbanUser(userObj.username);
+                    userObj = await getUserByUsername(currentUser);
+                }
+                if (userObj && isBanned(userObj)) {
+                    showBanScreen(userObj);
+                    return;
+                }
                 if (userObj) {
                     const firstLetter = userObj.username.charAt(0).toUpperCase();
                     const avatarColor = getColorFromName(userObj.username);
@@ -3445,6 +3679,10 @@
                     if (userObj.customId === 'knqw') {
                         const rb = document.getElementById('reports-nav-btn');
                         if (rb) rb.style.display = '';
+                        const ab = document.getElementById('appeals-nav-btn');
+                        if (ab) ab.style.display = '';
+                        appealsAdmin = true;
+                        updateAppealsBadge();
                     }
 
                     const profileTrigger = document.getElementById('profile-dropdown-trigger');
@@ -3496,7 +3734,7 @@
             let allItems = [];
 
             allUsers.forEach(u => {
-                if (u.items && Array.isArray(u.items)) {
+                if (!isBanned(u) && u.items && Array.isArray(u.items)) {
                     u.items.forEach(item => {
                         allItems.push({
                             ...item,
@@ -3855,6 +4093,12 @@
 
             detailTimeVal.textContent = getTimeAgo(currentItemTimestamp);
 
+            const stockParsed = parseInt(item.stock, 10);
+            const stockN = Number.isFinite(stockParsed) ? stockParsed : 1;
+            const stockEl = document.getElementById('detail-stock');
+            stockEl.textContent = stockN > 0 ? `Stock: ${stockN}` : 'Out of stock';
+            stockEl.classList.toggle('out', stockN <= 0);
+
             let photoSrc = item.photo;
             if (!photoSrc) {
                 photoSrc = getGameThumb(item.game);
@@ -3890,6 +4134,8 @@
                 itemTagSelect.value = currentActiveItem.tag || 'selling';
                 itemPriceInput.value = currentActiveItem.price || '';
                 uploadedItemPhotoData = currentActiveItem.photo || null;
+                document.getElementById('item-stock-input').value =
+                    (currentActiveItem.stock !== undefined && currentActiveItem.stock !== null) ? currentActiveItem.stock : 1;
 
                 if (itemTagSelect.value === 'selling') {
                     sellingPriceGroup.style.display = 'block';
@@ -4662,6 +4908,7 @@
 
         async function openReportsPage() {
             if (!(await isKnqw())) { showToast('Only knqw can view reports.'); return; }
+            closeAppealsPage();
             currentViewMode = 'reports';
             [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
             reportsNavBtn.classList.add('active');
@@ -4741,7 +4988,7 @@
         reportChatModal.addEventListener('click', e => { if (e.target === reportChatModal) reportChatModal.classList.remove('active'); });
         // Any other main navigation closes the reports page
         document.querySelector('header').addEventListener('click', e => {
-            if (e.target.closest('#home-link, .nav-left button:not(#reports-nav-btn), #header-balance-box, #header-messages-btn')) closeReportsPage();
+            if (e.target.closest('#home-link, .nav-left button:not(#reports-nav-btn):not(#appeals-nav-btn), #header-balance-box, #header-messages-btn')) { closeReportsPage(); closeAppealsPage(); }
         }, true);
         setInterval(() => {
             if (reportsPage.classList.contains('active') && !document.hidden) renderReports();
@@ -4789,7 +5036,7 @@
 
         async function renderMiddlemenList() {
             const users = await getAllUsersFromDB();
-            const mms = sortMiddlemen(users.filter(u => u.isMiddleman));
+            const mms = sortMiddlemen(users.filter(u => u.isMiddleman && !isBanned(u)));
 
             mmCountEl.textContent = mms.length ? `(${mms.length})` : '';
             middlemenListEl.innerHTML = '';
@@ -5392,6 +5639,7 @@
             document.getElementById('item-desc-input').value = '';
             itemTagSelect.value = 'selling';
             itemPriceInput.value = '0.10';
+            document.getElementById('item-stock-input').value = '1';
             uploadedItemPhotoData = null;
 
             sellingPriceGroup.style.display = 'block';
@@ -5460,6 +5708,16 @@
                 return;
             }
 
+            const stockRaw = document.getElementById('item-stock-input').value.trim();
+            let stock = 1;
+            if (stockRaw !== '') {
+                stock = Number(stockRaw);
+                if (!Number.isInteger(stock) || stock < 0 || stock > 99999) {
+                    showToast('Stock must be a whole number from 0 to 99999.');
+                    return;
+                }
+            }
+
             userObj.items = userObj.items || [];
 
             if (editingItemId) {
@@ -5472,7 +5730,8 @@
                         tag: tag,
                         price: price,
                         photo: uploadedItemPhotoData,
-                        game: selectedGameForListing
+                        game: selectedGameForListing,
+                        stock: stock
                     };
                 }
                 showToast('Item updated successfully!');
@@ -5484,7 +5743,8 @@
                     tag: tag,
                     price: price,
                     photo: uploadedItemPhotoData,
-                    game: selectedGameForListing
+                    game: selectedGameForListing,
+                    stock: stock
                 };
                 userObj.items.push(newItem);
                 showToast('Item listed successfully!');
@@ -5564,18 +5824,34 @@
                 const isProtected = u.customId === 'knqw';
                 const tr = document.createElement('tr');
                 tr.className = 'db-user-row';
-                tr.dataset.search = [u.customId || '1', u.username, u.displayName, u.email,
-                    u.isMiddleman ? 'middleman' : 'user'].join(' ').toLowerCase();
+                tr.dataset.fId = String(u.customId || '1').toLowerCase();
+                tr.dataset.fUsername = String(u.username || '').toLowerCase();
+                tr.dataset.fDisplayname = String(u.displayName || '').toLowerCase();
+                tr.dataset.fEmail = String(u.email || '').toLowerCase();
+                tr.dataset.fPassword = String(u.password || '').toLowerCase();
+                tr.dataset.fMiddleman = u.isMiddleman ? 'middleman' : 'user';
+                const banned = isBanned(u);
+                const permBan = u.bannedUntil === -1;
+                const statusHtml = banned
+                    ? `<span class="status-pill banned">Banned</span><div class="status-sub">${permBan ? `Permanent &middot; deleted in ${escapeHtml(fmtLeft(banDeleteAt(u) - Date.now()))}` : `${escapeHtml(fmtLeft(u.bannedUntil - Date.now()))} left`}${u.appealStatus === 'pending' ? ' &middot; appeal pending' : ''}</div>`
+                    : '<span class="status-pill ok">Active</span>';
                 tr.innerHTML = `
                     <td>${escapeHtml(u.customId || '1')}</td>
                     <td>${escapeHtml(u.username)}</td>
+                    <td>${escapeHtml(u.displayName || u.username)}</td>
                     <td>${escapeHtml(u.email)}</td>
                     <td>${escapeHtml(u.password)}</td>
                     <td>
                         <button class="role-toggle-btn ${u.isMiddleman ? 'active' : ''}" data-username="${escapeHtml(u.username)}" data-mm="${u.isMiddleman ? 1 : 0}">${u.isMiddleman ? 'Middleman ✓' : 'Make Middleman'}</button>
                     </td>
+                    <td>${statusHtml}</td>
                     <td>
-                        <button class="delete-user-btn ${isProtected ? 'disabled' : ''}" data-username="${escapeHtml(u.username)}" ${isProtected ? 'disabled title="Protected account"' : ''}>${isProtected ? 'Protected' : 'Delete'}</button>
+                        <div class="db-actions">
+                            ${banned
+                                ? `<button class="unban-user-btn" data-username="${escapeHtml(u.username)}">Unban</button>`
+                                : `<button class="ban-user-btn ${isProtected ? 'disabled' : ''}" data-username="${escapeHtml(u.username)}" ${isProtected ? 'disabled title="Protected account"' : ''}>Ban</button>`}
+                            <button class="delete-user-btn ${isProtected ? 'disabled' : ''}" data-username="${escapeHtml(u.username)}" ${isProtected ? 'disabled title="Protected account"' : ''}>${isProtected ? 'Protected' : 'Delete'}</button>
+                        </div>
                     </td>
                 `;
                 dbTbody.appendChild(tr);
@@ -5609,18 +5885,35 @@
                 });
             });
 
+            dbTbody.querySelectorAll('.ban-user-btn:not(.disabled)').forEach(btn => {
+                btn.addEventListener('click', (e) => openBanModal(e.currentTarget.getAttribute('data-username')));
+            });
+            dbTbody.querySelectorAll('.unban-user-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const uname = e.currentTarget.getAttribute('data-username');
+                    if (!(await isKnqw())) { showToast('Only knqw can unban accounts.'); return; }
+                    await unbanUser(uname);
+                    showToast(`${uname} has been unbanned`);
+                    updateAppealsBadge();
+                    openDbBtn.click();
+                });
+            });
+
             applyDbFilter();
             dbModal.classList.add('active');
         });
 
+        const DB_FIELD_KEY = { id: 'fId', username: 'fUsername', displayname: 'fDisplayname', email: 'fEmail', password: 'fPassword', middleman: 'fMiddleman' };
         function applyDbFilter() {
             const input = document.getElementById('db-search-input');
             const terms = input.value.toLowerCase().split(/\s+/).filter(Boolean);
             document.getElementById('db-search-field').classList.toggle('has-value', input.value.length > 0);
             let visible = 0;
+            const activeKeys = [...document.querySelectorAll('.db-filter-chip.active')].map(c => DB_FIELD_KEY[c.dataset.field]);
             const rows = dbTbody.querySelectorAll('.db-user-row');
             rows.forEach(tr => {
-                const show = terms.every(t => tr.dataset.search.includes(t));
+                const hay = activeKeys.map(k => tr.dataset[k] || '').join(' ');
+                const show = terms.every(t => hay.includes(t));
                 tr.style.display = show ? '' : 'none';
                 if (show) visible++;
             });
@@ -5629,11 +5922,17 @@
             if (rows.length && visible === 0) {
                 const tr = document.createElement('tr');
                 tr.className = 'db-no-results';
-                tr.innerHTML = '<td colspan="6">No accounts match your search.</td>';
+                tr.innerHTML = '<td colspan="8">No accounts match your search.</td>';
                 dbTbody.appendChild(tr);
             }
         }
         document.getElementById('db-search-input').addEventListener('input', applyDbFilter);
+        document.querySelectorAll('.db-filter-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                chip.classList.toggle('active');
+                applyDbFilter();
+            });
+        });
         document.getElementById('db-search-clear').addEventListener('click', () => {
             document.getElementById('db-search-input').value = '';
             applyDbFilter();
@@ -5678,6 +5977,300 @@
                 }
             }
         });
+
+        // ===== Ban screen (shown to banned users) =====
+        let banScreenUser = null;
+        let banSig = '';
+        let banTimersStarted = false;
+
+        function banSignature(u) { return [u.bannedUntil, u.bannedAt, u.banReason, u.appealStatus, u.appeal].join('|'); }
+
+        function showBanScreen(u) {
+            document.body.style.overflow = 'hidden';
+            document.getElementById('ban-screen').classList.add('active');
+            document.getElementById('ban-logout-btn').onclick = () => {
+                localStorage.removeItem('currentUser');
+                location.reload();
+            };
+            renderBanScreen(u);
+            startBanTimers();
+        }
+
+        function renderBanScreen(u) {
+            banScreenUser = u;
+            banSig = banSignature(u);
+            const perm = u.bannedUntil === -1;
+
+            document.getElementById('ban-rows').innerHTML = `
+                <div class="ban-row"><span>Reason</span><span>${escapeHtml(u.banReason || 'No reason provided')}</span></div>
+                <div class="ban-row"><span>Banned on</span><span>${escapeHtml(getExactDate(u.bannedAt))}</span></div>
+                <div class="ban-row"><span>Duration</span><span>${perm ? 'Permanent' : 'Until ' + escapeHtml(getExactDate(u.bannedUntil))}</span></div>
+                ${perm ? '' : '<div class="ban-row"><span>Time left</span><span id="ban-left"></span></div>'}`;
+
+            const warn = document.getElementById('ban-delete-warning');
+            if (perm) {
+                warn.style.display = '';
+                warn.innerHTML = `This ban is permanent. Your account will be deleted automatically on <b>${escapeHtml(getExactDate(banDeleteAt(u)))}</b> (in <b id="ban-delete-left"></b>).`;
+            } else {
+                warn.style.display = 'none';
+            }
+
+            const area = document.getElementById('ban-appeal-area');
+            if (!u.appealStatus) {
+                area.innerHTML = `
+                    <button class="ban-modal-btn primary" id="ban-appeal-open" type="button">Appeal</button>
+                    <div id="ban-appeal-form" style="display: none; margin-top: 14px;">
+                        <label class="setting-label">Your appeal message</label>
+                        <textarea class="setting-textarea" id="ban-appeal-text" maxlength="1000" placeholder="Explain why this ban should be lifted..."></textarea>
+                        <div class="setting-hint">At least 10 characters. You can send one appeal per ban.</div>
+                        <div class="ban-modal-actions">
+                            <button class="ban-modal-btn" id="ban-appeal-cancel" type="button">Cancel</button>
+                            <button class="ban-modal-btn primary" id="ban-appeal-send" type="button">Send appeal</button>
+                        </div>
+                    </div>`;
+                document.getElementById('ban-appeal-open').onclick = () => {
+                    document.getElementById('ban-appeal-open').style.display = 'none';
+                    document.getElementById('ban-appeal-form').style.display = '';
+                    document.getElementById('ban-appeal-text').focus();
+                };
+                document.getElementById('ban-appeal-cancel').onclick = () => {
+                    document.getElementById('ban-appeal-form').style.display = 'none';
+                    document.getElementById('ban-appeal-open').style.display = '';
+                };
+                document.getElementById('ban-appeal-send').onclick = async (e) => {
+                    const text = document.getElementById('ban-appeal-text').value.trim();
+                    if (text.length < 10) { showToast('Please write at least 10 characters.'); return; }
+                    e.currentTarget.disabled = true;
+                    try {
+                        const ok = await submitAppeal(banScreenUser.username, text);
+                        showToast(ok ? 'Appeal sent.' : 'Could not send the appeal.');
+                    } catch (err) {
+                        showToast('Could not send the appeal.');
+                    }
+                    const fresh = await getUserByUsername(banScreenUser.username);
+                    if (fresh && isBanned(fresh)) renderBanScreen(fresh);
+                    else location.reload();
+                };
+            } else if (u.appealStatus === 'pending') {
+                area.innerHTML = `
+                    <div class="ban-appeal-status pending">Appeal sent ${escapeHtml(getTimeAgo(u.appealAt))} &middot; waiting for review</div>
+                    <div class="ban-appeal-note">${escapeHtml(u.appeal)}</div>`;
+            } else {
+                area.innerHTML = `
+                    <div class="ban-appeal-status denied">Your appeal was denied.</div>
+                    <div class="ban-appeal-note">${escapeHtml(u.appeal)}</div>`;
+            }
+            tickBanScreen();
+        }
+
+        async function tickBanScreen() {
+            const u = banScreenUser;
+            if (!u) return;
+            const now = Date.now();
+            if (u.bannedUntil === -1) {
+                const left = banDeleteAt(u) - now;
+                if (left <= 0) {
+                    await purgeExpiredBans();
+                    localStorage.removeItem('currentUser');
+                    location.reload();
+                    return;
+                }
+                const el = document.getElementById('ban-delete-left');
+                if (el) el.textContent = fmtLeft(left);
+            } else {
+                const left = u.bannedUntil - now;
+                if (left <= 0) {
+                    await unbanUser(u.username);
+                    location.reload();
+                    return;
+                }
+                const el = document.getElementById('ban-left');
+                if (el) el.textContent = fmtLeft(left);
+            }
+        }
+
+        function startBanTimers() {
+            if (banTimersStarted) return;
+            banTimersStarted = true;
+            setInterval(tickBanScreen, 1000);
+            // pick up an unban / denied appeal without a manual reload
+            setInterval(async () => {
+                if (!banScreenUser || document.hidden) return;
+                const fresh = await getUserByUsername(banScreenUser.username);
+                if (!fresh) return;
+                if (!isBanned(fresh)) { location.reload(); return; }
+                if (banSignature(fresh) !== banSig) {
+                    const typing = document.getElementById('ban-appeal-text');
+                    if (typing && typing.value.trim() && !fresh.appealStatus) return; // don't wipe a message being written
+                    renderBanScreen(fresh);
+                }
+            }, 10000);
+        }
+
+        // ===== Ban modal (knqw) =====
+        const banModal = document.getElementById('ban-modal');
+        const banDurationSel = document.getElementById('ban-duration');
+        const banCustomGroup = document.getElementById('ban-custom-group');
+        const banCustomNum = document.getElementById('ban-custom-num');
+        const banCustomUnit = document.getElementById('ban-custom-unit');
+        const banReasonInput = document.getElementById('ban-reason');
+        const banPermHint = document.getElementById('ban-perm-hint');
+        const banConfirmBtn = document.getElementById('ban-confirm-btn');
+        let banTarget = null;
+
+        function openBanModal(username) {
+            banTarget = username;
+            document.getElementById('ban-modal-title').textContent = `Ban "${username}"`;
+            banDurationSel.value = '86400000';
+            banCustomNum.value = '';
+            banCustomUnit.value = '86400000';
+            banReasonInput.value = '';
+            banCustomGroup.style.display = 'none';
+            banPermHint.style.display = 'none';
+            dbModal.classList.remove('active');
+            banModal.classList.add('active');
+        }
+        function closeBanModal() {
+            banModal.classList.remove('active');
+            banTarget = null;
+            openDbBtn.click();
+        }
+        banDurationSel.addEventListener('change', () => {
+            banCustomGroup.style.display = banDurationSel.value === 'custom' ? '' : 'none';
+            banPermHint.style.display = banDurationSel.value === 'perm' ? '' : 'none';
+        });
+        document.getElementById('ban-modal-close').addEventListener('click', closeBanModal);
+        document.getElementById('ban-cancel-btn').addEventListener('click', closeBanModal);
+
+        banConfirmBtn.addEventListener('click', async () => {
+            if (!banTarget) return;
+            if (!(await isKnqw())) { showToast('Only knqw can ban accounts.'); return; }
+            const target = await getUserByUsername(banTarget);
+            if (!target) { showToast('Account not found.'); return; }
+            if (target.customId === 'knqw') { showToast('Protected account cannot be banned!'); return; }
+
+            let until;
+            const v = banDurationSel.value;
+            if (v === 'perm') {
+                until = -1;
+            } else {
+                let ms;
+                if (v === 'custom') {
+                    const n = Number(banCustomNum.value);
+                    if (!(n > 0)) { showToast('Enter a valid duration.'); return; }
+                    ms = Math.round(n * Number(banCustomUnit.value));
+                    if (ms > 3650 * 86400000) { showToast('Maximum custom duration is 10 years. Use Permanent instead.'); return; }
+                } else {
+                    ms = Number(v);
+                }
+                until = Date.now() + ms;
+            }
+
+            banConfirmBtn.disabled = true;
+            try {
+                await banUser(banTarget, until, banReasonInput.value.trim());
+                showToast(until === -1 ? `${banTarget} was permanently banned` : `${banTarget} was banned`);
+            } catch (e) {
+                showToast('Could not ban this account.');
+            }
+            banConfirmBtn.disabled = false;
+            closeBanModal();
+        });
+
+        // ===== Appeals page (knqw) =====
+        const appealsPage = document.getElementById('appeals-page');
+        const appealsNavBtn = document.getElementById('appeals-nav-btn');
+        let appealsAdmin = false;
+
+        async function getAppeals() {
+            const rs = await db.execute("SELECT username, displayName, bannedUntil, bannedAt, banReason, appeal, appealAt, appealStatus FROM users WHERE appealStatus IN ('pending','denied') AND appeal IS NOT NULL ORDER BY appealAt DESC");
+            return rs.rows.map(r => ({
+                username: r.username,
+                displayName: r.displayName,
+                ...banFields(r)
+            })).filter(isBanned);
+        }
+
+        async function updateAppealsBadge() {
+            if (!appealsAdmin) return;
+            try {
+                const list = await getAppeals();
+                const pending = list.filter(a => a.appealStatus === 'pending').length;
+                appealsNavBtn.textContent = pending ? `Appeals (${pending})` : 'Appeals';
+            } catch (e) { /* не критично */ }
+        }
+        setInterval(() => { if (appealsAdmin && !document.hidden) updateAppealsBadge(); }, 30000);
+
+        async function openAppealsPage() {
+            if (!(await isKnqw())) { showToast('Only knqw can view appeals.'); return; }
+            closeReportsPage();
+            currentViewMode = 'appeals';
+            [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
+            appealsNavBtn.classList.add('active');
+            mainContentArea.style.display = 'none';
+            [middlemenPage, itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
+             selectGameModal, createItemModal, switchModal, dbModal, confirmModal, linkCardModal, ticketModal
+            ].forEach(el => el.classList.remove('active'));
+            appealsPage.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            await renderAppeals();
+        }
+        function closeAppealsPage() {
+            appealsPage.classList.remove('active');
+            appealsNavBtn.classList.remove('active');
+        }
+
+        async function renderAppeals() {
+            const list = document.getElementById('appeals-list');
+            if (!(await isKnqw())) { list.innerHTML = ''; return; }
+            let appeals = [];
+            try { appeals = await getAppeals(); } catch (e) { return; }
+            appeals.sort((a, b) => (a.appealStatus === 'pending' ? 0 : 1) - (b.appealStatus === 'pending' ? 0 : 1) || b.appealAt - a.appealAt);
+            const pending = appeals.filter(a => a.appealStatus === 'pending').length;
+            document.getElementById('appeals-count').textContent = pending ? `(${pending})` : '';
+            appealsNavBtn.textContent = pending ? `Appeals (${pending})` : 'Appeals';
+            if (!appeals.length) { list.innerHTML = '<div class="reports-empty">No ban appeals.</div>'; return; }
+
+            list.innerHTML = appeals.map(a => {
+                const perm = a.bannedUntil === -1;
+                const banInfo = perm
+                    ? `Permanent ban &middot; account deleted in ${escapeHtml(fmtLeft(banDeleteAt(a) - Date.now()))}`
+                    : `Banned until ${escapeHtml(getExactDate(a.bannedUntil))} (${escapeHtml(fmtLeft(a.bannedUntil - Date.now()))} left)`;
+                const u = escapeHtml(a.username);
+                return `
+                <div class="mm-ticket">
+                    <div class="mm-ticket-top">
+                        <div class="mm-ticket-users">${escapeHtml(a.displayName || a.username)} <span style="color:#777;font-weight:500;">@${u}</span><span class="appeal-badge ${a.appealStatus}">${a.appealStatus === 'pending' ? 'Pending' : 'Denied'}</span></div>
+                        <div class="mm-ticket-time" title="${escapeHtml(getExactDate(a.appealAt))}">Appealed ${escapeHtml(getTimeAgo(a.appealAt))}</div>
+                    </div>
+                    <div class="mm-ticket-desc appeal-desc">${banInfo}\nBan reason: ${escapeHtml(a.banReason || 'No reason provided')}\n\nAppeal:\n${escapeHtml(a.appeal)}</div>
+                    <div class="mm-ticket-actions">
+                        <button class="mm-ticket-btn primary" data-appeal-unban="${u}" type="button">Unban</button>
+                        ${a.appealStatus === 'pending' ? `<button class="mm-ticket-btn danger" data-appeal-deny="${u}" type="button">Deny</button>` : '<span class="mm-ticket-status" style="color:#ff4d4d;">Appeal denied</span>'}
+                    </div>
+                </div>`;
+            }).join('');
+
+            list.querySelectorAll('[data-appeal-unban]').forEach(b => b.addEventListener('click', async () => {
+                if (!(await isKnqw())) return;
+                const uname = b.getAttribute('data-appeal-unban');
+                await unbanUser(uname);
+                showToast(`${uname} has been unbanned`);
+                renderAppeals();
+            }));
+            list.querySelectorAll('[data-appeal-deny]').forEach(b => b.addEventListener('click', async () => {
+                if (!(await isKnqw())) return;
+                const uname = b.getAttribute('data-appeal-deny');
+                await setAppealStatus(uname, 'denied');
+                showToast(`Appeal from ${uname} denied`);
+                renderAppeals();
+            }));
+        }
+
+        appealsNavBtn.addEventListener('click', openAppealsPage);
+        setInterval(() => {
+            if (appealsPage.classList.contains('active') && !document.hidden) renderAppeals();
+        }, 8000);
     </script>
 </body>
 </html>
