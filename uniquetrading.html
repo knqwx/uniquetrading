@@ -2240,6 +2240,60 @@
         .role-toggle-btn.active:hover {
             background-color: rgba(61, 220, 132, 0.3);
         }
+
+        /* ===== Deals: payment requests inside chat ===== */
+        .deal-toolbar { display: flex; justify-content: flex-end; padding: 8px 20px 0; }
+        .ask-payment-btn {
+            background: transparent; border: 1px solid #ff7300; color: #ff7300; border-radius: 8px;
+            padding: 7px 14px; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: background-color 0.2s, color 0.2s;
+        }
+        .ask-payment-btn:hover { background: #ff7300; color: #fff; }
+        .deal-card {
+            align-self: center; width: 100%; max-width: 420px; box-sizing: border-box;
+            background: #262626; border: 1px solid #383838; border-left: 3px solid #ff7300;
+            border-radius: 12px; padding: 14px 16px; color: #fff; font-size: 14px;
+        }
+        .deal-card.done { border-left-color: #3ddc84; }
+        .deal-card.bad { border-left-color: #ff4d4d; }
+        .deal-card.muted { border-left-color: #666; }
+        .deal-card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+        .deal-card-title { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; color: #ff9a44; }
+        .deal-card.done .deal-card-title { color: #3ddc84; }
+        .deal-card.bad .deal-card-title { color: #ff4d4d; }
+        .deal-card.muted .deal-card-title { color: #999; }
+        .deal-card-time { color: #777; font-size: 12px; }
+        .deal-card-amount { font-size: 22px; font-weight: 700; margin: 2px 0; }
+        .deal-card-item { color: #bbbbbb; font-size: 13px; margin-bottom: 6px; word-break: break-word; }
+        .deal-card-text { color: #cccccc; line-height: 1.45; margin-bottom: 10px; }
+        .deal-card-q { font-weight: 600; margin-bottom: 10px; }
+        .deal-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .deal-btn {
+            border: 1px solid #4a4a4a; background: #333; color: #fff; border-radius: 8px; padding: 8px 16px;
+            font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: opacity 0.2s, border-color 0.2s;
+        }
+        .deal-btn:hover { border-color: #777; }
+        .deal-btn.primary { background: #ff7300; border-color: #ff7300; }
+        .deal-btn.primary:hover { opacity: 0.85; }
+        .deal-btn.danger { background: #ff4d4d; border-color: #ff4d4d; }
+        .deal-btn.danger:hover { opacity: 0.85; }
+        .deal-modal { width: 400px; max-width: 92vw; }
+        .deal-modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+        .deal-modal-actions .deal-btn { flex: 1; padding: 11px; }
+        .deal-field { text-align: left; margin-top: 14px; }
+        .report-modal { width: 680px; max-width: 94vw; max-height: 86vh; display: flex; flex-direction: column; text-align: left; }
+        .report-chat-meta { color: #bbbbbb; font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+        .report-chat-meta b { color: #fff; }
+        .report-chat-scroll {
+            flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+            background: #1f1f1f; border: 1px solid #383838; border-radius: 10px; padding: 14px; min-height: 160px;
+        }
+        .rp-bubble { max-width: 80%; cursor: default; }
+        .rp-bubble.removed { opacity: 0.55; border: 1px dashed #ff4d4d; }
+        .rp-sender { font-size: 11px; opacity: 0.75; margin-bottom: 4px; }
+        .rp-note { font-size: 11px; color: #ffd0d0; margin-top: 6px; }
+        .reports-empty { color: #777; font-size: 14px; text-align: center; padding: 24px; }
     </style>
 </head>
 <body>
@@ -2254,6 +2308,7 @@
             <button class="nav-marketplace" id="marketplace-nav-btn">Marketplace</button>
             <button class="nav-trading" id="trading-nav-btn">Trading</button>
             <button class="nav-middlemen" id="middlemen-nav-btn">Middlemen</button>
+            <button class="nav-middlemen" id="reports-nav-btn" style="display: none;">Reports</button>
         </div>
         <div class="auth-buttons" id="auth-container">
             <a href="login.html" class="btn btn-login">Log in</a>
@@ -2313,6 +2368,7 @@
             <div class="balance-title">Wallet</div>
             <div class="setting-hint" style="margin-bottom: 6px;">Available Balance</div>
             <div class="balance-amount-display" id="balance-page-amount">$0</div>
+            <div class="setting-hint" id="balance-held-line" style="margin: 6px 0 0;">On hold: $0 (released when the buyer confirms delivery)</div>
 
             <div class="wallet-grid">
                 <!-- Левая колонка: покупка валюты -->
@@ -2795,6 +2851,61 @@
         </div>
     </div>
 
+
+    <!-- Reports (только knqw) -->
+    <div class="middlemen-page" id="reports-page">
+        <div class="middlemen-container">
+            <div class="mm-panel">
+                <div class="mm-panel-title">Reported deals <span id="reports-count"></span></div>
+                <div class="mm-ticket-list" id="reports-list" style="max-height: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="report-chat-modal">
+        <div class="modal-content report-modal">
+            <button class="close-modal" id="report-chat-close">&times;</button>
+            <div class="confirm-title" id="report-chat-title">Reported deal</div>
+            <div class="report-chat-meta" id="report-chat-meta"></div>
+            <div class="report-chat-scroll" id="report-chat-scroll"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="deal-request-modal" style="z-index: 260;">
+        <div class="modal-content deal-modal">
+            <button class="close-modal" id="deal-req-close">&times;</button>
+            <div class="confirm-title">Ask for payment</div>
+            <div class="deal-field" id="deal-req-item-wrap">
+                <label class="setting-label">Your listing</label>
+                <select class="setting-select" id="deal-req-item"></select>
+            </div>
+            <div class="deal-field">
+                <label class="setting-label">What is the buyer paying for?</label>
+                <input type="text" class="setting-input" id="deal-req-name" maxlength="80" placeholder="Item name">
+            </div>
+            <div class="deal-field">
+                <label class="setting-label">Amount ($)</label>
+                <input type="number" step="0.01" min="0.01" class="setting-input" id="deal-req-amount" placeholder="0.00">
+                <div class="setting-hint" id="deal-req-hint">You receive 90% after payment. It stays on hold until the buyer confirms delivery.</div>
+            </div>
+            <div class="deal-modal-actions">
+                <button class="deal-btn" id="deal-req-cancel" type="button">Cancel</button>
+                <button class="deal-btn primary" id="deal-req-send" type="button">Send request</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="deal-confirm-modal" style="z-index: 260;">
+        <div class="modal-content deal-modal">
+            <div class="confirm-title" id="deal-confirm-title">Confirm</div>
+            <div class="confirm-text" id="deal-confirm-text"></div>
+            <div class="deal-modal-actions">
+                <button class="deal-btn" id="deal-confirm-no" type="button">Cancel</button>
+                <button class="deal-btn primary" id="deal-confirm-yes" type="button">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Подключаем Turso Client через стабильный ESM-модуль -->
     <script type="module">
         import { createClient } from "https://esm.sh/@libsql/client@0.6.0/web";
@@ -2831,7 +2942,8 @@
                     "ALTER TABLE users ADD COLUMN messages TEXT;",
                     "ALTER TABLE users ADD COLUMN card TEXT;",
                     "ALTER TABLE users ADD COLUMN isMiddleman INTEGER DEFAULT 0;",
-                    "ALTER TABLE users ADD COLUMN lastSeen INTEGER;"
+                    "ALTER TABLE users ADD COLUMN lastSeen INTEGER;",
+                    "ALTER TABLE users ADD COLUMN heldBalance REAL DEFAULT 0;"
                 ];
 
                 for (const sqlQuery of columnsToVerify) {
@@ -2851,6 +2963,21 @@
                         status TEXT DEFAULT 'open',
                         claimedBy TEXT,
                         createdAt INTEGER
+                    )
+                `);
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS deals (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        buyer TEXT,
+                        seller TEXT,
+                        itemName TEXT,
+                        amount REAL,
+                        sellerAmount REAL,
+                        status TEXT,
+                        createdAt INTEGER,
+                        updatedAt INTEGER,
+                        reportedAt INTEGER,
+                        chatSnapshot TEXT
                     )
                 `);
             } catch (e) {
@@ -2876,6 +3003,7 @@
                     messages: row.messages ? JSON.parse(row.messages) : [],
                     card: row.card || null,
                     isMiddleman: Number(row.isMiddleman) === 1,
+                    heldBalance: Number(row.heldBalance) || 0,
                     lastSeen: Number(row.lastSeen) || 0
                 }));
                 rememberPresence(_list);
@@ -2910,6 +3038,7 @@
                     messages: row.messages ? JSON.parse(row.messages) : [],
                     card: row.card || null,
                     isMiddleman: Number(row.isMiddleman) === 1,
+                    heldBalance: Number(row.heldBalance) || 0,
                     lastSeen: Number(row.lastSeen) || 0
                 };
             } catch (e) {
@@ -3265,6 +3394,7 @@
         let pendingChatItem = null;
         let renderedChatUser = null;
         let chatSignature = '';
+        let dealSignature = '';
         let chatPollTimer = null;
         let editingMessageTimestamp = null;
         let activeUserCard = null;
@@ -3311,6 +3441,11 @@
                             <button class="dropdown-item" id="dropdown-logout-btn" style="color: #ff4d4d;">Log out</button>
                         </div>
                     `;
+
+                    if (userObj.customId === 'knqw') {
+                        const rb = document.getElementById('reports-nav-btn');
+                        if (rb) rb.style.display = '';
+                    }
 
                     const profileTrigger = document.getElementById('profile-dropdown-trigger');
                     const dropdownMenu = document.getElementById('profile-dropdown-menu');
@@ -3469,6 +3604,7 @@
             const freshUser = (await getUserByUsername(currentUser)) || userObj;
             setBal(document.getElementById('balance-page-amount'), freshUser.balance || 0);
             setBal(document.getElementById('header-balance-amount'), freshUser.balance || 0);
+            document.getElementById('balance-held-line').textContent = `On hold: ${fmtMoney(freshUser.heldBalance)} (released when the buyer confirms delivery)`;
             document.getElementById('withdraw-amount-input').value = '';
             resetTopUpForm();
             document.getElementById('admin-amount-input').value = '';
@@ -3856,7 +3992,8 @@
                 if (!messagesPage.classList.contains('active') || document.hidden || !currentUser) return;
                 const me = await getUserByUsername(currentUser);
                 if (!me) return;
-                if (chatSig(me.messages || []) !== chatSignature) {
+                const ds = await getDealSig(currentUser);
+                if (chatSig(me.messages || []) !== chatSignature || ds !== dealSignature) {
                     renderChatsList(activeChatUsername);
                 }
             }, 3000);
@@ -3872,6 +4009,8 @@
 
             let myMessages = me.messages || [];
             chatSignature = chatSig(myMessages);
+            dealSignature = await getDealSig(currentUser);
+            setBal(document.getElementById('header-balance-amount'), me.balance);
 
             let lastTime = {};
             myMessages.forEach(m => {
@@ -3957,10 +4096,15 @@
                 headerAvatarHtml = `<img class="chat-header-avatar" src="${otherUser.avatar}" alt="Avatar">`;
             }
 
-            const bubblesHtml = chatMsgs.map(m => {
+            const dealsHere = await getDealsBetween(currentUser, targetUsername);
+            const canAskPayment = targetUsername !== currentUser && (me.items || []).some(i => i.tag === 'selling');
+            const askBtnHtml = canAskPayment ? '<div class="deal-toolbar"><button class="ask-payment-btn" id="ask-payment-btn" type="button">Ask for payment</button></div>' : '';
+            const msgEntries = chatMsgs.map(m => ({ t: m.timestamp, html: (() => {
                 const ref = m.itemRef ? `<div class="msg-item-ref"><b>${escapeHtml(m.itemRef.name)}</b><span>${escapeHtml(m.itemRef.price)}</span></div>` : '';
                 return `<div class="message-bubble ${m.sender === currentUser ? 'outgoing' : 'incoming'}" data-timestamp="${m.timestamp}" data-sender="${m.sender}" title="${escapeHtml(getExactDate(m.timestamp))}">${ref}<span class="msg-text-content">${escapeHtml(m.text)}</span><span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))}</span></div>`;
-            }).join('');
+            })() }));
+            const bubblesHtml = [...msgEntries, ...dealsHere.map(d => ({ t: d.createdAt, html: dealCardHtml(d, currentUser) }))]
+                .sort((a, b) => a.t - b.t).map(x => x.html).join('');
 
             const ctxHtml = ctxItem ? `<div class="chat-item-context" id="chat-item-context"><div class="ctx-info"><div class="ctx-label">About this item</div><div class="ctx-name">${escapeHtml(ctxItem.name)}</div><div class="ctx-price">${escapeHtml(itemPriceLabel(ctxItem))}</div></div><button class="ctx-close" id="chat-ctx-close" title="Remove item from context">&times;</button></div>` : '';
 
@@ -3973,10 +4117,11 @@
                     </div>
                 </div>
                 <div class="chat-messages-container" id="chat-messages-scroll">
-                    ${chatMsgs.length === 0 ? '<div class="no-chat-selected">No messages yet. Send a message to start conversation!</div>' : ''}
+                    ${chatMsgs.length === 0 && dealsHere.length === 0 ? '<div class="no-chat-selected">No messages yet. Send a message to start conversation!</div>' : ''}
                     ${bubblesHtml}
                 </div>
                 ${ctxHtml}
+                ${askBtnHtml}
                 <div class="chat-input-row">
                     <textarea class="chat-input" id="chat-message-input" placeholder="Type a message...">${escapeHtml(keepDraft)}</textarea>
                     <button class="chat-send-btn" id="chat-send-btn">Send</button>
@@ -4046,6 +4191,8 @@
                     setTimeout(() => document.addEventListener('click', closeMenuHandler), 10);
                 });
             });
+
+            bindDealControls(scrollContainer, targetUsername, me);
 
             const ctxCloseBtn = document.getElementById('chat-ctx-close');
             if (ctxCloseBtn) {
@@ -4161,6 +4308,444 @@
             showToast('Message deleted');
             await renderChatsList(targetUsername);
         }
+
+
+        // ===== Deals: ask for payment -> pay -> hold -> confirm delivery -> report =====
+        const SELLER_SHARE = 0.9;      // seller gets 90%, 10% is the platform fee
+        const MIN_DEAL = 0.01;
+        const MAX_DEAL = 1000000;
+        const round2 = n => Math.round(Number(n) * 100) / 100;
+
+        // Atomic balance change (also used by wallet top-up and the admin panel). Never goes below $0.
+        async function adjustBalance(username, delta) {
+            const rs = await db.execute({
+                sql: "UPDATE users SET balance = MAX(0, COALESCE(balance, 0) + ?) WHERE username = ?",
+                args: [delta, username]
+            });
+            if (!rs.rowsAffected) return null;
+            const r = await db.execute({ sql: "SELECT balance FROM users WHERE username = ?", args: [username] });
+            return Number(r.rows[0].balance || 0);
+        }
+
+        function mapDeal(r) {
+            return {
+                id: Number(r.id), buyer: r.buyer, seller: r.seller, itemName: r.itemName || '',
+                amount: Number(r.amount) || 0, sellerAmount: Number(r.sellerAmount) || 0, status: r.status,
+                createdAt: Number(r.createdAt) || 0, updatedAt: Number(r.updatedAt) || 0,
+                reportedAt: Number(r.reportedAt) || 0, chatSnapshot: r.chatSnapshot || null
+            };
+        }
+        async function getDeal(id) {
+            const rs = await db.execute({ sql: "SELECT * FROM deals WHERE id = ?", args: [id] });
+            return rs.rows.length ? mapDeal(rs.rows[0]) : null;
+        }
+        async function getDealsBetween(a, b) {
+            try {
+                const rs = await db.execute({
+                    sql: "SELECT * FROM deals WHERE (buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?) ORDER BY createdAt ASC",
+                    args: [a, b, b, a]
+                });
+                return rs.rows.map(mapDeal);
+            } catch (e) { console.error('Deals load error:', e); return []; }
+        }
+        async function getReportedDeals() {
+            const rs = await db.execute("SELECT * FROM deals WHERE status = 'reported' ORDER BY reportedAt DESC");
+            return rs.rows.map(mapDeal);
+        }
+        async function getDealSig(username) {
+            try {
+                const rs = await db.execute({
+                    sql: "SELECT COUNT(*) AS c, COALESCE(SUM(updatedAt), 0) AS s FROM deals WHERE buyer = ? OR seller = ?",
+                    args: [username, username]
+                });
+                return `${Number(rs.rows[0].c)}:${Number(rs.rows[0].s)}`;
+            } catch (e) { return ''; }
+        }
+
+        // ---- state changes (each one is guarded by the expected current status, so double clicks can't pay twice) ----
+        async function createDealRequest(buyer, amount, itemName) {
+            const dup = await db.execute({
+                sql: "SELECT id FROM deals WHERE seller = ? AND buyer = ? AND status = 'requested'",
+                args: [currentUser, buyer]
+            });
+            if (dup.rows.length) { showToast('You already have a pending payment request in this chat.'); return false; }
+            const now = Date.now();
+            await db.execute({
+                sql: "INSERT INTO deals (buyer, seller, itemName, amount, sellerAmount, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, 'requested', ?, ?)",
+                args: [buyer, currentUser, itemName || '', amount, round2(amount * SELLER_SHARE), now, now]
+            });
+            return true;
+        }
+
+        async function payDeal(id) {
+            const d = await getDeal(id);
+            if (!d) return null;
+            const claim = await db.execute({
+                sql: "UPDATE deals SET status = 'paid', updatedAt = ? WHERE id = ? AND status = 'requested' AND buyer = ?",
+                args: [Date.now(), id, currentUser]
+            });
+            if (!claim.rowsAffected) { showToast('This request is no longer available.'); return null; }
+            const revert = () => db.execute({ sql: "UPDATE deals SET status = 'requested', updatedAt = ? WHERE id = ?", args: [Date.now(), id] });
+
+            const debit = await db.execute({
+                sql: "UPDATE users SET balance = balance - ? WHERE username = ? AND COALESCE(balance, 0) >= ?",
+                args: [d.amount, currentUser, d.amount]
+            });
+            if (!debit.rowsAffected) { await revert(); showToast('Not enough balance.'); return null; }
+
+            const credit = await db.execute({
+                sql: "UPDATE users SET heldBalance = COALESCE(heldBalance, 0) + ? WHERE username = ?",
+                args: [d.sellerAmount, d.seller]
+            });
+            if (!credit.rowsAffected) {
+                await adjustBalance(currentUser, d.amount);
+                await revert();
+                showToast('Seller account not found. You were not charged.');
+                return null;
+            }
+            const r = await db.execute({ sql: "SELECT balance FROM users WHERE username = ?", args: [currentUser] });
+            return Number(r.rows[0].balance || 0);
+        }
+
+        async function completeDeal(id) {
+            const d = await getDeal(id);
+            if (!d) return false;
+            const claim = await db.execute({
+                sql: "UPDATE deals SET status = 'completed', updatedAt = ? WHERE id = ? AND status IN ('paid', 'not_received') AND buyer = ?",
+                args: [Date.now(), id, currentUser]
+            });
+            if (!claim.rowsAffected) { showToast('This deal can no longer be confirmed.'); return false; }
+            await db.execute({
+                sql: "UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?), balance = COALESCE(balance, 0) + ? WHERE username = ?",
+                args: [d.sellerAmount, d.sellerAmount, d.seller]
+            });
+            return true;
+        }
+
+        async function setDealStatus(id, from, to) {
+            const rs = await db.execute({
+                sql: `UPDATE deals SET status = ?, updatedAt = ? WHERE id = ? AND status = ? AND (buyer = ? OR seller = ?)`,
+                args: [to, Date.now(), id, from, currentUser, currentUser]
+            });
+            if (!rs.rowsAffected) showToast('This deal was already updated.');
+            return rs.rowsAffected > 0;
+        }
+
+        async function reportDeal(id) {
+            const d = await getDeal(id);
+            if (!d || d.buyer !== currentUser) return false;
+            const buyerObj = await getUserByUsername(d.buyer);
+            const snap = ((buyerObj && buyerObj.messages) || [])
+                .filter(m => m.sender === d.seller || m.receiver === d.seller)
+                .map(m => ({ sender: m.sender, receiver: m.receiver, text: m.text, timestamp: m.timestamp }));
+            const now = Date.now();
+            const rs = await db.execute({
+                sql: "UPDATE deals SET status = 'reported', reportedAt = ?, updatedAt = ?, chatSnapshot = ? WHERE id = ? AND status = 'not_received' AND buyer = ?",
+                args: [now, now, JSON.stringify(snap), id, currentUser]
+            });
+            if (!rs.rowsAffected) showToast('This deal was already updated.');
+            return rs.rowsAffected > 0;
+        }
+
+        // ---- dialogs ----
+        const dealConfirmModal = document.getElementById('deal-confirm-modal');
+        let dealConfirmResolve = null;
+        function askDealConfirm(title, text, yesLabel, danger) {
+            document.getElementById('deal-confirm-title').textContent = title;
+            document.getElementById('deal-confirm-text').textContent = text;
+            const yes = document.getElementById('deal-confirm-yes');
+            yes.textContent = yesLabel || 'Confirm';
+            yes.className = 'deal-btn ' + (danger ? 'danger' : 'primary');
+            dealConfirmModal.classList.add('active');
+            return new Promise(res => { dealConfirmResolve = res; });
+        }
+        function closeDealConfirm(val) {
+            dealConfirmModal.classList.remove('active');
+            if (dealConfirmResolve) { dealConfirmResolve(val); dealConfirmResolve = null; }
+        }
+        document.getElementById('deal-confirm-yes').addEventListener('click', () => closeDealConfirm(true));
+        document.getElementById('deal-confirm-no').addEventListener('click', () => closeDealConfirm(false));
+
+        const dealRequestModal = document.getElementById('deal-request-modal');
+        const dealReqItem = document.getElementById('deal-req-item');
+        const dealReqName = document.getElementById('deal-req-name');
+        const dealReqAmount = document.getElementById('deal-req-amount');
+        let dealReqResolve = null;
+        let dealReqItems = [];
+        function updateDealReqHint() {
+            const a = round2(parseFloat(dealReqAmount.value));
+            document.getElementById('deal-req-hint').textContent = (a > 0)
+                ? `You receive ${fmtMoney(round2(a * SELLER_SHARE))} (90%) after payment. It stays on hold until the buyer confirms delivery.`
+                : 'You receive 90% after payment. It stays on hold until the buyer confirms delivery.';
+        }
+        function openRequestDialog(items) {
+            dealReqItems = items;
+            dealReqItem.innerHTML = '<option value="">Custom</option>' +
+                items.map((it, i) => `<option value="${i}">${escapeHtml(it.name)} - $${escapeHtml(String(it.price))}</option>`).join('');
+            dealReqName.value = '';
+            dealReqAmount.value = '';
+            updateDealReqHint();
+            dealRequestModal.classList.add('active');
+            return new Promise(res => { dealReqResolve = res; });
+        }
+        function closeRequestDialog(val) {
+            dealRequestModal.classList.remove('active');
+            if (dealReqResolve) { dealReqResolve(val); dealReqResolve = null; }
+        }
+        dealReqItem.addEventListener('change', () => {
+            const it = dealReqItems[Number(dealReqItem.value)];
+            if (dealReqItem.value !== '' && it) {
+                dealReqName.value = it.name || '';
+                const p = parseFloat(it.price);
+                if (p > 0) dealReqAmount.value = p;
+                updateDealReqHint();
+            }
+        });
+        dealReqAmount.addEventListener('input', updateDealReqHint);
+        document.getElementById('deal-req-close').addEventListener('click', () => closeRequestDialog(null));
+        document.getElementById('deal-req-cancel').addEventListener('click', () => closeRequestDialog(null));
+        document.getElementById('deal-req-send').addEventListener('click', () => {
+            const amount = round2(parseFloat(dealReqAmount.value));
+            if (!amount || isNaN(amount) || amount < MIN_DEAL) { showToast('Enter a valid amount.'); return; }
+            if (amount > MAX_DEAL) { showToast(`Maximum amount is ${fmtMoney(MAX_DEAL)}.`); return; }
+            closeRequestDialog({ amount, itemName: dealReqName.value.trim() });
+        });
+
+        // ---- deal card inside the chat ----
+        function dealCardHtml(d, me) {
+            const isBuyer = d.buyer === me;
+            const amt = fmtMoney(d.amount), mine = fmtMoney(d.sellerAmount);
+            const buyerN = escapeHtml(d.buyer), sellerN = escapeHtml(d.seller);
+            const btn = (act, label, kind) => `<button class="deal-btn ${kind || ''}" data-deal-act="${act}" data-deal-id="${d.id}" type="button">${label}</button>`;
+            let cls = '', title = 'Payment request', text = '', q = '', actions = '';
+
+            switch (d.status) {
+                case 'requested':
+                    if (isBuyer) { text = `${sellerN} is asking you for ${amt}.`; actions = btn('pay', `Pay ${amt}`, 'primary'); }
+                    else { text = `Waiting for ${buyerN} to pay.`; actions = btn('cancel', 'Cancel request'); }
+                    break;
+                case 'paid':
+                    title = 'Paid - on hold';
+                    if (isBuyer) {
+                        text = `You paid ${amt}. The money is held until you confirm delivery.`;
+                        q = 'Did you receive your items?';
+                        actions = btn('yes', 'Yes', 'primary') + btn('no', 'No');
+                    } else {
+                        text = `${buyerN} paid ${amt}. Your share (${mine}, 90%) is on hold until the buyer confirms delivery.`;
+                    }
+                    break;
+                case 'not_received':
+                    cls = 'bad'; title = 'Items not received';
+                    if (isBuyer) {
+                        text = 'You said you did not receive your items. The money stays on hold.';
+                        actions = btn('report', 'Report', 'danger') + btn('yes', 'I received it');
+                    } else {
+                        text = `${buyerN} says the items were not received. Your ${mine} stays on hold.`;
+                    }
+                    break;
+                case 'reported':
+                    cls = 'bad'; title = 'Reported';
+                    text = 'This deal was reported and is under review. The money stays on hold.';
+                    break;
+                case 'completed':
+                    cls = 'done'; title = 'Deal completed';
+                    text = isBuyer ? 'You confirmed that you received your items.' : `${buyerN} confirmed delivery. ${mine} was released to your balance.`;
+                    break;
+                case 'cancelled':
+                    cls = 'muted'; title = 'Request cancelled';
+                    text = 'The payment request was cancelled.';
+                    break;
+                default:
+                    text = escapeHtml(d.status);
+            }
+
+            return `<div class="deal-card ${cls}">
+                <div class="deal-card-head"><span class="deal-card-title">${title}</span><span class="deal-card-time">${escapeHtml(getTimeAgo(d.updatedAt || d.createdAt))}</span></div>
+                <div class="deal-card-amount">${amt}</div>
+                ${d.itemName ? `<div class="deal-card-item">${escapeHtml(d.itemName)}</div>` : ''}
+                <div class="deal-card-text">${text}</div>
+                ${q ? `<div class="deal-card-q">${q}</div>` : ''}
+                ${actions ? `<div class="deal-card-actions">${actions}</div>` : ''}
+            </div>`;
+        }
+
+        let dealBusy = false;
+        async function handleDealAction(act, id) {
+            const d = await getDeal(id);
+            if (!d) return;
+
+            if (act === 'pay') {
+                if (d.buyer !== currentUser || d.status !== 'requested') { showToast('This request is no longer available.'); return; }
+                const me = await getUserByUsername(currentUser);
+                if (!me || round2(me.balance) < d.amount) {
+                    showToast(`Not enough balance. You need ${fmtMoney(d.amount)} - top up in your wallet.`);
+                    return;
+                }
+                const ok = await askDealConfirm('Confirm payment',
+                    `Pay ${fmtMoney(d.amount)} to ${d.seller}? The money is held until you confirm that you received your items.`,
+                    `Pay ${fmtMoney(d.amount)}`);
+                if (!ok) return;
+                const nb = await payDeal(d.id);
+                if (nb !== null) { showMyBalance(nb); showToast('Paid. The money is held until you confirm delivery.'); }
+            } else if (act === 'yes') {
+                if (d.buyer !== currentUser) return;
+                const ok = await askDealConfirm('Confirm delivery',
+                    `Confirm that you received your items? ${fmtMoney(d.sellerAmount)} will be released to ${d.seller}. This can't be undone.`,
+                    'Yes, I received them');
+                if (!ok) return;
+                if (await completeDeal(d.id)) showToast('Deal completed. Funds released to the seller.');
+            } else if (act === 'no') {
+                if (d.buyer !== currentUser) return;
+                const ok = await askDealConfirm('Items not received?',
+                    'Confirm that you did NOT receive your items. The money will stay on hold and you will be able to report the deal.',
+                    "No, I didn't receive them", true);
+                if (!ok) return;
+                await setDealStatus(d.id, 'paid', 'not_received');
+            } else if (act === 'report') {
+                if (d.buyer !== currentUser) return;
+                const ok = await askDealConfirm('Report this deal?',
+                    `The deal and your chat with ${d.seller} will be sent to support for review. The money stays on hold meanwhile.`,
+                    'Report', true);
+                if (!ok) return;
+                if (await reportDeal(d.id)) showToast('Deal reported. Support will review it.');
+            } else if (act === 'cancel') {
+                if (d.seller !== currentUser) return;
+                const ok = await askDealConfirm('Cancel request?', 'The buyer will no longer be able to pay this request.', 'Cancel request', true);
+                if (!ok) return;
+                await setDealStatus(d.id, 'requested', 'cancelled');
+            }
+        }
+
+        function bindDealControls(root, targetUsername, me) {
+            root.querySelectorAll('[data-deal-act]').forEach(b => {
+                b.addEventListener('click', async () => {
+                    if (dealBusy) return;
+                    dealBusy = true;
+                    try {
+                        await handleDealAction(b.dataset.dealAct, Number(b.dataset.dealId));
+                        await renderChatsList(targetUsername);
+                    } catch (e) {
+                        console.error(e);
+                        showToast('Something went wrong. Try again.');
+                    } finally { dealBusy = false; }
+                });
+            });
+
+            const ask = document.getElementById('ask-payment-btn');
+            if (ask) {
+                ask.addEventListener('click', async () => {
+                    if (dealBusy) return;
+                    dealBusy = true;
+                    try {
+                        const selling = (me.items || []).filter(i => i.tag === 'selling');
+                        const res = await openRequestDialog(selling);
+                        if (res && await createDealRequest(targetUsername, res.amount, res.itemName)) {
+                            await renderChatsList(targetUsername);
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        showToast('Could not send the request. Try again.');
+                    } finally { dealBusy = false; }
+                });
+            }
+        }
+
+        // ===== Reports page (knqw only) =====
+        const reportsPage = document.getElementById('reports-page');
+        const reportsNavBtn = document.getElementById('reports-nav-btn');
+        const reportChatModal = document.getElementById('report-chat-modal');
+
+        async function isKnqw() {
+            const me = currentUser ? await getUserByUsername(currentUser) : null;
+            return !!me && me.customId === 'knqw';
+        }
+
+        async function openReportsPage() {
+            if (!(await isKnqw())) { showToast('Only knqw can view reports.'); return; }
+            currentViewMode = 'reports';
+            [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
+            reportsNavBtn.classList.add('active');
+            mainContentArea.style.display = 'none';
+            [middlemenPage, itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
+             selectGameModal, createItemModal, switchModal, dbModal, confirmModal, linkCardModal, ticketModal
+            ].forEach(el => el.classList.remove('active'));
+            reportsPage.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            await renderReports();
+        }
+        function closeReportsPage() {
+            reportsPage.classList.remove('active');
+            reportsNavBtn.classList.remove('active');
+        }
+
+        async function renderReports() {
+            const list = document.getElementById('reports-list');
+            if (!(await isKnqw())) { list.innerHTML = ''; return; }
+            const deals = await getReportedDeals();
+            document.getElementById('reports-count').textContent = deals.length ? `(${deals.length})` : '';
+            if (!deals.length) { list.innerHTML = '<div class="reports-empty">No reported deals.</div>'; return; }
+            list.innerHTML = deals.map(d => `
+                <div class="mm-ticket">
+                    <div class="mm-ticket-top">
+                        <div class="mm-ticket-users">${escapeHtml(d.buyer)}<i>&rarr;</i>${escapeHtml(d.seller)}</div>
+                        <div class="mm-ticket-time" title="${escapeHtml(getExactDate(d.reportedAt))}">Reported ${escapeHtml(getTimeAgo(d.reportedAt))}</div>
+                    </div>
+                    <div class="mm-ticket-desc">Item: ${escapeHtml(d.itemName || '-')}\nPaid: ${fmtMoney(d.amount)} &middot; Seller's share on hold: ${fmtMoney(d.sellerAmount)}\nReported by: ${escapeHtml(d.buyer)} (buyer)</div>
+                    <div class="mm-ticket-actions"><button class="mm-ticket-btn primary" data-report-id="${d.id}" type="button">View chat</button></div>
+                </div>`).join('');
+            list.querySelectorAll('[data-report-id]').forEach(b => {
+                b.addEventListener('click', () => openReportChat(Number(b.dataset.reportId)));
+            });
+        }
+
+        async function openReportChat(id) {
+            if (!(await isKnqw())) return;
+            const d = await getDeal(id);
+            if (!d) return;
+            const [buyerObj, sellerObj] = await Promise.all([getUserByUsername(d.buyer), getUserByUsername(d.seller)]);
+            const between = m => (m.sender === d.buyer && m.receiver === d.seller) || (m.sender === d.seller && m.receiver === d.buyer);
+            const key = m => `${m.sender}|${m.timestamp}`;
+
+            const live = new Map();
+            [buyerObj, sellerObj].forEach(u => ((u && u.messages) || []).filter(between).forEach(m => { if (!live.has(key(m))) live.set(key(m), { ...m }); }));
+
+            let snap = [];
+            try { snap = d.chatSnapshot ? JSON.parse(d.chatSnapshot) : []; } catch (e) {}
+            snap.filter(between).forEach(m => {
+                const cur = live.get(key(m));
+                if (!cur) live.set(key(m), { ...m, removed: true });
+                else if (cur.text !== m.text) cur.originalText = m.text;
+            });
+
+            const msgs = [...live.values()].sort((a, b) => a.timestamp - b.timestamp);
+            document.getElementById('report-chat-title').textContent = `Deal #${d.id}`;
+            document.getElementById('report-chat-meta').innerHTML =
+                `<b>${escapeHtml(d.buyer)}</b> (buyer) &rarr; <b>${escapeHtml(d.seller)}</b> (seller)<br>` +
+                `Item: ${escapeHtml(d.itemName || '-')} &middot; Paid ${fmtMoney(d.amount)} &middot; On hold for seller ${fmtMoney(d.sellerAmount)}<br>` +
+                `Reported ${escapeHtml(getExactDate(d.reportedAt))}`;
+
+            const box = document.getElementById('report-chat-scroll');
+            box.innerHTML = msgs.length ? msgs.map(m => {
+                let note = '';
+                if (m.removed) note = '<div class="rp-note">Deleted after the report</div>';
+                else if (m.originalText) note = `<div class="rp-note">Edited after the report. Original: ${escapeHtml(m.originalText)}</div>`;
+                return `<div class="message-bubble ${m.sender === d.buyer ? 'outgoing' : 'incoming'} rp-bubble${m.removed ? ' removed' : ''}"><div class="rp-sender">${escapeHtml(m.sender)} &middot; ${escapeHtml(getExactDate(m.timestamp))}</div>${escapeHtml(m.text)}${note}</div>`;
+            }).join('') : '<div class="reports-empty">No messages between these users.</div>';
+
+            reportChatModal.classList.add('active');
+            box.scrollTop = box.scrollHeight;
+        }
+
+        reportsNavBtn.addEventListener('click', openReportsPage);
+        document.getElementById('report-chat-close').addEventListener('click', () => reportChatModal.classList.remove('active'));
+        reportChatModal.addEventListener('click', e => { if (e.target === reportChatModal) reportChatModal.classList.remove('active'); });
+        // Any other main navigation closes the reports page
+        document.querySelector('header').addEventListener('click', e => {
+            if (e.target.closest('#home-link, .nav-left button:not(#reports-nav-btn), #header-balance-box, #header-messages-btn')) closeReportsPage();
+        }, true);
+        setInterval(() => {
+            if (reportsPage.classList.contains('active') && !document.hidden) renderReports();
+        }, 8000);
 
         // ===== Вкладка Middlemen =====
         const middlemenListEl = document.getElementById('middlemen-list');
