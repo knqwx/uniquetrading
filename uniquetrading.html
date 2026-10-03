@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>try { if (localStorage.getItem('currentUser')) document.documentElement.classList.add('has-session'); } catch (e) {}</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Unique Trading</title>
@@ -2544,6 +2545,9 @@
         .chat-item.unread .chat-item-last { color: #ffffff; font-weight: 600; }
         .chat-item.unread .chat-item-name { color: #ffffff; }
         .deal-price-fixed { font-size: 22px; font-weight: 700; color: #ff7300; padding: 4px 0; }
+        .auth-placeholder { display: none; align-items: center; gap: 15px; pointer-events: none; }
+        html.has-session #auth-container > a.btn { display: none; }
+        html.has-session #auth-placeholder { display: flex; }
         /* per-item chat label, join date, item picker */
         .chat-item-sub { color: #ff9a44; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
         .chat-header-item { color: #ff9a44; font-size: 12px; font-weight: 600; }
@@ -2578,8 +2582,25 @@
         <div class="auth-buttons" id="auth-container">
             <a href="login.html" class="btn btn-login">Log in</a>
             <a href="login.html?mode=signup" class="btn btn-signup">Sign up</a>
+            <!-- shown instead of Log in / Sign up while the page loads for a logged-in user (no icons) -->
+            <div class="auth-placeholder" id="auth-placeholder">
+                <div class="user-balance-box"><span class="user-balance-amount" id="ph-balance"></span></div>
+                <div class="user-balance-box"><span>Messages</span></div>
+                <div class="user-profile-box"><span class="user-name" id="ph-name"></span></div>
+            </div>
         </div>
     </header>
+    <script>
+        (function () {
+            try {
+                var u = localStorage.getItem('currentUser');
+                if (!u) return;
+                var c = JSON.parse(localStorage.getItem('ut_hdr_' + u) || 'null') || {};
+                document.getElementById('ph-name').textContent = c.name || u;
+                document.getElementById('ph-balance').textContent = c.bal || '$0';
+            } catch (e) {}
+        })();
+    </script>
 
     <!-- Help / Copyright / Terms of Service: put your text inside the .info-modal-text blocks -->
     <div class="modal-overlay" id="help-modal" style="z-index: 270;">
@@ -2618,6 +2639,7 @@ Your Terms of Service text goes here.
         <button class="side-admin-btn" id="reports-nav-btn" style="display: none;">Reports</button>
         <button class="side-admin-btn" id="appeals-nav-btn" style="display: none;">Appeals</button>
         <button class="side-admin-btn" id="money-nav-btn" style="display: none;">Money</button>
+        <button class="side-admin-btn" id="open-db-btn" style="display: none;">Database</button>
     </div>
 
     <!-- Главная страница (Live Listings) -->
@@ -2853,12 +2875,11 @@ Your Terms of Service text goes here.
                     <span class="presence-text" id="modal-presence-text"></span>
                 </div>
                 <div class="modal-userid" id="modal-userid-text">ID: 1</div>
-                <div class="modal-joined" id="modal-joined-text"></div>
                 <div class="profile-rating" id="profile-rating"></div>
+                <div class="modal-joined" id="modal-joined-text"></div>
                 
                 <div class="profile-left-buttons">
                     <button class="settings-btn" id="open-settings-btn">Edit Profile</button>
-                    <button class="admin-db-btn" id="open-db-btn">View Database</button>
                 </div>
             </div>
 
@@ -4203,6 +4224,10 @@ Your Terms of Service text goes here.
                         avatarInner = `<img class="user-avatar" src="${userObj.avatar}" alt="Avatar">`;
                     }
 
+                    try {
+                        const hk = 'ut_hdr_' + userObj.username;
+                        localStorage.setItem(hk, JSON.stringify({ name: userObj.displayName || userObj.username, bal: fmtBal(userBalanceRaw) }));
+                    } catch (e) {}
                     authContainer.innerHTML = `
                         <div class="user-balance-box" id="header-balance-box" title="Wallet & Withdrawal">
                             <svg viewBox="0 0 24 24"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
@@ -4231,6 +4256,7 @@ Your Terms of Service text goes here.
                         if (ab) ab.style.display = '';
                         const mb = document.getElementById('money-nav-btn');
                         if (mb) mb.style.display = '';
+                        openDbBtn.style.display = '';
                         appealsAdmin = true;
                         updateAppealsBadge();
                     }
@@ -4273,6 +4299,8 @@ Your Terms of Service text goes here.
                         localStorage.removeItem('currentUser');
                         location.reload();
                     });
+                } else {
+                    document.documentElement.classList.remove('has-session');
                 }
             }
             renderGlobalItems();
@@ -4454,6 +4482,14 @@ Your Terms of Service text goes here.
         }
         function setBal(el, value) {
             if (el) el.textContent = fmtBal(value);
+            if (el && el.id === 'header-balance-amount' && currentUser) {
+                try {
+                    const k = 'ut_hdr_' + currentUser;
+                    const c = JSON.parse(localStorage.getItem(k) || 'null') || {};
+                    c.bal = fmtBal(value);
+                    localStorage.setItem(k, JSON.stringify(c));
+                } catch (e) {}
+            }
         }
 
         function showMyBalance(value) {
@@ -6341,12 +6377,6 @@ Your Terms of Service text goes here.
             renderProfileRating(userObj);
             if (userObj.isMiddleman) refreshVouchCount(userObj.username);
 
-            if (userObj.username === currentUser && displayId === 'knqw') {
-                openDbBtn.style.display = 'block';
-            } else {
-                openDbBtn.style.display = 'none';
-            }
-
             renderUserItems(userObj);
             profileModal.classList.add('active');
         }
@@ -6554,10 +6584,6 @@ Your Terms of Service text goes here.
             if (userObj.customId !== 'knqw' && newId !== (userObj.customId || '')) {
                 if (!/^[A-Za-z0-9_-]{1,20}$/.test(newId)) {
                     showToast('ID must be 1-20 characters: letters, numbers, _ or -.');
-                    return;
-                }
-                if (newId.toLowerCase() === 'knqw') {
-                    showToast('This ID is reserved.');
                     return;
                 }
                 const idTaken = await db.execute({
