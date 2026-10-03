@@ -259,18 +259,47 @@
 
         async function initDB() {
             try {
+                // Создаем таблицы с числовыми ID и правильными внешними ключами
                 await db.execute(`
                     CREATE TABLE IF NOT EXISTS users (
-                        id TEXT PRIMARY KEY,
-                        customId TEXT,
-                        username TEXT UNIQUE,
-                        displayName TEXT,
-                        email TEXT,
-                        password TEXT,
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT UNIQUE NOT NULL,
+                        display_name TEXT NOT NULL,
+                        email TEXT UNIQUE NOT NULL,
+                        password TEXT NOT NULL,
                         avatar TEXT,
-                        lastUsernameChange INTEGER,
-                        lastDisplayNameChange INTEGER,
-                        items TEXT
+                        balance REAL DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                `);
+
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS listings (
+                        id TEXT PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        title TEXT NOT NULL,
+                        category TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        price REAL,
+                        description TEXT,
+                        image TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                `);
+
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS messages (
+                        id TEXT PRIMARY KEY,
+                        sender_id INTEGER NOT NULL,
+                        receiver_id INTEGER NOT NULL,
+                        listing_id TEXT,
+                        content TEXT NOT NULL,
+                        is_read INTEGER DEFAULT 0,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                        FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                        FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE SET NULL
                     )
                 `);
             } catch (e) {
@@ -343,11 +372,10 @@
         function showError(msg) {
             errorMsg.textContent = msg;
             errorMsg.style.display = 'block';
-            generateCaptcha(); // Обновляем капчу при ошибке для безопасности
+            generateCaptcha();
         }
 
-
-        // ===== IP ban check (same rules as the main site) =====
+        // ===== IP ban check =====
         let visitorIp = null;
         async function getVisitorIp() {
             if (visitorIp !== null) return visitorIp;
@@ -379,7 +407,7 @@
                     return null;
                 }
                 return { until, reason: r.reason || '' };
-            } catch (e) { return null; } // table does not exist yet -> no bans
+            } catch (e) { return null; }
         }
         function ipBanText(ban) {
             let when = 'permanently';
@@ -390,7 +418,6 @@
             }
             return `Your IP address is banned ${when}.` + (ban.reason ? ` Reason: ${ban.reason}` : '');
         }
-        // Tell the visitor right away (the form stays usable only for the protected admin account)
         (async () => {
             const ban = await getActiveIpBan();
             if (ban) showError(ipBanText(ban));
@@ -400,7 +427,6 @@
             e.preventDefault();
             errorMsg.style.display = 'none';
 
-            // Проверка капчи (защита от ботов)
             const userCaptchaAnswer = parseInt(captchaInput.value.trim(), 10);
             if (isNaN(userCaptchaAnswer) || userCaptchaAnswer !== correctAnswer) {
                 showError('Incorrect security answer. Please try again.');
@@ -457,17 +483,15 @@
                         return;
                     }
 
-                    // Генерация безопасного уникального идентификатора
-                    const newUserId = crypto.randomUUID();
-
+                    // Числовой ID выдается базой автоматически (AUTOINCREMENT), передаем только данные
                     await db.execute({
-                        sql: `INSERT INTO users (id, customId, username, displayName, email, password, items) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                        args: [newUserId, newUserId, username, username, email, password, JSON.stringify([])]
+                        sql: `INSERT INTO users (username, display_name, email, password, balance) VALUES (?, ?, ?, ?, ?)`,
+                        args: [username, username, email, password, 0]
                     });
 
                     const ipNew = await getVisitorIp();
                     if (ipNew) {
-                        try { await db.execute({ sql: "UPDATE users SET lastIp = ? WHERE username = ?", args: [ipNew, username] }); } catch (e) { /* column is created by the main site */ }
+                        try { await db.execute({ sql: "UPDATE users SET lastIp = ? WHERE username = ?", args: [ipNew, username] }); } catch (e) {}
                     }
 
                     localStorage.setItem('currentUser', username);
@@ -504,7 +528,8 @@
                         return;
                     }
 
-                    const loginBan = String(user.customId || '') === 'knqw' ? null : await getActiveIpBan();
+                    // Проверка админа по id === 1 или username
+                    const loginBan = Number(user.id) === 1 ? null : await getActiveIpBan();
                     if (loginBan) {
                         showError(ipBanText(loginBan));
                         return;
@@ -512,7 +537,7 @@
 
                     const ipNow = await getVisitorIp();
                     if (ipNow) {
-                        try { await db.execute({ sql: "UPDATE users SET lastIp = ? WHERE username = ?", args: [ipNow, user.username] }); } catch (e) { /* column is created by the main site */ }
+                        try { await db.execute({ sql: "UPDATE users SET lastIp = ? WHERE username = ?", args: [ipNow, user.username] }); } catch (e) {}
                     }
 
                     localStorage.setItem('currentUser', user.username);
