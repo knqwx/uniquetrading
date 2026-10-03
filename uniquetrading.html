@@ -2249,6 +2249,41 @@
             background-color: rgba(61, 220, 132, 0.3);
         }
 
+
+        /* ===== Chat: pictures, typing, offers ===== */
+        .chat-attach-btn { background: #2a2a2a; border: 1px solid #3d3d3d; color: #ccc; border-radius: 8px; width: 44px; cursor: pointer; font-size: 18px; flex-shrink: 0; transition: border-color 0.2s, color 0.2s; }
+        .chat-attach-btn:hover { border-color: #ff7300; color: #fff; }
+        .chat-img { display: block; max-width: 260px; max-height: 300px; width: auto; height: auto; border-radius: 8px; cursor: zoom-in; background: #1a1a1a; min-width: 60px; min-height: 60px; }
+        .message-bubble.has-image { padding: 6px; }
+        .message-bubble.has-image .msg-time { display: block; padding: 4px 8px 2px; }
+        .img-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 400; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+        .img-lightbox img { max-width: 94vw; max-height: 92vh; border-radius: 8px; }
+        .typing-indicator { padding: 4px 22px 0; font-size: 12px; color: #ff9a44; font-style: italic; min-height: 16px; }
+        .typing-dots span { animation: typingBlink 1.2s infinite; opacity: 0.2; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingBlink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+        .deal-toolbar { gap: 8px; }
+        .message-bubble.has-offer { white-space: normal; min-width: 220px; }
+        .offer-card-title { font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+        .offer-card-title small { font-weight: 500; opacity: 0.85; }
+        .offer-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .offer-chip { display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.28); border-radius: 8px; padding: 4px 8px; font-size: 12px; font-weight: 500; }
+        .offer-chip img { width: 28px; height: 28px; object-fit: contain; border-radius: 4px; }
+        .offer-chip .x { cursor: pointer; opacity: 0.7; margin-left: 2px; }
+        .offer-chip .x:hover { opacity: 1; }
+        .offer-mm-warn { margin-top: 9px; font-size: 12px; font-weight: 600; color: #ffd27a; background: rgba(255,170,0,0.14); border: 1px solid rgba(255,170,0,0.4); border-radius: 8px; padding: 7px 10px; }
+        .offer-modal-content { width: 92vw; max-width: 680px; max-height: 88vh; display: flex; flex-direction: column; box-sizing: border-box; overflow-y: auto; }
+        .offer-games { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+        .offer-game { background: #262626; border: 1px solid #383838; border-radius: 10px; color: #fff; padding: 8px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .offer-game:hover { border-color: #ff7300; }
+        .offer-game img { width: 100%; height: 70px; object-fit: cover; border-radius: 6px; }
+        .offer-cats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+        .offer-cats .item-picker-cat { border: 1px solid #383838; }
+        .offer-list { display: flex; flex-wrap: wrap; gap: 8px; max-height: 34vh; overflow-y: auto; align-content: flex-start; margin-bottom: 10px; }
+        .offer-list .item-picker-item.selected, .offer-list .item-picker-card.selected { border-color: #ff7300; background: rgba(255,115,0,0.18); }
+        .offer-selected-title { color: #ff9a44; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin: 4px 0 6px; }
+        .offer-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 12px; }
         /* ===== Deals: payment requests inside chat ===== */
         .deal-toolbar { display: flex; justify-content: flex-end; padding: 8px 20px 0; }
         .ask-payment-btn {
@@ -3169,6 +3204,33 @@ Your Terms of Service text goes here.
     </div>
 
     <!-- Item picker (Murder Mystery 2) -->
+
+    <div class="modal-overlay" id="offer-modal" style="z-index: 260;">
+        <div class="modal-content offer-modal-content">
+            <button class="close-modal" id="offer-close">&times;</button>
+            <div class="settings-title" id="offer-title" style="font-size: 18px; margin-bottom: 14px;">Make an offer</div>
+            <div id="offer-step-game">
+                <div class="setting-hint" style="margin-bottom: 10px;">Select the game your items are from.</div>
+                <div class="offer-games" id="offer-games"></div>
+            </div>
+            <div id="offer-step-items" style="display:none;">
+                <div class="offer-cats" id="offer-cats"></div>
+                <div class="offer-list" id="offer-list"></div>
+                <div class="item-picker-custom" style="margin-bottom: 6px;">
+                    <input type="text" class="setting-input" id="offer-custom-input" maxlength="80" placeholder="Can't find it? Type the item name">
+                    <button type="button" class="item-pick-btn use" id="offer-custom-btn">Add</button>
+                </div>
+                <div class="offer-selected-title">Your offer (<span id="offer-count">0</span>)</div>
+                <div class="offer-chips" id="offer-selected"></div>
+                <div class="offer-mm-warn" id="offer-warn" style="display:none;">This trade will require a middleman to complete</div>
+                <div class="offer-actions">
+                    <button class="deal-btn" id="offer-back" type="button">Back</button>
+                    <button class="deal-btn primary" id="offer-send" type="button">Send offer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="item-picker-modal" style="z-index: 250;">
         <div class="modal-content item-picker-content">
             <button class="close-modal" id="item-picker-close">&times;</button>
@@ -3417,6 +3479,7 @@ Your Terms of Service text goes here.
                 <label class="setting-label" id="deal-req-amount-label">Amount ($)</label>
                 <input type="number" step="0.01" min="0.01" class="setting-input" id="deal-req-amount" placeholder="0.00">
                 <div class="deal-price-fixed" id="deal-req-price-fixed" style="display:none;"></div>
+                <div class="setting-hint" id="deal-req-amount-fmt" style="display:none; color:#ff9a44; font-weight:600;"></div>
                 <div class="setting-hint" id="deal-req-hint">You receive 90% after payment. It stays on hold until the buyer confirms delivery.</div>
             </div>
             <div class="deal-modal-actions">
@@ -3584,6 +3647,23 @@ Your Terms of Service text goes here.
                         other TEXT,
                         clearedAt INTEGER,
                         PRIMARY KEY (user, other)
+                    )
+                `);
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS typing (
+                        user TEXT,
+                        other TEXT,
+                        ts INTEGER,
+                        PRIMARY KEY (user, other)
+                    )
+                `);
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS chat_images (
+                        id TEXT PRIMARY KEY,
+                        sender TEXT,
+                        receiver TEXT,
+                        data TEXT,
+                        createdAt INTEGER
                     )
                 `);
                 await purgeExpiredBans();
@@ -3956,6 +4036,8 @@ Your Terms of Service text goes here.
                 await db.execute({ sql: "DELETE FROM group_messages WHERE timestamp < ?", args: [cutoff] });
                 await db.execute({ sql: "DELETE FROM deals WHERE status IN ('completed','cancelled','refunded','released') AND updatedAt < ?", args: [cutoff] });
                 await db.execute({ sql: "DELETE FROM chat_clears WHERE clearedAt < ?", args: [cutoff] });
+                await db.execute({ sql: "DELETE FROM chat_images WHERE createdAt < ?", args: [cutoff] });
+                await db.execute({ sql: "DELETE FROM typing WHERE ts < ?", args: [Date.now() - 60000] });
             } catch (e) { console.error('Chat purge error:', e); }
         }
 
@@ -4145,12 +4227,9 @@ Your Terms of Service text goes here.
         // without spaces/symbols, e.g. "Swirly Axe" -> SwirlyAxe.webp, "Nik's Scythe" -> NiksScythe.webp
         const ITEM_IMG_DIR = 'ancients/';
         function itemImageFile(name) { return String(name).replace(/[^A-Za-z0-9]/g, '') + '.webp'; }
-        // Possible file names for an item (e.g. "Traveler's Axe" -> TravelersAxe.webp, then TravelerAxe.webp)
+        // Only the exact file name is used, e.g. "Traveler's Axe" -> TravelersAxe.webp
         function itemImageCandidates(name) {
-            const list = [ITEM_IMG_DIR + itemImageFile(name)];
-            const noPossessive = ITEM_IMG_DIR + itemImageFile(String(name).replace(/['\u2019]s\b/gi, ''));
-            if (!list.includes(noPossessive)) list.push(noPossessive);
-            return list;
+            return [ITEM_IMG_DIR + itemImageFile(name)];
         }
         function isAncientItem(game, name) {
             const g = GAME_ITEMS[game];
@@ -4495,7 +4574,7 @@ Your Terms of Service text goes here.
                 showToast('Please enter a valid withdrawal amount.');
                 return;
             }
-            showToast(`Withdrawal of $${amount.toFixed(2)} requested successfully!`);
+            showToast(`Withdrawal of ${fmtMoney(amount)} requested successfully!`);
             balancePage.classList.remove('active');
             switchToHome();
         });
@@ -4516,7 +4595,7 @@ Your Terms of Service text goes here.
         const adminAddBtn = document.getElementById('admin-add-btn');
         const adminSubBtn = document.getElementById('admin-sub-btn');
 
-        function fmtMoney(n) { return `$${Number(n || 0).toFixed(2)}`; }
+        function fmtMoney(n) { return fmtBal(n); }
 
         // Balance format: $3,100,000 (cents only shown when the amount has them)
         function fmtBal(n) {
@@ -5123,6 +5202,244 @@ Your Terms of Service text goes here.
             }
         }
 
+
+        // ===== Chat: pictures, typing indicator, offers =====
+        const chatImageCache = new Map();
+        function chatBubbleHtml(m, ref) {
+            const mine = m.sender === currentUser;
+            const base = `message-bubble ${mine ? 'outgoing' : 'incoming'}`;
+            const attrs = `data-timestamp="${m.timestamp}" data-sender="${escapeHtml(m.sender)}" title="${escapeHtml(getExactDate(m.timestamp))}"`;
+            const time = `<span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))}</span>`;
+            if (m.imageId) {
+                return `<div class="${base} has-image" ${attrs} data-noedit="1">${ref}<img class="chat-img" data-image-id="${escapeHtml(String(m.imageId))}" alt="Picture"><span class="msg-text-content" style="display:none;">${escapeHtml(m.text || '')}</span>${time}</div>`;
+            }
+            if (m.offer && Array.isArray(m.offer.items)) {
+                const g = m.offer.game || '';
+                const chips = m.offer.items.map(n => {
+                    const icon = isAncientItem(g, n) ? `<img ${itemImgAttrs({ game: g, name: n })} alt="">` : '';
+                    return `<span class="offer-chip">${icon}${escapeHtml(n)}</span>`;
+                }).join('');
+                const warn = m.offer.mm ? '<div class="offer-mm-warn">This trade will require a middleman to complete</div>' : '';
+                return `<div class="${base} has-offer" ${attrs} data-noedit="1">${ref}<div class="offer-card-title">Offer <small>&middot; ${escapeHtml(g)} &middot; ${m.offer.items.length} item${m.offer.items.length === 1 ? '' : 's'}</small></div><div class="offer-chips">${chips}</div>${warn}<span class="msg-text-content" style="display:none;">${escapeHtml(m.text || '')}</span>${time}</div>`;
+            }
+            return `<div class="${base}" ${attrs}>${ref}<span class="msg-text-content">${escapeHtml(m.text)}</span>${time}</div>`;
+        }
+        async function loadChatImages(root) {
+            const imgs = root.querySelectorAll('img[data-image-id]');
+            for (const img of imgs) {
+                const id = img.getAttribute('data-image-id');
+                try {
+                    let data = chatImageCache.get(id);
+                    if (!data) {
+                        const rs = await db.execute({ sql: "SELECT data FROM chat_images WHERE id = ?", args: [id] });
+                        data = rs.rows.length ? rs.rows[0].data : null;
+                        if (data) chatImageCache.set(id, data);
+                    }
+                    if (data) {
+                        img.src = data;
+                        img.addEventListener('click', (e) => { e.stopPropagation(); openImageLightbox(data); });
+                    } else {
+                        img.alt = 'Picture is no longer available';
+                    }
+                } catch (e) { img.alt = 'Could not load picture'; }
+            }
+        }
+        function openImageLightbox(src) {
+            const box = document.createElement('div');
+            box.className = 'img-lightbox';
+            box.innerHTML = '<img alt="Picture">';
+            box.querySelector('img').src = src;
+            box.addEventListener('click', () => box.remove());
+            document.body.appendChild(box);
+        }
+        function compressChatImage(file) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => {
+                    const max = 1280;
+                    const s = Math.min(1, max / Math.max(img.width, img.height));
+                    const w = Math.max(1, Math.round(img.width * s)), hh = Math.max(1, Math.round(img.height * s));
+                    const c = document.createElement('canvas');
+                    c.width = w; c.height = hh;
+                    const ctx = c.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, w, hh);
+                    ctx.drawImage(img, 0, 0, w, hh);
+                    URL.revokeObjectURL(url);
+                    resolve(c.toDataURL('image/jpeg', 0.78));
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('bad image')); };
+                img.src = url;
+            });
+        }
+        async function pushChatMessage(newMessage) {
+            const all = await getAllUsersFromDB();
+            const senderObj = all.find(u => u.username === newMessage.sender);
+            const receiverObj = all.find(u => u.username === newMessage.receiver);
+            if (senderObj) {
+                senderObj.messages = senderObj.messages || [];
+                senderObj.messages.push(newMessage);
+                await saveUserToDB(senderObj);
+            }
+            if (receiverObj && receiverObj.username !== newMessage.sender) {
+                receiverObj.messages = receiverObj.messages || [];
+                receiverObj.messages.push(newMessage);
+                await saveUserToDB(receiverObj);
+            }
+        }
+        async function sendChatImageFile(file, targetUsername, threadKey, itemId, ctxItem) {
+            if (!file) return;
+            if (!/^image\/(png|jpe?g|webp|gif|bmp)$/i.test(file.type)) { showToast('You can only send pictures (PNG, JPG, WEBP, GIF).'); return; }
+            if (file.size > 12 * 1024 * 1024) { showToast('Picture is too large (max 12 MB).'); return; }
+            let dataUrl;
+            try { dataUrl = await compressChatImage(file); } catch (e) { showToast('Could not read this picture.'); return; }
+            const ts = Date.now();
+            const imageId = ts + '-' + Math.random().toString(36).slice(2, 8);
+            try {
+                await db.execute({ sql: "INSERT INTO chat_images (id, sender, receiver, data, createdAt) VALUES (?, ?, ?, ?, ?)", args: [imageId, currentUser, targetUsername, dataUrl, ts] });
+            } catch (e) { showToast('Could not send the picture.'); return; }
+            chatImageCache.set(imageId, dataUrl);
+            await pushChatMessage({
+                sender: currentUser, receiver: targetUsername, text: '\uD83D\uDCF7 Photo', timestamp: ts, imageId: imageId,
+                itemRef: ctxItem ? { name: ctxItem.name, price: ctxItem.label || itemPriceLabel(ctxItem), game: ctxItem.game || '', seller: ctxItem.owner || '' } : null,
+                itemId: itemId || null
+            });
+            pendingChatItem = null;
+            clearTypingState(targetUsername);
+            await renderChatsList(threadKey);
+        }
+
+        // typing indicator
+        let typingPollTimer = null;
+        let lastTypingSent = 0;
+        async function sendTypingState(other) {
+            const now = Date.now();
+            if (now - lastTypingSent < 2000) return;
+            lastTypingSent = now;
+            try {
+                await db.execute({ sql: "INSERT INTO typing (user, other, ts) VALUES (?, ?, ?) ON CONFLICT(user, other) DO UPDATE SET ts = excluded.ts", args: [currentUser, other, now] });
+            } catch (e) { /* not critical */ }
+        }
+        async function clearTypingState(other) {
+            lastTypingSent = 0;
+            try { await db.execute({ sql: "DELETE FROM typing WHERE user = ? AND other = ?", args: [currentUser, other] }); } catch (e) {}
+        }
+        function startTypingWatch(other) {
+            if (typingPollTimer) clearInterval(typingPollTimer);
+            const tick = async () => {
+                const el = document.getElementById('typing-indicator');
+                if (!el) { clearInterval(typingPollTimer); typingPollTimer = null; return; }
+                if (document.hidden) return;
+                try {
+                    const rs = await db.execute({ sql: "SELECT ts FROM typing WHERE user = ? AND other = ?", args: [other, currentUser] });
+                    const live = rs.rows.length && (Date.now() - Number(rs.rows[0].ts)) < 4500;
+                    el.innerHTML = live ? `${escapeHtml(other)} is typing<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>` : '';
+                } catch (e) {}
+            };
+            tick();
+            typingPollTimer = setInterval(tick, 1500);
+        }
+
+        // offers
+        const offerModal = document.getElementById('offer-modal');
+        let offerState = null;
+        function offerNeedsMiddleman(listingGame, offerGame, count) {
+            return offerGame !== listingGame || (offerGame === 'Murder Mystery 2' && count > 4);
+        }
+        function openOfferDialog(ctx) {
+            offerState = { ...ctx, game: '', items: [], cat: '' };
+            document.getElementById('offer-title').textContent = 'Make an offer for ' + ctx.ctxItem.name;
+            document.getElementById('offer-step-game').style.display = '';
+            document.getElementById('offer-step-items').style.display = 'none';
+            document.getElementById('offer-games').innerHTML = GAMES.map(g =>
+                `<button type="button" class="offer-game" data-game="${escapeHtml(g.name)}"><img src="${escapeHtml(getGameThumb(g.name))}" alt=""><span>${escapeHtml(g.name)}</span></button>`).join('');
+            document.querySelectorAll('#offer-games .offer-game').forEach(b => b.addEventListener('click', () => {
+                offerState.game = b.dataset.game;
+                offerState.items = [];
+                const groups = GAME_ITEMS[offerState.game];
+                offerState.cat = groups ? Object.keys(groups)[0] : '';
+                document.getElementById('offer-step-game').style.display = 'none';
+                document.getElementById('offer-step-items').style.display = '';
+                document.getElementById('offer-title').textContent = 'Select your items (' + offerState.game + ')';
+                renderOfferItems();
+            }));
+            offerModal.classList.add('active');
+        }
+        function toggleOfferItem(name) {
+            name = String(name || '').trim();
+            if (!name) return;
+            const i = offerState.items.indexOf(name);
+            if (i >= 0) offerState.items.splice(i, 1);
+            else if (offerState.items.length >= 40) { showToast('You can offer up to 40 items.'); return; }
+            else offerState.items.push(name);
+            renderOfferItems();
+        }
+        function renderOfferItems() {
+            const st = offerState;
+            const groups = GAME_ITEMS[st.game];
+            const catsEl = document.getElementById('offer-cats');
+            const listEl = document.getElementById('offer-list');
+            if (groups) {
+                catsEl.style.display = ''; listEl.style.display = '';
+                catsEl.innerHTML = Object.keys(groups).map(c => `<button type="button" class="item-picker-cat ${c === st.cat ? 'active' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
+                catsEl.querySelectorAll('.item-picker-cat').forEach(b => b.addEventListener('click', () => { st.cat = b.dataset.cat; renderOfferItems(); }));
+                const list = groups[st.cat] || [];
+                listEl.innerHTML = list.map(n => {
+                    const sel = st.items.includes(n) ? ' selected' : '';
+                    return st.cat === 'Ancients'
+                        ? `<button type="button" class="item-picker-card item-picker-item${sel}" data-name="${escapeHtml(n)}"><img class="card-img" ${itemImgAttrs({ game: st.game, name: n })} alt="${escapeHtml(n)}" loading="lazy"><span>${escapeHtml(n)}</span></button>`
+                        : `<button type="button" class="item-picker-item${sel}" data-name="${escapeHtml(n)}">${escapeHtml(n)}</button>`;
+                }).join('') || '<div class="item-picker-empty">No items in this category.</div>';
+                listEl.querySelectorAll('[data-name]').forEach(b => b.addEventListener('click', () => toggleOfferItem(b.dataset.name)));
+            } else {
+                catsEl.style.display = 'none'; listEl.style.display = 'none';
+            }
+            document.getElementById('offer-selected').innerHTML = st.items.length
+                ? st.items.map((n, i) => `<span class="offer-chip">${isAncientItem(st.game, n) ? `<img ${itemImgAttrs({ game: st.game, name: n })} alt="">` : ''}${escapeHtml(n)}<span class="x" data-i="${i}">&times;</span></span>`).join('')
+                : '<span class="item-picker-empty">No items selected yet.</span>';
+            document.querySelectorAll('#offer-selected .x').forEach(x => x.addEventListener('click', () => { st.items.splice(Number(x.dataset.i), 1); renderOfferItems(); }));
+            document.getElementById('offer-count').textContent = st.items.length;
+            document.getElementById('offer-warn').style.display = (st.items.length && offerNeedsMiddleman(st.ctxItem.game, st.game, st.items.length)) ? '' : 'none';
+        }
+        document.getElementById('offer-close').addEventListener('click', () => offerModal.classList.remove('active'));
+        offerModal.addEventListener('click', (e) => { if (e.target === offerModal) offerModal.classList.remove('active'); });
+        document.getElementById('offer-back').addEventListener('click', () => {
+            document.getElementById('offer-step-game').style.display = '';
+            document.getElementById('offer-step-items').style.display = 'none';
+            document.getElementById('offer-title').textContent = 'Make an offer for ' + offerState.ctxItem.name;
+        });
+        const offerAddCustom = () => {
+            const inp = document.getElementById('offer-custom-input');
+            const v = inp.value.trim();
+            if (!v) return;
+            inp.value = '';
+            if (!offerState.items.includes(v)) toggleOfferItem(v);
+        };
+        document.getElementById('offer-custom-btn').addEventListener('click', offerAddCustom);
+        document.getElementById('offer-custom-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); offerAddCustom(); } });
+        document.getElementById('offer-send').addEventListener('click', async () => {
+            const st = offerState;
+            if (!st || !st.items.length) { showToast('Select at least one item.'); return; }
+            const mm = offerNeedsMiddleman(st.ctxItem.game, st.game, st.items.length);
+            const btn = document.getElementById('offer-send');
+            btn.disabled = true;
+            try {
+                await pushChatMessage({
+                    sender: currentUser, receiver: st.targetUsername,
+                    text: `Offer (${st.game}): ${st.items.join(', ')}` + (mm ? ' - this trade will require a middleman to complete' : ''),
+                    timestamp: Date.now(),
+                    offer: { game: st.game, items: st.items.slice(), mm: mm },
+                    itemRef: { name: st.ctxItem.name, price: st.ctxItem.label || itemPriceLabel(st.ctxItem), game: st.ctxItem.game || '', seller: st.ctxItem.owner || '' },
+                    itemId: st.itemId || null
+                });
+                offerModal.classList.remove('active');
+                pendingChatItem = null;
+                showToast('Offer sent!');
+                await renderChatsList(st.threadKey);
+            } finally { btn.disabled = false; }
+        });
+
         async function renderActiveChatWindow(threadKey, allUsers) {
             const { user: targetUsername, itemId } = tParse(threadKey);
             const chatWindowCol = document.getElementById('chat-window-col');
@@ -5146,9 +5463,9 @@ Your Terms of Service text goes here.
                 const inMine = (me.items || []).find(i => String(i.id) === itemId);
                 const liveItem = inOther || inMine;
                 const refMsg = [...chatMsgs].reverse().find(m => m.itemRef && m.itemRef.name);
-                if (liveItem) ctxItem = { name: liveItem.name, tag: liveItem.tag, price: liveItem.price, owner: inOther ? targetUsername : currentUser };
-                else if (pendingChatItem && String(pendingChatItem.id) === itemId) ctxItem = { name: pendingChatItem.name, tag: pendingChatItem.tag, price: pendingChatItem.price, owner: pendingChatItem.sellerUsername || targetUsername };
-                else ctxItem = { name: refMsg ? refMsg.itemRef.name : 'Item', label: refMsg ? refMsg.itemRef.price : '', owner: (refMsg && refMsg.itemRef.seller) || '', gone: true };
+                if (liveItem) ctxItem = { name: liveItem.name, tag: liveItem.tag, price: liveItem.price, game: liveItem.game, owner: inOther ? targetUsername : currentUser };
+                else if (pendingChatItem && String(pendingChatItem.id) === itemId) ctxItem = { name: pendingChatItem.name, tag: pendingChatItem.tag, price: pendingChatItem.price, game: pendingChatItem.game, owner: pendingChatItem.sellerUsername || targetUsername };
+                else ctxItem = { name: refMsg ? refMsg.itemRef.name : 'Item', game: (refMsg && refMsg.itemRef.game) || '', label: refMsg ? refMsg.itemRef.price : '', owner: (refMsg && refMsg.itemRef.seller) || '', gone: true };
             }
 
             const firstLetter = targetUsername.charAt(0).toUpperCase();
@@ -5168,10 +5485,11 @@ Your Terms of Service text goes here.
             const canAskPayment = targetUsername !== currentUser && (itemId
                 ? (ctxItem.owner === currentUser && (me.items || []).some(i => String(i.id) === itemId && i.tag === 'selling'))
                 : (me.items || []).some(i => i.tag === 'selling'));
-            const askBtnHtml = canAskPayment ? '<div class="deal-toolbar"><button class="ask-payment-btn" id="ask-payment-btn" type="button">Ask for payment</button></div>' : '';
+            const canOffer = !!(ctxItem && !ctxItem.gone && ctxItem.tag === 'offers' && ctxItem.owner !== currentUser && ctxItem.game && targetUsername !== currentUser);
+            const askBtnHtml = (canAskPayment || canOffer) ? '<div class="deal-toolbar">' + (canOffer ? '<button class="ask-payment-btn" id="make-offer-btn" type="button">Make an offer</button>' : '') + (canAskPayment ? '<button class="ask-payment-btn" id="ask-payment-btn" type="button">Ask for payment</button>' : '') + '</div>' : '';
             const msgEntries = chatMsgs.map(m => ({ t: m.timestamp, html: (() => {
                 const ref = (m.itemRef && !itemId) ? `<div class="msg-item-ref"><b>${escapeHtml(m.itemRef.name)}</b><span>${escapeHtml(m.itemRef.price)}</span></div>` : '';
-                return `<div class="message-bubble ${m.sender === currentUser ? 'outgoing' : 'incoming'}" data-timestamp="${m.timestamp}" data-sender="${m.sender}" title="${escapeHtml(getExactDate(m.timestamp))}">${ref}<span class="msg-text-content">${escapeHtml(m.text)}</span><span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))}</span></div>`;
+                return chatBubbleHtml(m, ref);
             })() }));
             const bubblesHtml = [...msgEntries, ...dealsHere.map(d => ({ t: d.createdAt, html: dealCardHtml(d, currentUser) }))]
                 .sort((a, b) => a.t - b.t).map(x => x.html).join('');
@@ -5196,7 +5514,10 @@ Your Terms of Service text goes here.
                 </div>
                 ${ctxHtml}
                 ${askBtnHtml}
+                <div class="typing-indicator" id="typing-indicator"></div>
                 <div class="chat-input-row">
+                    <input type="file" id="chat-image-file" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none;">
+                    <button class="chat-attach-btn" id="chat-attach-btn" type="button" title="Send a picture">&#128247;</button>
                     <textarea class="chat-input" id="chat-message-input" placeholder="Type a message...">${escapeHtml(keepDraft)}</textarea>
                     <button class="chat-send-btn" id="chat-send-btn">Send</button>
                 </div>
@@ -5236,6 +5557,7 @@ Your Terms of Service text goes here.
                     menu.appendChild(copyBtn);
 
                     if (msgSender === currentUser) {
+                        if (!bubble.hasAttribute('data-noedit')) {
                         const editBtn = document.createElement('button');
                         editBtn.className = 'msg-ctx-btn';
                         editBtn.textContent = 'Edit';
@@ -5247,6 +5569,7 @@ Your Terms of Service text goes here.
                             menu.remove();
                         };
                         menu.appendChild(editBtn);
+                        }
 
                         const deleteBtn = document.createElement('button');
                         deleteBtn.className = 'msg-ctx-btn danger';
@@ -5270,6 +5593,7 @@ Your Terms of Service text goes here.
                 });
             });
 
+            loadChatImages(scrollContainer).then(() => { scrollContainer.scrollTop = scrollContainer.scrollHeight; });
             bindDealControls(scrollContainer, targetUsername, me, threadKey, itemId);
             document.getElementById('chat-delete-btn').addEventListener('click', () => deleteChatForMe(threadKey));
 
@@ -5303,6 +5627,7 @@ Your Terms of Service text goes here.
                     const itemRefData = ctxItem ? {
                         name: ctxItem.name,
                         price: ctxItem.label || itemPriceLabel(ctxItem),
+                        game: ctxItem.game || '',
                         seller: ctxItem.owner || ''
                     } : null;
 
@@ -5334,6 +5659,7 @@ Your Terms of Service text goes here.
 
                 pendingChatItem = null;
                 inputField.value = '';
+                clearTypingState(targetUsername);
                 await renderChatsList(threadKey);
             };
 
@@ -5344,6 +5670,35 @@ Your Terms of Service text goes here.
                     handleSend();
                 }
             });
+
+            // typing indicator
+            inputField.addEventListener('input', () => {
+                if (inputField.value.trim()) sendTypingState(targetUsername);
+                else clearTypingState(targetUsername);
+            });
+            startTypingWatch(targetUsername);
+
+            // pictures only
+            const fileInput = document.getElementById('chat-image-file');
+            document.getElementById('chat-attach-btn').addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', async () => {
+                const f = fileInput.files && fileInput.files[0];
+                fileInput.value = '';
+                await sendChatImageFile(f, targetUsername, threadKey, itemId, ctxItem);
+            });
+            inputField.addEventListener('paste', async (e) => {
+                const items = (e.clipboardData && e.clipboardData.items) || [];
+                for (const it of items) {
+                    if (it.kind === 'file' && it.type.startsWith('image/')) {
+                        e.preventDefault();
+                        await sendChatImageFile(it.getAsFile(), targetUsername, threadKey, itemId, ctxItem);
+                        return;
+                    }
+                }
+            });
+
+            const offerBtn = document.getElementById('make-offer-btn');
+            if (offerBtn) offerBtn.addEventListener('click', () => openOfferDialog({ targetUsername, threadKey, itemId, ctxItem }));
         }
 
         async function editMessageInDB(targetUsername, timestamp, newText) {
@@ -5617,6 +5972,8 @@ Your Terms of Service text goes here.
         let dealReqItems = [];
         function updateDealReqHint() {
             const a = round2(parseFloat(dealReqAmount.value));
+            const fmtEl = document.getElementById('deal-req-amount-fmt');
+            if (fmtEl) { fmtEl.style.display = (a > 0 && dealReqAmount.style.display !== 'none') ? '' : 'none'; fmtEl.textContent = a > 0 ? fmtMoney(a) : ''; }
             document.getElementById('deal-req-hint').textContent = (a > 0)
                 ? `You receive ${fmtMoney(round2(a * SELLER_SHARE))} (90%) after payment. It stays on hold until the buyer confirms delivery.`
                 : 'You receive 90% after payment. It stays on hold until the buyer confirms delivery.';
@@ -5645,7 +6002,7 @@ Your Terms of Service text goes here.
         function openRequestDialog(items, lockToItem) {
             dealReqItems = items;
             dealReqItem.innerHTML = (lockToItem ? '' : '<option value="">Custom</option>') +
-                items.map((it, i) => `<option value="${i}">${escapeHtml(it.name)} - $${escapeHtml(String(it.price))}</option>`).join('');
+                items.map((it, i) => `<option value="${i}">${escapeHtml(it.name)} - ${escapeHtml(isFinite(parseFloat(it.price)) ? fmtMoney(parseFloat(it.price)) : String(it.price))}</option>`).join('');
             dealReqItem.disabled = !!lockToItem;
             dealReqItem.value = lockToItem && items.length ? '0' : '';
             const first = dealReqSelectedItem();
