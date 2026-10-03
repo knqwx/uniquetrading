@@ -2305,6 +2305,21 @@
         .chat-staged-x { position: absolute; top: 6px; left: 8px; width: 22px; height: 22px; border-radius: 50%; border: none; background: #ff4d4d; color: #fff; font-size: 14px; line-height: 1; cursor: pointer; }
         .chat-caption { display: block; padding: 6px 8px 0; }
         .item-wanted-line { font-size: 11px; color: #ff9a44; margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* ===== multi-select polish ===== */
+        .offer-chips .offer-chip { color: #ffffff; }
+        .offer-chip .x { font-size: 24px; line-height: 1; padding: 0 6px; cursor: pointer; opacity: 0.85; color: #ff6b6b; font-weight: 700; margin-left: 2px; }
+        .offer-chip .x:hover { opacity: 1; color: #ff4d4d; }
+        .offer-chip .qty { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; }
+        .offer-chip .qbtn { width: 22px; height: 22px; border-radius: 6px; border: 1px solid #555; background: #333; color: #fff; font-size: 14px; line-height: 1; cursor: pointer; padding: 0; }
+        .offer-chip .qbtn:hover { border-color: #ff7300; }
+        .offer-chip .qn { min-width: 16px; text-align: center; font-weight: 700; }
+        .offer-selected-head { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 6px; }
+        .offer-selected-head .offer-selected-title { margin: 0; }
+        .offer-clear-btn { background: transparent; border: 1px solid #c0392b; color: #ff6b6b; border-radius: 7px; padding: 4px 10px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .offer-clear-btn:hover { background: #c0392b; color: #fff; }
+        .item-picker-item.selected[data-count]::after { content: "\00d7" attr(data-count); margin-left: 6px; color: #ff9a44; font-weight: 700; }
+        .item-picker-card.selected[data-count]::after { margin-left: 0; }
         /* ===== Deals: payment requests inside chat ===== */
         .deal-toolbar { display: flex; justify-content: flex-end; padding: 8px 20px 0; }
         .ask-payment-btn {
@@ -3257,7 +3272,10 @@ Your Terms of Service text goes here.
                         </div>
                     </div>
                 </div>
-                <div class="offer-selected-title" style="margin-top:12px;">Selected (<span id="offer-count">0</span>)</div>
+                <div class="offer-selected-head">
+                    <div class="offer-selected-title">Selected (<span id="offer-count">0</span>)</div>
+                    <button type="button" class="offer-clear-btn" id="offer-clear">Remove all</button>
+                </div>
                 <div class="offer-chips" id="offer-selected"></div>
                 <div class="offer-mm-warn" id="offer-warn" style="display:none;">This trade will require a middleman to complete</div>
                 <div class="offer-actions">
@@ -4280,23 +4298,34 @@ Your Terms of Service text goes here.
             img.onerror = null;
             img.classList.add('missing');
         }
+        // items may contain the same name several times; group them: [{name, count}]
+        function groupItems(items) {
+            const order = [], counts = {};
+            (items || []).forEach(n => { if (!(n in counts)) { counts[n] = 0; order.push(n); } counts[n]++; });
+            return order.map(n => ({ name: n, count: counts[n] }));
+        }
+        function fmtItemList(items) {
+            return groupItems(items).map(g => g.count > 1 ? `${g.name} x${g.count}` : g.name).join(', ');
+        }
         function offerChipsHtml(game, items) {
-            return (items || []).map(n => {
-                const icon = isAncientItem(game, n) ? `<img ${itemImgAttrs({ game: game, name: n })} alt="">` : '';
-                return `<span class="offer-chip">${icon}${escapeHtml(n)}</span>`;
+            return groupItems(items).map(g => {
+                const icon = isAncientItem(game, g.name) ? `<img ${itemImgAttrs({ game: game, name: g.name })} alt="">` : '';
+                return `<span class="offer-chip">${icon}${escapeHtml(g.name)}${g.count > 1 ? ' &times;' + g.count : ''}</span>`;
             }).join('');
         }
         function wantedLineHtml(item) {
             if (!item || item.tag !== 'specific' || !item.wanted || !Array.isArray(item.wanted.items) || !item.wanted.items.length) return '';
-            const it = item.wanted.items;
+            const it = groupItems(item.wanted.items).map(g => g.count > 1 ? `${g.name} x${g.count}` : g.name);
             return `<div class="item-wanted-line">Wants: ${escapeHtml(it.slice(0, 2).join(', '))}${it.length > 2 ? ' +' + (it.length - 2) : ''}</div>`;
         }
         // src + fallback attributes for an item image. Uploaded photo wins, then the Ancient's icon, then the game thumbnail.
         function itemImgAttrs(item) {
             if (item.photo) return `src="${item.photo}"`;
             const fb = getGameThumb(item.game);
-            if (isAncientItem(item.game, item.name)) {
-                const c = itemImageCandidates(item.name);
+            const _list = (item.items && item.items.length) ? item.items : [item.name];
+            const _anc = _list.find(n => isAncientItem(item.game, n));
+            if (_anc) {
+                const c = itemImageCandidates(_anc);
                 return `src="${escapeHtml(c[0])}" data-alts="${escapeHtml(c.slice(1).join('|'))}" data-fb="${escapeHtml(fb)}" onerror="itemImgFallback(this)"`;
             }
             return `src="${fb}"`;
@@ -4304,17 +4333,26 @@ Your Terms of Service text goes here.
         let pickedItemCategory = '';
         let pickerActiveCat = '';
 
+        let listingItems = [];
+        function categoryOfItem(game, name) {
+            const g = GAME_ITEMS[game];
+            if (!g) return '';
+            return Object.keys(g).find(c => g[c].includes(name)) || '';
+        }
         function updatePickBtn() {
             const btn = document.getElementById('item-pick-btn');
-            const name = itemNameInput.value.trim();
-            btn.textContent = name ? (name + (pickedItemCategory ? ' \u00b7 ' + pickedItemCategory : '')) : 'Select item';
+            btn.textContent = listingItems.length ? (fmtItemList(listingItems) + (pickedItemCategory ? ' \u00b7 ' + pickedItemCategory : '')) : 'Select item';
         }
-        function refreshItemPicker(currentName, currentCategory) {
+        function refreshItemPicker(currentName, currentCategory, currentItems) {
             const has = !!GAME_ITEMS[selectedGameForListing];
             document.getElementById('item-pick-group').style.display = has ? '' : 'none';
             document.getElementById('item-name-group').style.display = has ? 'none' : '';
             pickedItemCategory = has ? (currentCategory || '') : '';
+            listingItems = has ? ((Array.isArray(currentItems) && currentItems.length) ? currentItems.slice() : (currentName ? [currentName] : [])) : [];
             updatePickBtn();
+        }
+        function currentListingItemsForSave() {
+            return (GAME_ITEMS[selectedGameForListing] && listingItems.length) ? listingItems.slice() : null;
         }
         function renderPickerCats() {
             const groups = GAME_ITEMS[selectedGameForListing] || {};
@@ -4345,13 +4383,20 @@ Your Terms of Service text goes here.
             updateItemPreview();
         }
         function openItemPicker() {
-            const groups = GAME_ITEMS[selectedGameForListing];
-            if (!groups) return;
-            document.getElementById('item-picker-title').textContent = `Select item (${selectedGameForListing})`;
-            pickerActiveCat = (pickedItemCategory && groups[pickedItemCategory]) ? pickedItemCategory : Object.keys(groups)[0];
-            document.getElementById('item-picker-custom-input').value = '';
-            renderPickerCats();
-            document.getElementById('item-picker-modal').classList.add('active');
+            if (!GAME_ITEMS[selectedGameForListing]) return;
+            openItemsDialog({
+                game: selectedGameForListing,
+                lockGame: true,
+                items: listingItems,
+                confirmLabel: 'Done',
+                onDone: async (game, items) => {
+                    listingItems = items;
+                    itemNameInput.value = fmtItemList(items);
+                    pickedItemCategory = categoryOfItem(game, items[0]);
+                    updatePickBtn();
+                    updateItemPreview();
+                }
+            });
         }
 
         if (currentUser) {
@@ -4907,7 +4952,7 @@ Your Terms of Service text goes here.
                 saveItemBtn.textContent = 'Save Changes';
 
                 itemNameInput.value = currentActiveItem.name || '';
-                refreshItemPicker(currentActiveItem.name || '', currentActiveItem.category || '');
+                refreshItemPicker(currentActiveItem.name || '', currentActiveItem.category || '', currentActiveItem.items);
                 document.getElementById('item-desc-input').value = currentActiveItem.description || '';
                 itemTagSelect.value = currentActiveItem.tag || 'selling';
                 wantedState = (currentActiveItem.tag === 'specific' && currentActiveItem.wanted && Array.isArray(currentActiveItem.wanted.items)) ? { game: currentActiveItem.wanted.game, items: currentActiveItem.wanted.items.slice() } : null;
@@ -4922,7 +4967,7 @@ Your Terms of Service text goes here.
                     offersOptionsGroup.style.display = 'none';
                 } else {
                     sellingPriceGroup.style.display = 'none';
-                    offersOptionsGroup.style.display = 'block';
+                    offersOptionsGroup.style.display = itemTagSelect.value === 'offers' ? 'block' : 'none';
                 }
 
                 updateItemPreview();
@@ -5471,13 +5516,20 @@ Your Terms of Service text goes here.
             document.getElementById('offer-back').style.display = itemsDlg.lockGame ? 'none' : '';
             renderItemsDialog();
         }
-        function toggleDlgItem(name) {
+        function addDlgItem(name) {
             name = String(name || '').trim();
             if (!name) return;
+            if (itemsDlg.items.length >= 40) { showToast('You can select up to 40 items in total.'); return; }
+            itemsDlg.items.push(name);
+            renderItemsDialog();
+        }
+        function removeOneDlgItem(name) {
             const i = itemsDlg.items.indexOf(name);
             if (i >= 0) itemsDlg.items.splice(i, 1);
-            else if (itemsDlg.items.length >= 40) { showToast('You can select up to 40 items.'); return; }
-            else itemsDlg.items.push(name);
+            renderItemsDialog();
+        }
+        function removeAllOfDlgItem(name) {
+            itemsDlg.items = itemsDlg.items.filter(n => n !== name);
             renderItemsDialog();
         }
         function renderItemsDialog() {
@@ -5493,32 +5545,44 @@ Your Terms of Service text goes here.
                 titleEl.textContent = st.cat;
                 listEl.classList.toggle('cards', st.cat === 'Ancients');
                 const list = groups[st.cat] || [];
+                const cnt = {};
+                st.items.forEach(n => { cnt[n] = (cnt[n] || 0) + 1; });
                 listEl.innerHTML = list.map(n => {
-                    const sel = st.items.includes(n) ? ' selected' : '';
+                    const c = cnt[n] || 0;
+                    const sel = c ? ` selected" data-count="${c}` : '';
                     return st.cat === 'Ancients'
                         ? `<button type="button" class="item-picker-card item-picker-item${sel}" data-name="${escapeHtml(n)}"><img class="card-img" ${itemImgAttrs({ game: st.game, name: n })} alt="${escapeHtml(n)}" loading="lazy"><span>${escapeHtml(n)}</span></button>`
                         : `<button type="button" class="item-picker-item${sel}" data-name="${escapeHtml(n)}">${escapeHtml(n)}</button>`;
                 }).join('') || '<div class="item-picker-empty">No items added to this category yet. You can type the item name below.</div>';
-                listEl.querySelectorAll('[data-name]').forEach(b => b.addEventListener('click', () => toggleDlgItem(b.dataset.name)));
+                listEl.querySelectorAll('[data-name]').forEach(b => b.addEventListener('click', () => addDlgItem(b.dataset.name)));
             } else {
                 catsEl.style.display = 'none'; listEl.style.display = 'none'; titleEl.style.display = 'none';
             }
-            document.getElementById('offer-selected').innerHTML = st.items.length
-                ? st.items.map((n, i) => `<span class="offer-chip">${isAncientItem(st.game, n) ? `<img ${itemImgAttrs({ game: st.game, name: n })} alt="">` : ''}${escapeHtml(n)}<span class="x" data-i="${i}">&times;</span></span>`).join('')
+            const groupsSel = groupItems(st.items);
+            document.getElementById('offer-selected').innerHTML = groupsSel.length
+                ? groupsSel.map((g, i) => `<span class="offer-chip">${isAncientItem(st.game, g.name) ? `<img ${itemImgAttrs({ game: st.game, name: g.name })} alt="">` : ''}${escapeHtml(g.name)}<span class="qty"><button type="button" class="qbtn" data-q="dec" data-i="${i}" title="One less">&minus;</button><span class="qn">${g.count}</span><button type="button" class="qbtn" data-q="inc" data-i="${i}" title="One more">+</button></span><span class="x" data-i="${i}" title="Remove">&times;</span></span>`).join('')
                 : '<span class="item-picker-empty">No items selected yet.</span>';
-            document.querySelectorAll('#offer-selected .x').forEach(x => x.addEventListener('click', () => { st.items.splice(Number(x.dataset.i), 1); renderItemsDialog(); }));
+            document.querySelectorAll('#offer-selected [data-i]').forEach(el => el.addEventListener('click', () => {
+                const g = groupsSel[Number(el.dataset.i)];
+                if (!g) return;
+                if (el.dataset.q === 'inc') addDlgItem(g.name);
+                else if (el.dataset.q === 'dec') removeOneDlgItem(g.name);
+                else removeAllOfDlgItem(g.name);
+            }));
+            document.getElementById('offer-clear').style.display = st.items.length ? '' : 'none';
             document.getElementById('offer-count').textContent = st.items.length;
             document.getElementById('offer-warn').style.display = (st.listingGame && st.items.length && offerNeedsMiddleman(st.listingGame, st.game, st.items.length)) ? '' : 'none';
         }
         document.getElementById('offer-close').addEventListener('click', () => offerModal.classList.remove('active'));
         offerModal.addEventListener('click', (e) => { if (e.target === offerModal) offerModal.classList.remove('active'); });
         document.getElementById('offer-back').addEventListener('click', () => { if (itemsDlg) showGameStep(); });
+        document.getElementById('offer-clear').addEventListener('click', () => { if (itemsDlg) { itemsDlg.items = []; renderItemsDialog(); } });
         const dlgAddCustom = () => {
             const inp = document.getElementById('offer-custom-input');
             const v = inp.value.trim();
             if (!v || !itemsDlg) return;
             inp.value = '';
-            if (!itemsDlg.items.includes(v)) toggleDlgItem(v);
+            addDlgItem(v);
         };
         document.getElementById('offer-custom-btn').addEventListener('click', dlgAddCustom);
         document.getElementById('offer-custom-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); dlgAddCustom(); } });
@@ -5541,13 +5605,13 @@ Your Terms of Service text goes here.
             openItemsDialog({
                 title: 'Make an offer',
                 listingGame: c.game || '',
-                hint: w ? 'They want: ' + w.items.join(', ') : '',
+                hint: w ? 'They want: ' + fmtItemList(w.items) : '',
                 confirmLabel: 'Send offer',
                 onDone: async (game, items) => {
                     const mm = offerNeedsMiddleman(c.game || '', game, items.length);
                     await pushChatMessage({
                         sender: currentUser, receiver: ctx.targetUsername,
-                        text: `Offer (${game}): ${items.join(', ')}` + (mm ? ' - this trade will require a middleman to complete' : ''),
+                        text: `Offer (${game}): ${fmtItemList(items)}` + (mm ? ' - this trade will require a middleman to complete' : ''),
                         timestamp: Date.now(),
                         offer: { game: game, items: items, mm: mm, listingGame: c.game || '', status: 'pending' },
                         itemRef: { name: c.name, price: c.label || itemPriceLabel(c), game: c.game || '', seller: c.owner || '' },
@@ -5594,7 +5658,7 @@ Your Terms of Service text goes here.
                         const mm = offerNeedsMiddleman(o.listingGame || '', game, items.length);
                         await updateOfferInDB(msg.sender, msg.receiver, msg.timestamp, m => {
                             m.offer.items = items; m.offer.mm = mm; m.offer.status = 'pending'; delete m.offer.by;
-                            m.text = `Offer (${game}): ${items.join(', ')}` + (mm ? ' - this trade will require a middleman to complete' : '');
+                            m.text = `Offer (${game}): ${fmtItemList(items)}` + (mm ? ' - this trade will require a middleman to complete' : '');
                         });
                         showToast('Offer updated!');
                         await renderChatsList(threadKey);
@@ -5659,7 +5723,7 @@ Your Terms of Service text goes here.
             const bubblesHtml = [...msgEntries, ...dealsHere.map(d => ({ t: d.createdAt, html: dealCardHtml(d, currentUser) }))]
                 .sort((a, b) => a.t - b.t).map(x => x.html).join('');
 
-            const ctxHtml = ctxItem ? `<div class="chat-item-context" id="chat-item-context"><div class="ctx-info"><div class="ctx-label">This chat is about</div><div class="ctx-name">${escapeHtml(ctxItem.name)}</div><div class="ctx-price">${escapeHtml(ctxItem.label || itemPriceLabel(ctxItem))}${ctxItem.gone ? ' &middot; no longer listed' : ''}</div>${(ctxItem.tag === 'specific' && ctxItem.wanted && ctxItem.wanted.items && ctxItem.wanted.items.length) ? `<div class="ctx-price" style="color:#ff9a44;">Wants: ${escapeHtml(ctxItem.wanted.items.join(', '))}</div>` : ''}</div></div>` : '';
+            const ctxHtml = ctxItem ? `<div class="chat-item-context" id="chat-item-context"><div class="ctx-info"><div class="ctx-label">This chat is about</div><div class="ctx-name">${escapeHtml(ctxItem.name)}</div><div class="ctx-price">${escapeHtml(ctxItem.label || itemPriceLabel(ctxItem))}${ctxItem.gone ? ' &middot; no longer listed' : ''}</div>${(ctxItem.tag === 'specific' && ctxItem.wanted && ctxItem.wanted.items && ctxItem.wanted.items.length) ? `<div class="ctx-price" style="color:#ff9a44;">Wants: ${escapeHtml(fmtItemList(ctxItem.wanted.items))}</div>` : ''}</div></div>` : '';
 
             chatWindowCol.innerHTML = `
                 <div class="chat-header-row">
@@ -7277,7 +7341,7 @@ Your Terms of Service text goes here.
                 offersOptionsGroup.style.display = 'none';
             } else {
                 sellingPriceGroup.style.display = 'none';
-                offersOptionsGroup.style.display = 'block';
+                offersOptionsGroup.style.display = itemTagSelect.value === 'offers' ? 'block' : 'none';
             }
             updateItemPreview();
         });
@@ -7294,7 +7358,7 @@ Your Terms of Service text goes here.
             if (!photoSrc) {
                 photoSrc = getGameThumb(selectedGameForListing);
             }
-            previewCardImg.innerHTML = `<img ${itemImgAttrs({ photo: uploadedItemPhotoData, name: itemNameInput.value.trim(), game: selectedGameForListing })} style="width:100%; height:100%; border-radius:8px; object-fit:cover;" alt="Preview">`;
+            previewCardImg.innerHTML = `<img ${itemImgAttrs({ photo: uploadedItemPhotoData, name: itemNameInput.value.trim(), items: listingItems, game: selectedGameForListing })} style="width:100%; height:100%; border-radius:8px; object-fit:cover;" alt="Preview">`;
         }
 
         itemNameInput.addEventListener('input', updateItemPreview);
@@ -7352,6 +7416,7 @@ Your Terms of Service text goes here.
                         photo: uploadedItemPhotoData,
                         game: selectedGameForListing,
                         category: pickedItemCategory || '',
+                        items: currentListingItemsForSave(),
                         wanted: (tag === 'specific' && wantedState) ? { game: wantedState.game, items: wantedState.items.slice() } : null,
                         stock: stock
                     };
@@ -7367,6 +7432,7 @@ Your Terms of Service text goes here.
                     photo: uploadedItemPhotoData,
                     game: selectedGameForListing,
                     category: pickedItemCategory || '',
+                        items: currentListingItemsForSave(),
                         wanted: (tag === 'specific' && wantedState) ? { game: wantedState.game, items: wantedState.items.slice() } : null,
                     stock: stock
                 };
