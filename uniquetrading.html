@@ -2543,11 +2543,13 @@
         }
         .chat-item.unread .chat-item-last { color: #ffffff; font-weight: 600; }
         .chat-item.unread .chat-item-name { color: #ffffff; }
+        .deal-price-fixed { font-size: 22px; font-weight: 700; color: #ff7300; padding: 4px 0; }
         /* per-item chat label, join date, item picker */
         .chat-item-sub { color: #ff9a44; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
         .chat-header-item { color: #ff9a44; font-size: 12px; font-weight: 600; }
         .modal-joined { color: #888888; font-size: 12px; margin-top: 2px; }
-        .top-link.discord-link { text-decoration: none; display: inline-block; color: #8c9eff; }
+        .top-link.discord-link { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; color: #8c9eff; padding: 6px 10px; }
+        .top-link.discord-link svg { display: block; }
         .top-link.discord-link:hover { color: #ffffff; background-color: #5865f2; }
     </style>
 </head>
@@ -2563,7 +2565,7 @@
             <button class="top-link" id="copyright-btn" type="button">Copyright</button>
             <button class="top-link" id="terms-btn" type="button"><span class="long">Terms of Service</span><span class="short">Terms</span></button>
             <!-- ====== PUT YOUR DISCORD INVITE LINK IN href BELOW ====== -->
-            <a class="top-link discord-link" id="discord-link" href="https://discord.gg/YOUR_INVITE_CODE" target="_blank" rel="noopener noreferrer">Discord</a>
+            <a class="top-link discord-link" id="discord-link" href="https://discord.gg/YOUR_INVITE_CODE" target="_blank" rel="noopener noreferrer" title="Join our Discord" aria-label="Join our Discord"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg></a>
         </nav>
         <div class="nav-left">
             <a class="nav-home active" id="home-link">Home</a>
@@ -2893,6 +2895,12 @@ Your Terms of Service text goes here.
                 <label class="setting-label">Username</label>
                 <input type="text" class="setting-input" id="setting-username-input">
                 <div class="setting-hint" id="username-hint">Can be changed once every 2 weeks.</div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">ID</label>
+                <input type="text" class="setting-input" id="setting-customid-input" maxlength="20" autocomplete="off">
+                <div class="setting-hint" id="customid-hint">1-20 characters: letters, numbers, _ and -. Must be unique.</div>
             </div>
 
             <div class="setting-group">
@@ -3357,8 +3365,9 @@ Your Terms of Service text goes here.
                 <input type="text" class="setting-input" id="deal-req-name" maxlength="80" placeholder="Item name">
             </div>
             <div class="deal-field">
-                <label class="setting-label">Amount ($)</label>
+                <label class="setting-label" id="deal-req-amount-label">Amount ($)</label>
                 <input type="number" step="0.01" min="0.01" class="setting-input" id="deal-req-amount" placeholder="0.00">
+                <div class="deal-price-fixed" id="deal-req-price-fixed" style="display:none;"></div>
                 <div class="setting-hint" id="deal-req-hint">You receive 90% after payment. It stays on hold until the buyer confirms delivery.</div>
             </div>
             <div class="deal-modal-actions">
@@ -3437,11 +3446,14 @@ Your Terms of Service text goes here.
                 }
 
                 // join date: new rows get it automatically (also rows created by login.html);
-                // accounts that existed before this feature get 1 = "joined before join dates were tracked"
+                // accounts that existed before join dates were tracked have joinedAt = 0 and show "Joined: 0".
+                // An account row with no joinedAt at all is brand new (made by login.html) and is stamped with the real time.
+                try { await db.execute("UPDATE users SET joinedAt = 0 WHERE joinedAt = 1"); } catch (e) {} // old placeholder value
+                try { await db.execute("DROP TRIGGER IF EXISTS users_set_joined"); } catch (e) {}
                 try {
-                    await db.execute(`CREATE TRIGGER IF NOT EXISTS users_set_joined AFTER INSERT ON users WHEN NEW.joinedAt IS NULL OR NEW.joinedAt = 0 BEGIN UPDATE users SET joinedAt = CAST(strftime('%s','now') AS INTEGER) * 1000 WHERE id = NEW.id; END`);
+                    await db.execute(`CREATE TRIGGER IF NOT EXISTS users_set_joined AFTER INSERT ON users WHEN NEW.joinedAt IS NULL BEGIN UPDATE users SET joinedAt = CAST(strftime('%s','now') AS INTEGER) * 1000 WHERE id = NEW.id; END`);
                 } catch (e) { console.error('joinedAt trigger error:', e); }
-                try { await db.execute("UPDATE users SET joinedAt = 1 WHERE joinedAt IS NULL OR joinedAt = 0"); } catch (e) {}
+                try { await db.execute({ sql: "UPDATE users SET joinedAt = ? WHERE joinedAt IS NULL", args: [Date.now()] }); } catch (e) {}
 
                 await db.execute(`
                     CREATE TABLE IF NOT EXISTS tickets (
@@ -3634,7 +3646,7 @@ Your Terms of Service text goes here.
                                 items = excluded.items, lastItemTime = excluded.lastItemTime, messages = excluded.messages, card = excluded.card`,
                         args: [vals[0], userData.username, ...vals.slice(1), userData.isMiddleman ? 1 : 0, userData.lastSeen || 0]
                     });
-                    if (userData.joinedAt) {
+                    if (userData.joinedAt !== undefined && userData.joinedAt !== null) {
                         try { await db.execute({ sql: "UPDATE users SET joinedAt = ? WHERE username = ?", args: [userData.joinedAt, userData.username] }); } catch (e) {}
                     }
                 } else {
@@ -4071,9 +4083,8 @@ Your Terms of Service text goes here.
         }
         function fmtJoined(ts) {
             const n = Number(ts) || 0;
-            if (!n) return '';
-            if (n < 1e11) return 'Joined: before Oct 2026';
-            return 'Joined: ' + new Date(n).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            if (n < 1e11) return 'Joined: 0';
+            return 'Joined: ' + getExactDate(n);
         }
 
         // ===== Items you can pick when listing, per game. Edit these lists freely. =====
@@ -5527,14 +5538,37 @@ Your Terms of Service text goes here.
                 ? `You receive ${fmtMoney(round2(a * SELLER_SHARE))} (90%) after payment. It stays on hold until the buyer confirms delivery.`
                 : 'You receive 90% after payment. It stays on hold until the buyer confirms delivery.';
         }
+        // a listed item always uses its listed price, shown as plain text (can't be edited); "Custom" stays free-form
+        function dealReqSelectedItem() {
+            return dealReqItem.value !== '' ? (dealReqItems[Number(dealReqItem.value)] || null) : null;
+        }
+        function dealReqFixedPrice() {
+            const it = dealReqSelectedItem();
+            const p = it ? round2(parseFloat(it.price)) : NaN;
+            return p > 0 ? p : 0;
+        }
+        function syncDealReqLock() {
+            const it = dealReqSelectedItem();
+            const fixed = dealReqFixedPrice();
+            const fixedEl = document.getElementById('deal-req-price-fixed');
+            dealReqAmount.style.display = fixed ? 'none' : '';
+            fixedEl.style.display = fixed ? '' : 'none';
+            fixedEl.textContent = fixed ? fmtMoney(fixed) : '';
+            document.getElementById('deal-req-amount-label').textContent = fixed ? 'Price' : 'Amount ($)';
+            dealReqName.readOnly = !!it;
+            if (fixed) dealReqAmount.value = fixed;
+            updateDealReqHint();
+        }
         function openRequestDialog(items, lockToItem) {
             dealReqItems = items;
-            dealReqItem.innerHTML = '<option value="">Custom</option>' +
+            dealReqItem.innerHTML = (lockToItem ? '' : '<option value="">Custom</option>') +
                 items.map((it, i) => `<option value="${i}">${escapeHtml(it.name)} - $${escapeHtml(String(it.price))}</option>`).join('');
-            dealReqName.value = '';
+            dealReqItem.disabled = !!lockToItem;
+            dealReqItem.value = lockToItem && items.length ? '0' : '';
+            const first = dealReqSelectedItem();
+            dealReqName.value = first ? (first.name || '') : '';
             dealReqAmount.value = '';
-            updateDealReqHint();
-            if (lockToItem && items.length) { dealReqItem.value = '0'; dealReqItem.dispatchEvent(new Event('change')); }
+            syncDealReqLock();
             dealRequestModal.classList.add('active');
             return new Promise(res => { dealReqResolve = res; });
         }
@@ -5543,22 +5577,26 @@ Your Terms of Service text goes here.
             if (dealReqResolve) { dealReqResolve(val); dealReqResolve = null; }
         }
         dealReqItem.addEventListener('change', () => {
-            const it = dealReqItems[Number(dealReqItem.value)];
-            if (dealReqItem.value !== '' && it) {
+            const it = dealReqSelectedItem();
+            if (it) {
                 dealReqName.value = it.name || '';
-                const p = parseFloat(it.price);
-                if (p > 0) dealReqAmount.value = p;
-                updateDealReqHint();
+                if (!dealReqFixedPrice()) dealReqAmount.value = '';
+            } else {
+                dealReqName.value = '';
+                dealReqAmount.value = '';
             }
+            syncDealReqLock();
         });
         dealReqAmount.addEventListener('input', updateDealReqHint);
         document.getElementById('deal-req-close').addEventListener('click', () => closeRequestDialog(null));
         document.getElementById('deal-req-cancel').addEventListener('click', () => closeRequestDialog(null));
         document.getElementById('deal-req-send').addEventListener('click', () => {
-            const amount = round2(parseFloat(dealReqAmount.value));
+            const it = dealReqSelectedItem();
+            const fixed = dealReqFixedPrice();
+            const amount = fixed || round2(parseFloat(dealReqAmount.value));
             if (!amount || isNaN(amount) || amount < MIN_DEAL) { showToast('Enter a valid amount.'); return; }
             if (amount > MAX_DEAL) { showToast(`Maximum amount is ${fmtMoney(MAX_DEAL)}.`); return; }
-            closeRequestDialog({ amount, itemName: dealReqName.value.trim() });
+            closeRequestDialog({ amount, itemName: it ? (it.name || '') : dealReqName.value.trim() });
         });
 
         // ---- deal card inside the chat ----
@@ -6367,6 +6405,12 @@ Your Terms of Service text goes here.
 
             settingUsernameInput.value = userObj.username || '';
             settingDisplaynameInput.value = userObj.displayName || userObj.username || '';
+            const idInput = document.getElementById('setting-customid-input');
+            idInput.value = userObj.customId || '';
+            // the admin account's ID is what makes it the admin, so it can't be changed
+            const protectedId = userObj.customId === 'knqw';
+            idInput.disabled = protectedId;
+            document.getElementById('customid-hint').textContent = protectedId ? 'This ID is protected and cannot be changed.' : '1-20 characters: letters, numbers, _ and -. Must be unique.';
             settingsModal.classList.add('active');
         }
 
@@ -6503,6 +6547,28 @@ Your Terms of Service text goes here.
                     showToast('Username is already taken');
                     return;
                 }
+            }
+
+            // ---- ID change (everyone; 'knqw' is the admin ID so nobody else can take it) ----
+            const newId = document.getElementById('setting-customid-input').value.trim();
+            if (userObj.customId !== 'knqw' && newId !== (userObj.customId || '')) {
+                if (!/^[A-Za-z0-9_-]{1,20}$/.test(newId)) {
+                    showToast('ID must be 1-20 characters: letters, numbers, _ or -.');
+                    return;
+                }
+                if (newId.toLowerCase() === 'knqw') {
+                    showToast('This ID is reserved.');
+                    return;
+                }
+                const idTaken = await db.execute({
+                    sql: "SELECT 1 FROM users WHERE lower(customId) = lower(?) AND username != ? LIMIT 1",
+                    args: [newId, currentUser]
+                });
+                if (idTaken.rows.length) {
+                    showToast('This ID is already taken.');
+                    return;
+                }
+                userObj.customId = newId;
             }
 
             userObj.username = newUsername;
