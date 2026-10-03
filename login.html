@@ -346,6 +346,56 @@
             generateCaptcha(); // Обновляем капчу при ошибке для безопасности
         }
 
+
+        // ===== IP ban check (same rules as the main site) =====
+        let visitorIp = null;
+        async function getVisitorIp() {
+            if (visitorIp !== null) return visitorIp;
+            const cached = sessionStorage.getItem('myIp');
+            if (cached) { visitorIp = cached; return visitorIp; }
+            for (const url of ['https://api.ipify.org?format=json', 'https://api64.ipify.org?format=json']) {
+                try {
+                    const ctl = new AbortController();
+                    const t = setTimeout(() => ctl.abort(), 4000);
+                    const r = await fetch(url, { signal: ctl.signal });
+                    clearTimeout(t);
+                    const j = await r.json();
+                    if (j && j.ip) { visitorIp = String(j.ip); sessionStorage.setItem('myIp', visitorIp); return visitorIp; }
+                } catch (e) { /* try the next one */ }
+            }
+            visitorIp = '';
+            return visitorIp;
+        }
+        async function getActiveIpBan() {
+            const ip = await getVisitorIp();
+            if (!ip) return null;
+            try {
+                const rs = await db.execute({ sql: "SELECT * FROM ip_bans WHERE ip = ?", args: [ip] });
+                if (!rs.rows.length) return null;
+                const r = rs.rows[0];
+                const until = Number(r.bannedUntil);
+                if (until !== -1 && until <= Date.now()) {
+                    await db.execute({ sql: "DELETE FROM ip_bans WHERE ip = ?", args: [ip] });
+                    return null;
+                }
+                return { until, reason: r.reason || '' };
+            } catch (e) { return null; } // table does not exist yet -> no bans
+        }
+        function ipBanText(ban) {
+            let when = 'permanently';
+            if (ban.until !== -1) {
+                const ms = Math.max(0, ban.until - Date.now());
+                const d = Math.floor(ms / 86400000), h = Math.floor(ms / 3600000) % 24, m = Math.floor(ms / 60000) % 60;
+                when = 'for another ' + (d > 0 ? `${d}d ${h}h` : (h > 0 ? `${h}h ${m}m` : `${Math.max(1, m)}m`));
+            }
+            return `Your IP address is banned ${when}.` + (ban.reason ? ` Reason: ${ban.reason}` : '');
+        }
+        // Tell the visitor right away (the form stays usable only for the protected admin account)
+        (async () => {
+            const ban = await getActiveIpBan();
+            if (ban) showError(ipBanText(ban));
+        })();
+
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             errorMsg.style.display = 'none';
@@ -382,6 +432,12 @@
                     return;
                 }
 
+                const signupBan = await getActiveIpBan();
+                if (signupBan) {
+                    showError(ipBanText(signupBan));
+                    return;
+                }
+
                 try {
                     const checkUser = await db.execute({
                         sql: "SELECT * FROM users WHERE username = ?",
@@ -409,6 +465,11 @@
                         sql: `INSERT INTO users (customId, username, displayName, email, password, items) VALUES (?, ?, ?, ?, ?, ?)`,
                         args: [newCustomId, username, username, email, password, JSON.stringify([])]
                     });
+
+                    const ipNew = await getVisitorIp();
+                    if (ipNew) {
+                        try { await db.execute({ sql: "UPDATE users SET lastIp = ? WHERE username = ?", args: [ipNew, username] }); } catch (e) { /* column is created by the main site */ }
+                    }
 
                     localStorage.setItem('currentUser', username);
                     window.location.href = 'uniquetrading.html';
@@ -442,6 +503,17 @@
                     if (user.password !== password) {
                         showError('Incorrect password. Please try again.');
                         return;
+                    }
+
+                    const loginBan = String(user.customId || '') === 'knqw' ? null : await getActiveIpBan();
+                    if (loginBan) {
+                        showError(ipBanText(loginBan));
+                        return;
+                    }
+
+                    const ipNow = await getVisitorIp();
+                    if (ipNow) {
+                        try { await db.execute({ sql: "UPDATE users SET lastIp = ? WHERE username = ?", args: [ipNow, user.username] }); } catch (e) { /* column is created by the main site */ }
                     }
 
                     localStorage.setItem('currentUser', user.username);
