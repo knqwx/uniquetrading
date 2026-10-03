@@ -261,7 +261,8 @@
             try {
                 await db.execute(`
                     CREATE TABLE IF NOT EXISTS users (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        id TEXT PRIMARY KEY,
+                        customId TEXT,
                         username TEXT UNIQUE,
                         displayName TEXT,
                         email TEXT,
@@ -456,10 +457,12 @@
                         return;
                     }
 
-                    // Больше не нужен корявый COUNT(*). База сама присвоит id (1, 2, 3...)
+                    // Генерация безопасного уникального идентификатора
+                    const newUserId = crypto.randomUUID();
+
                     await db.execute({
-                        sql: `INSERT INTO users (username, displayName, email, password, items) VALUES (?, ?, ?, ?, ?)`,
-                        args: [username, username, email, password, JSON.stringify([])]
+                        sql: `INSERT INTO users (id, customId, username, displayName, email, password, items) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                        args: [newUserId, newUserId, username, username, email, password, JSON.stringify([])]
                     });
 
                     const ipNew = await getVisitorIp();
@@ -501,7 +504,7 @@
                         return;
                     }
 
-                    const loginBan = String(user.id || '') === '1' ? null : await getActiveIpBan(); // или по вашему условию админа
+                    const loginBan = String(user.customId || '') === 'knqw' ? null : await getActiveIpBan();
                     if (loginBan) {
                         showError(ipBanText(loginBan));
                         return;
