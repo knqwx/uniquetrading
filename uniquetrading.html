@@ -2543,6 +2543,12 @@
         }
         .chat-item.unread .chat-item-last { color: #ffffff; font-weight: 600; }
         .chat-item.unread .chat-item-name { color: #ffffff; }
+        /* per-item chat label, join date, item picker */
+        .chat-item-sub { color: #ff9a44; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+        .chat-header-item { color: #ff9a44; font-size: 12px; font-weight: 600; }
+        .modal-joined { color: #888888; font-size: 12px; margin-top: 2px; }
+        .top-link.discord-link { text-decoration: none; display: inline-block; color: #8c9eff; }
+        .top-link.discord-link:hover { color: #ffffff; background-color: #5865f2; }
     </style>
 </head>
 <body>
@@ -2556,6 +2562,8 @@
             <button class="top-link" id="help-btn" type="button">Help</button>
             <button class="top-link" id="copyright-btn" type="button">Copyright</button>
             <button class="top-link" id="terms-btn" type="button"><span class="long">Terms of Service</span><span class="short">Terms</span></button>
+            <!-- ====== PUT YOUR DISCORD INVITE LINK IN href BELOW ====== -->
+            <a class="top-link discord-link" id="discord-link" href="https://discord.gg/YOUR_INVITE_CODE" target="_blank" rel="noopener noreferrer">Discord</a>
         </nav>
         <div class="nav-left">
             <a class="nav-home active" id="home-link">Home</a>
@@ -2843,6 +2851,7 @@ Your Terms of Service text goes here.
                     <span class="presence-text" id="modal-presence-text"></span>
                 </div>
                 <div class="modal-userid" id="modal-userid-text">ID: 1</div>
+                <div class="modal-joined" id="modal-joined-text"></div>
                 <div class="profile-rating" id="profile-rating"></div>
                 
                 <div class="profile-left-buttons">
@@ -3029,7 +3038,13 @@ Your Terms of Service text goes here.
                     <input type="file" id="item-photo-file-input" accept="image/*" style="display: none;">
                 </div>
 
-                <div class="setting-group">
+                <div class="setting-group" id="item-pick-group">
+                    <label class="setting-label">Item</label>
+                    <select class="setting-select" id="item-pick-select"></select>
+                    <div class="setting-hint">Pick one of this game's items, or choose "Other" to type your own.</div>
+                </div>
+
+                <div class="setting-group" id="item-name-group">
                     <label class="setting-label">Item Name</label>
                     <input type="text" class="setting-input" id="item-name-input" placeholder="e.g. Chroma Luger">
                 </div>
@@ -3409,7 +3424,8 @@ Your Terms of Service text goes here.
                     "ALTER TABLE users ADD COLUMN appealAt INTEGER DEFAULT 0;",
                     "ALTER TABLE users ADD COLUMN appealStatus TEXT;",
                     "ALTER TABLE users ADD COLUMN roblox TEXT;",
-                    "ALTER TABLE users ADD COLUMN lastIp TEXT;"
+                    "ALTER TABLE users ADD COLUMN lastIp TEXT;",
+                    "ALTER TABLE users ADD COLUMN joinedAt INTEGER;"
                 ];
 
                 for (const sqlQuery of columnsToVerify) {
@@ -3419,6 +3435,13 @@ Your Terms of Service text goes here.
                         // Колонка уже существует
                     }
                 }
+
+                // join date: new rows get it automatically (also rows created by login.html);
+                // accounts that existed before this feature get 1 = "joined before join dates were tracked"
+                try {
+                    await db.execute(`CREATE TRIGGER IF NOT EXISTS users_set_joined AFTER INSERT ON users WHEN NEW.joinedAt IS NULL OR NEW.joinedAt = 0 BEGIN UPDATE users SET joinedAt = CAST(strftime('%s','now') AS INTEGER) * 1000 WHERE id = NEW.id; END`);
+                } catch (e) { console.error('joinedAt trigger error:', e); }
+                try { await db.execute("UPDATE users SET joinedAt = 1 WHERE joinedAt IS NULL OR joinedAt = 0"); } catch (e) {}
 
                 await db.execute(`
                     CREATE TABLE IF NOT EXISTS tickets (
@@ -3447,6 +3470,7 @@ Your Terms of Service text goes here.
                     )
                 `);
                 try { await db.execute("ALTER TABLE deals ADD COLUMN reportedBy TEXT"); } catch (e) { /* уже есть */ }
+                try { await db.execute("ALTER TABLE deals ADD COLUMN itemId TEXT"); } catch (e) { /* уже есть */ }
                 await db.execute(`
                     CREATE TABLE IF NOT EXISTS chat_groups (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -3531,6 +3555,7 @@ Your Terms of Service text goes here.
                     isMiddleman: Number(row.isMiddleman) === 1,
                     heldBalance: Number(row.heldBalance) || 0,
                     lastSeen: Number(row.lastSeen) || 0,
+                    joinedAt: Number(row.joinedAt) || 0,
                     ...banFields(row)
                 }));
                 rememberPresence(_list);
@@ -3569,6 +3594,7 @@ Your Terms of Service text goes here.
                     isMiddleman: Number(row.isMiddleman) === 1,
                     heldBalance: Number(row.heldBalance) || 0,
                     lastSeen: Number(row.lastSeen) || 0,
+                    joinedAt: Number(row.joinedAt) || 0,
                     ...banFields(row)
                 };
             } catch (e) {
@@ -3608,6 +3634,9 @@ Your Terms of Service text goes here.
                                 items = excluded.items, lastItemTime = excluded.lastItemTime, messages = excluded.messages, card = excluded.card`,
                         args: [vals[0], userData.username, ...vals.slice(1), userData.isMiddleman ? 1 : 0, userData.lastSeen || 0]
                     });
+                    if (userData.joinedAt) {
+                        try { await db.execute({ sql: "UPDATE users SET joinedAt = ? WHERE username = ?", args: [userData.joinedAt, userData.username] }); } catch (e) {}
+                    }
                 } else {
                     await db.execute({
                         sql: `UPDATE users SET customId = ?, displayName = ?, email = ?, password = ?, avatar = ?, balance = ?,
@@ -4027,6 +4056,97 @@ Your Terms of Service text goes here.
         let chatPollTimer = null;
         let editingMessageTimestamp = null;
         let activeUserCard = null;
+
+        // ===== Chat threads: one chat per (other user + exact item). No item = general chat. =====
+        const THREAD_SEP = '~i~';
+        function tKey(user, itemId) { return itemId ? `${user}${THREAD_SEP}${itemId}` : user; }
+        function tParse(key) {
+            const s = String(key);
+            const i = s.lastIndexOf(THREAD_SEP);
+            return i < 0 ? { user: s, itemId: '' } : { user: s.slice(0, i), itemId: s.slice(i + THREAD_SEP.length) };
+        }
+        function msgThreadKey(m, me) {
+            const other = m.sender === me ? m.receiver : m.sender;
+            return tKey(other, m.itemId ? String(m.itemId) : '');
+        }
+        function fmtJoined(ts) {
+            const n = Number(ts) || 0;
+            if (!n) return '';
+            if (n < 1e11) return 'Joined: before Oct 2026';
+            return 'Joined: ' + new Date(n).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        // ===== Items you can pick when listing, per game. Edit these lists freely. =====
+        const GAME_ITEMS = {
+            "Murder Mystery 2": {
+                "Godly Knives": ["Harvester", "Elderwood Scythe", "Icewing", "Batwing", "Heat", "Seer", "Blossom", "Gemstone", "Nik's Scythe", "Vampire's Edge", "Eternal Cane", "Hallowscythe", "Tides", "Boneblade"],
+                "Godly Guns": ["Luger", "Gingerscope", "Blossom Gun", "Turkey", "Sugar", "Swirly Gun", "Traveler's Gun", "Sakura"],
+                "Other": ["Chroma (any)", "Ancient (any)", "Pet", "Set / bundle"]
+            },
+            "Steal a brainrot": {
+                "Brainrots": ["Garama and Madundung", "Dragon Cannelloni", "La Grande Combinasion", "Los Combinasionas", "Nuclearo Dinossauro", "Chicleteira Bicicleteira", "Graipuss Medussi", "Pot Hotspot", "Esok Sekolah", "Strawberry Elephant", "Los Hotspotsitos", "Spaghetti Tualetti", "La Vacca Saturno Saturnita", "Tung Tung Tung Sahur", "Ballerina Cappuccina", "Chimpanzini Bananini", "Brr Brr Patapim", "Tralalero Tralala", "Bombardiro Crocodilo", "Cappuccino Assassino"],
+                "Other": ["Mutation (any)", "Cash", "Account"]
+            },
+            "Blade Ball": {
+                "Cosmetics": ["Sword skin", "Explosion effect", "Emote", "Win effect"],
+                "Other": ["Ability", "Tokens / coins", "Account"]
+            },
+            "Adopt Me": {
+                "Legendary Pets": ["Shadow Dragon", "Bat Dragon", "Frost Dragon", "Giraffe", "Owl", "Parrot", "Crow", "Evil Unicorn", "Turtle", "Kangaroo", "Monkey King", "Albino Monkey", "Arctic Reindeer", "Hedgehog", "Diamond Unicorn", "Unicorn", "Dragon"],
+                "Other": ["Neon / Mega Neon pet", "Egg", "Potion", "Vehicle", "Toy / pet wear", "Bucks"]
+            },
+            "Pet Simulator 99": {
+                "Pets": ["Huge pet", "Titanic pet", "Exclusive pet", "Mythic pet"],
+                "Other": ["Gems", "Enchant", "Potion", "Charm", "Account"]
+            },
+            "Steal an Egg": {
+                "Items": ["Egg", "Pet", "Mutation", "Cash", "Account"]
+            },
+            "Grow a Garden": {
+                "Pets": ["Raccoon", "Dragonfly", "Red Fox", "Kitsune", "Disco Bee", "Butterfly", "Queen Bee", "Mimic Octopus", "T-Rex", "Spinosaurus", "Brontosaurus", "Fennec Fox"],
+                "Seeds": ["Candy Blossom", "Bone Blossom", "Beanstalk", "Burning Bud", "Giant Pinecone", "Ember Lily", "Sugar Apple", "Elder Strawberry", "Cacao", "Grape", "Mushroom", "Pepper", "Dragon Fruit", "Mango"],
+                "Other": ["Fruit (mutated)", "Gear", "Sheckles", "Account"]
+            },
+            "Farming and Friends": {
+                "Items": ["Pet", "Seed", "Crop", "Gear", "Cash", "Account"]
+            },
+            "Grow a Garden 2": {
+                "Items": ["Pet", "Seed", "Fruit", "Gear", "Cash", "Account"]
+            },
+            "Blox Fruits": {
+                "Fruits": ["Leopard", "Dragon", "Dough", "Kitsune", "T-Rex", "Spirit", "Control", "Venom", "Shadow", "Blizzard", "Gravity", "Mammoth", "Buddha", "Portal", "Rumble", "Phoenix", "Sound", "Spider", "Love", "Quake", "Magma", "Light", "Flame", "Ice", "Sand", "Dark", "Diamond", "Rubber", "Barrier", "Ghost", "Spike", "Bomb", "Spring", "Smoke", "Chop", "Blade", "Rocket"],
+                "Swords & more": ["Cursed Dual Katana", "Soul Guitar", "Dark Blade", "True Triple Katana", "Hallow Scythe", "Shark Anchor", "Gamepass"],
+                "Other": ["Beli", "Fragments", "Account"]
+            },
+            "Fisch": {
+                "Rods": ["Rod of the Depths", "Trident Rod", "Kings Rod", "Aurora Rod", "Mythical Rod", "Destiny Rod", "Steady Rod", "Carbon Rod", "Lucky Rod", "Magnet Rod", "Fortune Rod", "Nocturnal Rod", "Midas Rod", "Rapid Rod", "Phoenix Rod"],
+                "Other": ["Fish (rare)", "Bait", "Boat", "Account"]
+            },
+            "Bee Swarm Simulator": {
+                "Bees": ["Photon Bee", "Tabby Bee", "Gummy Bee", "Vicious Bee", "Windy Bee", "Digital Bee", "Festive Bee", "Fuzzy Bee", "Precise Bee", "Spicy Bee", "Cobalt Bee", "Crimson Bee", "Bomber Bee", "Brave Bee", "Baby Bee", "Bumble Bee", "Looker Bee", "Rad Bee", "Hasty Bee", "Diamond Bee", "Riley Bee", "Bucko Bee"],
+                "Other": ["Gifted bee", "Royal Jelly", "Star Jelly", "Ticket", "Mythic Meteor Shower", "Account"]
+            }
+        };
+        function refreshItemPicker(currentName) {
+            const wrap = document.getElementById('item-pick-group');
+            const nameGroup = document.getElementById('item-name-group');
+            const sel = document.getElementById('item-pick-select');
+            const groups = GAME_ITEMS[selectedGameForListing];
+            if (!groups) { wrap.style.display = 'none'; nameGroup.style.display = ''; return; }
+            wrap.style.display = '';
+            let found = false;
+            let html = '<option value="">Select an item...</option>';
+            Object.keys(groups).forEach(g => {
+                html += `<optgroup label="${escapeHtml(g)}">` + groups[g].map(n => {
+                    if (n === currentName) found = true;
+                    return `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`;
+                }).join('') + '</optgroup>';
+            });
+            html += '<option value="__custom__">Other / custom item...</option>';
+            sel.innerHTML = html;
+            sel.value = currentName ? (found ? currentName : '__custom__') : '';
+            nameGroup.style.display = sel.value === '__custom__' ? '' : 'none';
+        }
 
         if (currentUser) {
             let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -4559,6 +4679,7 @@ Your Terms of Service text goes here.
                 saveItemBtn.textContent = 'Save Changes';
 
                 itemNameInput.value = currentActiveItem.name || '';
+                refreshItemPicker(currentActiveItem.name || '');
                 document.getElementById('item-desc-input').value = currentActiveItem.description || '';
                 itemTagSelect.value = currentActiveItem.tag || 'selling';
                 itemPriceInput.value = currentActiveItem.price || '';
@@ -4662,7 +4783,7 @@ Your Terms of Service text goes here.
 
             messagesPage.classList.add('active');
             await purgeOldChats();
-            await renderChatsList(targetUsername);
+            await renderChatsList(targetUsername ? tKey(targetUsername, item && item.id) : null);
             startChatPolling();
         }
 
@@ -4707,9 +4828,10 @@ Your Terms of Service text goes here.
                 msgs.forEach(m => {
                     if (!m || m.sender === currentUser) return;
                     const t = Number(m.timestamp) || 0;
-                    if (t <= (clears[m.sender] || 0)) return;
-                    if (t > (maxTs[m.sender] || 0)) maxTs[m.sender] = t;
-                    if (t > (st.r[m.sender] !== undefined ? st.r[m.sender] : st.base)) dm[m.sender] = (dm[m.sender] || 0) + 1;
+                    const k = msgThreadKey(m, currentUser);
+                    if (t <= (clears[k] || 0)) return;
+                    if (t > (maxTs[k] || 0)) maxTs[k] = t;
+                    if (t > (st.r[k] !== undefined ? st.r[k] : st.base)) dm[k] = (dm[k] || 0) + 1;
                 });
 
                 const groups = {}, gMax = {};
@@ -4805,11 +4927,11 @@ Your Terms of Service text goes here.
 
             let lastTime = {};
             myMessages.forEach(m => {
-                const other = m.sender === currentUser ? m.receiver : m.sender;
+                const other = msgThreadKey(m, currentUser);
                 if (!(other in lastTime) || m.timestamp > lastTime[other]) lastTime[other] = m.timestamp;
             });
 
-            if (selectUsername && !String(selectUsername).startsWith('g:') && selectUsername !== currentUser && !(selectUsername in lastTime)) {
+            if (selectUsername && !String(selectUsername).startsWith('g:') && tParse(selectUsername).user !== currentUser && !(selectUsername in lastTime)) {
                 lastTime[selectUsername] = Infinity;
             }
 
@@ -4861,30 +4983,38 @@ Your Terms of Service text goes here.
                 }
             }
 
-            interlocutors.forEach(username => {
+            interlocutors.forEach(threadKeyI => {
+                const { user: username, itemId: tItemId } = tParse(threadKeyI);
                 let otherUser = allUsers.find(u => u.username === username) || { username, displayName: username };
                 const firstLetter = username.charAt(0).toUpperCase();
                 const avatarColor = getColorFromName(username);
 
-                let chatMsgs = myMessages.filter(m => m.sender === username || m.receiver === username);
+                let chatMsgs = myMessages.filter(m => msgThreadKey(m, currentUser) === threadKeyI);
                 chatMsgs.sort((a, b) => a.timestamp - b.timestamp);
                 let lastMsg = chatMsgs.length > 0 ? chatMsgs[chatMsgs.length - 1].text : 'No messages yet';
 
+                let itemLabel = '';
+                if (tItemId) {
+                    const liveIt = (otherUser.items || []).concat(me.items || []).find(i => String(i.id) === tItemId);
+                    const refM = [...chatMsgs].reverse().find(m => m.itemRef && m.itemRef.name);
+                    itemLabel = (liveIt && liveIt.name) || (refM && refM.itemRef.name) || ((pendingChatItem && String(pendingChatItem.id) === tItemId) ? pendingChatItem.name : '') || 'Item';
+                }
+
                 const item = document.createElement('div');
-                const dUn = unread.dm[username] || 0;
-                item.className = `chat-item ${activeChatUsername === username ? 'active' : ''} ${dUn > 0 ? 'unread' : ''}`;
+                const dUn = unread.dm[threadKeyI] || 0;
+                item.className = `chat-item ${activeChatUsername === threadKeyI ? 'active' : ''} ${dUn > 0 ? 'unread' : ''}`;
 
                 let avatarHtml = `<div class="chat-item-avatar" style="background-color: ${avatarColor};">${escapeHtml(firstLetter)}</div>`;
                 if (otherUser.avatar) {
                     avatarHtml = `<img class="chat-item-avatar" src="${otherUser.avatar}" alt="Avatar">`;
                 }
 
-                item.innerHTML = `<span class="av-wrap">${avatarHtml}${presenceDot(username)}</span><div class="chat-item-info"><div class="chat-item-name">${escapeHtml(otherUser.displayName || username)}${otherUser.isMiddleman ? '<span class="mm-badge sm">MM</span>' : ''}</div><div class="chat-item-last">${escapeHtml(lastMsg)}</div></div>${unreadBadge(dUn)}`;
+                item.innerHTML = `<span class="av-wrap">${avatarHtml}${presenceDot(username)}</span><div class="chat-item-info"><div class="chat-item-name">${escapeHtml(otherUser.displayName || username)}${otherUser.isMiddleman ? '<span class="mm-badge sm">MM</span>' : ''}</div>${itemLabel ? `<div class="chat-item-sub">&#127991; ${escapeHtml(itemLabel)}</div>` : ''}<div class="chat-item-last">${escapeHtml(lastMsg)}</div></div>${unreadBadge(dUn)}`;
 
                 item.addEventListener('click', () => {
-                    activeChatUsername = username;
+                    activeChatUsername = threadKeyI;
                     pendingChatItem = null;
-                    renderChatsList(username);
+                    renderChatsList(threadKeyI);
                 });
 
                 chatsContainer.appendChild(item);
@@ -4899,23 +5029,33 @@ Your Terms of Service text goes here.
             }
         }
 
-        async function renderActiveChatWindow(targetUsername, allUsers) {
+        async function renderActiveChatWindow(threadKey, allUsers) {
+            const { user: targetUsername, itemId } = tParse(threadKey);
             const chatWindowCol = document.getElementById('chat-window-col');
             let me = allUsers.find(u => u.username === currentUser);
             let otherUser = allUsers.find(u => u.username === targetUsername) || { username: targetUsername, displayName: targetUsername };
 
             const prevInput = document.getElementById('chat-message-input');
-            const sameChat = renderedChatUser === targetUsername;
+            const sameChat = renderedChatUser === threadKey;
             const keepDraft = (sameChat && prevInput) ? prevInput.value : '';
             const hadFocus = sameChat && prevInput && document.activeElement === prevInput;
 
-            renderedChatUser = targetUsername;
+            renderedChatUser = threadKey;
 
             let myMessages = me.messages || [];
-            let chatMsgs = myMessages.filter(m => m.sender === targetUsername || m.receiver === targetUsername);
+            let chatMsgs = myMessages.filter(m => msgThreadKey(m, currentUser) === threadKey);
             chatMsgs.sort((a, b) => a.timestamp - b.timestamp);
 
-            const ctxItem = (pendingChatItem && pendingChatItem.sellerUsername === targetUsername) ? pendingChatItem : null;
+            let ctxItem = null;
+            if (itemId) {
+                const inOther = (otherUser.items || []).find(i => String(i.id) === itemId);
+                const inMine = (me.items || []).find(i => String(i.id) === itemId);
+                const liveItem = inOther || inMine;
+                const refMsg = [...chatMsgs].reverse().find(m => m.itemRef && m.itemRef.name);
+                if (liveItem) ctxItem = { name: liveItem.name, tag: liveItem.tag, price: liveItem.price, owner: inOther ? targetUsername : currentUser };
+                else if (pendingChatItem && String(pendingChatItem.id) === itemId) ctxItem = { name: pendingChatItem.name, tag: pendingChatItem.tag, price: pendingChatItem.price, owner: pendingChatItem.sellerUsername || targetUsername };
+                else ctxItem = { name: refMsg ? refMsg.itemRef.name : 'Item', label: refMsg ? refMsg.itemRef.price : '', owner: (refMsg && refMsg.itemRef.seller) || '', gone: true };
+            }
 
             const firstLetter = targetUsername.charAt(0).toUpperCase();
             const avatarColor = getColorFromName(targetUsername);
@@ -4924,22 +5064,25 @@ Your Terms of Service text goes here.
                 headerAvatarHtml = `<img class="chat-header-avatar" src="${otherUser.avatar}" alt="Avatar">`;
             }
 
-            const clearedAt = await getChatClearedAt(currentUser, targetUsername);
+            const clearedAt = await getChatClearedAt(currentUser, threadKey);
             const dealsHere = (await getDealsBetween(currentUser, targetUsername))
+                .filter(d => (d.itemId || '') === itemId)
                 .filter(d => Math.max(d.updatedAt, d.createdAt) > clearedAt);
             chatMyRating = await getMyRating(targetUsername);
             const completedHere = dealsHere.filter(d => d.status === 'completed');
             chatRateDealId = completedHere.length ? completedHere[completedHere.length - 1].id : 0;
-            const canAskPayment = targetUsername !== currentUser && (me.items || []).some(i => i.tag === 'selling');
+            const canAskPayment = targetUsername !== currentUser && (itemId
+                ? (ctxItem.owner === currentUser && (me.items || []).some(i => String(i.id) === itemId && i.tag === 'selling'))
+                : (me.items || []).some(i => i.tag === 'selling'));
             const askBtnHtml = canAskPayment ? '<div class="deal-toolbar"><button class="ask-payment-btn" id="ask-payment-btn" type="button">Ask for payment</button></div>' : '';
             const msgEntries = chatMsgs.map(m => ({ t: m.timestamp, html: (() => {
-                const ref = m.itemRef ? `<div class="msg-item-ref"><b>${escapeHtml(m.itemRef.name)}</b><span>${escapeHtml(m.itemRef.price)}</span></div>` : '';
+                const ref = (m.itemRef && !itemId) ? `<div class="msg-item-ref"><b>${escapeHtml(m.itemRef.name)}</b><span>${escapeHtml(m.itemRef.price)}</span></div>` : '';
                 return `<div class="message-bubble ${m.sender === currentUser ? 'outgoing' : 'incoming'}" data-timestamp="${m.timestamp}" data-sender="${m.sender}" title="${escapeHtml(getExactDate(m.timestamp))}">${ref}<span class="msg-text-content">${escapeHtml(m.text)}</span><span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))}</span></div>`;
             })() }));
             const bubblesHtml = [...msgEntries, ...dealsHere.map(d => ({ t: d.createdAt, html: dealCardHtml(d, currentUser) }))]
                 .sort((a, b) => a.t - b.t).map(x => x.html).join('');
 
-            const ctxHtml = ctxItem ? `<div class="chat-item-context" id="chat-item-context"><div class="ctx-info"><div class="ctx-label">About this item</div><div class="ctx-name">${escapeHtml(ctxItem.name)}</div><div class="ctx-price">${escapeHtml(itemPriceLabel(ctxItem))}</div></div><button class="ctx-close" id="chat-ctx-close" title="Remove item from context">&times;</button></div>` : '';
+            const ctxHtml = ctxItem ? `<div class="chat-item-context" id="chat-item-context"><div class="ctx-info"><div class="ctx-label">This chat is about</div><div class="ctx-name">${escapeHtml(ctxItem.name)}</div><div class="ctx-price">${escapeHtml(ctxItem.label || itemPriceLabel(ctxItem))}${ctxItem.gone ? ' &middot; no longer listed' : ''}</div></div></div>` : '';
 
             chatWindowCol.innerHTML = `
                 <div class="chat-header-row">
@@ -4947,6 +5090,7 @@ Your Terms of Service text goes here.
                     <div class="chat-header-meta">
                         <div class="chat-header-name">${escapeHtml(otherUser.displayName || targetUsername)}${otherUser.isMiddleman ? '<span class="mm-badge">Middleman</span>' : ''}</div>
                         ${presenceLabel(targetUsername)}
+                        ${ctxItem ? `<div class="chat-header-item">&#127991; ${escapeHtml(ctxItem.name)}</div>` : ''}
                     </div>
                     <div class="chat-header-spacer"></div>
                     <button class="chat-delete-btn" id="chat-delete-btn" type="button" title="Removes this chat only for you. Chats are also deleted automatically after 2 weeks.">Delete chat</button>
@@ -5017,7 +5161,7 @@ Your Terms of Service text goes here.
                             menu.remove();
                             const okDel = await askDealConfirm('Delete message?', 'This message will be deleted for both of you. This can\'t be undone.', 'Delete', true);
                             if (!okDel) return;
-                            await deleteMessageInDB(targetUsername, msgTimestamp);
+                            await deleteMessageInDB(targetUsername, msgTimestamp, threadKey);
                         };
                         menu.appendChild(deleteBtn);
                     }
@@ -5032,14 +5176,14 @@ Your Terms of Service text goes here.
                 });
             });
 
-            bindDealControls(scrollContainer, targetUsername, me);
-            document.getElementById('chat-delete-btn').addEventListener('click', () => deleteChatForMe(targetUsername));
+            bindDealControls(scrollContainer, targetUsername, me, threadKey, itemId);
+            document.getElementById('chat-delete-btn').addEventListener('click', () => deleteChatForMe(threadKey));
 
             const ctxCloseBtn = document.getElementById('chat-ctx-close');
             if (ctxCloseBtn) {
                 ctxCloseBtn.addEventListener('click', () => {
                     pendingChatItem = null;
-                    renderActiveChatWindow(targetUsername, allUsers);
+                    renderActiveChatWindow(threadKey, allUsers);
                 });
             }
 
@@ -5053,7 +5197,7 @@ Your Terms of Service text goes here.
 
             const handleSend = async () => {
                 const text = inputField.value.trim();
-                if (!text && !pendingChatItem) return;
+                if (!text && !(itemId && chatMsgs.length === 0)) return;
 
                 const messageText = text || 'Inquiring about this item';
 
@@ -5062,9 +5206,10 @@ Your Terms of Service text goes here.
                     editingMessageTimestamp = null;
                 } else {
                     const timestamp = Date.now();
-                    const itemRefData = pendingChatItem ? {
-                        name: pendingChatItem.name,
-                        price: itemPriceLabel(pendingChatItem)
+                    const itemRefData = ctxItem ? {
+                        name: ctxItem.name,
+                        price: ctxItem.label || itemPriceLabel(ctxItem),
+                        seller: ctxItem.owner || ''
                     } : null;
 
                     const newMessage = {
@@ -5072,7 +5217,8 @@ Your Terms of Service text goes here.
                         receiver: targetUsername,
                         text: messageText,
                         timestamp: timestamp,
-                        itemRef: itemRefData
+                        itemRef: itemRefData,
+                        itemId: itemId || null
                     };
 
                     let allUsersLatest = await getAllUsersFromDB();
@@ -5094,7 +5240,7 @@ Your Terms of Service text goes here.
 
                 pendingChatItem = null;
                 inputField.value = '';
-                await renderChatsList(targetUsername);
+                await renderChatsList(threadKey);
             };
 
             sendBtn.addEventListener('click', handleSend);
@@ -5131,7 +5277,7 @@ Your Terms of Service text goes here.
             showToast('Message updated');
         }
 
-        async function deleteMessageInDB(targetUsername, timestamp) {
+        async function deleteMessageInDB(targetUsername, timestamp, threadKey) {
             let allUsers = await getAllUsersFromDB();
             let senderObj = allUsers.find(u => u.username === currentUser);
             let receiverObj = allUsers.find(u => u.username === targetUsername);
@@ -5147,7 +5293,7 @@ Your Terms of Service text goes here.
             }
 
             showToast('Message deleted');
-            await renderChatsList(targetUsername);
+            await renderChatsList(threadKey || targetUsername);
         }
 
 
@@ -5167,38 +5313,40 @@ Your Terms of Service text goes here.
                 return rs.rows.length ? Number(rs.rows[0].stars) || 0 : 0;
             } catch (e) { return 0; }
         }
-        async function deleteChatForMe(other) {
+        async function deleteChatForMe(key) {
+            const { user: other, itemId } = tParse(key);
             const open = await db.execute({
-                sql: "SELECT id FROM deals WHERE ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?)) AND status IN ('requested','paid','not_received','reported') LIMIT 1",
-                args: [currentUser, other, other, currentUser]
+                sql: "SELECT id FROM deals WHERE ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?)) AND COALESCE(itemId, '') = ? AND status IN ('requested','paid','not_received','reported') LIMIT 1",
+                args: [currentUser, other, other, currentUser, itemId]
             });
             if (open.rows.length) { showToast('Finish or resolve the deal in this chat before deleting it.'); return; }
             const ok = await askDealConfirm('Delete this chat?',
-                `The chat with ${other} will be removed only for you. ${other} will still see it until they delete it too - when both of you have deleted it, it is gone forever. Chats are also deleted automatically after 2 weeks.`,
+                `This chat with ${other}${itemId ? ' (about this item)' : ''} will be removed only for you. ${other} will still see it until they delete it too - when both of you have deleted it, it is gone forever. Chats are also deleted automatically after 2 weeks.`,
                 'Delete chat', true);
             if (!ok) return;
             const now = Date.now();
             const meObj = await getUserByUsername(currentUser);
             if (meObj) {
-                meObj.messages = (meObj.messages || []).filter(m => !(m.sender === other || m.receiver === other));
+                meObj.messages = (meObj.messages || []).filter(m => msgThreadKey(m, currentUser) !== key);
                 await saveUserToDB(meObj);
             }
             await db.execute({
                 sql: "INSERT INTO chat_clears (user, other, clearedAt) VALUES (?, ?, ?) ON CONFLICT(user, other) DO UPDATE SET clearedAt = excluded.clearedAt",
-                args: [currentUser, other, now]
+                args: [currentUser, key, now]
             });
             // other side already deleted and has nothing left of this chat -> delete forever
-            const theirs = await getChatClearedAt(other, currentUser);
+            const theirKey = tKey(currentUser, itemId);
+            const theirs = await getChatClearedAt(other, theirKey);
             const otherObj = await getUserByUsername(other);
-            const theirLeft = otherObj ? (otherObj.messages || []).some(m => m.sender === currentUser || m.receiver === currentUser) : false;
+            const theirLeft = otherObj ? (otherObj.messages || []).some(m => msgThreadKey(m, other) === theirKey) : false;
             if (theirs && !theirLeft) {
                 await db.execute({
-                    sql: "DELETE FROM deals WHERE status IN ('completed','cancelled','refunded','released') AND ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?))",
-                    args: [currentUser, other, other, currentUser]
+                    sql: "DELETE FROM deals WHERE status IN ('completed','cancelled','refunded','released') AND COALESCE(itemId, '') = ? AND ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?))",
+                    args: [itemId, currentUser, other, other, currentUser]
                 });
                 await db.execute({
                     sql: "DELETE FROM chat_clears WHERE (user = ? AND other = ?) OR (user = ? AND other = ?)",
-                    args: [currentUser, other, other, currentUser]
+                    args: [currentUser, key, other, theirKey]
                 });
             }
             if (pendingChatItem && pendingChatItem.sellerUsername === other) pendingChatItem = null;
@@ -5230,7 +5378,8 @@ Your Terms of Service text goes here.
                 id: Number(r.id), buyer: r.buyer, seller: r.seller, itemName: r.itemName || '',
                 amount: Number(r.amount) || 0, sellerAmount: Number(r.sellerAmount) || 0, status: r.status,
                 createdAt: Number(r.createdAt) || 0, updatedAt: Number(r.updatedAt) || 0,
-                reportedAt: Number(r.reportedAt) || 0, chatSnapshot: r.chatSnapshot || null, reportedBy: r.reportedBy || ''
+                reportedAt: Number(r.reportedAt) || 0, chatSnapshot: r.chatSnapshot || null, reportedBy: r.reportedBy || '',
+                itemId: r.itemId ? String(r.itemId) : ''
 
             };
         }
@@ -5262,16 +5411,16 @@ Your Terms of Service text goes here.
         }
 
         // ---- state changes (each one is guarded by the expected current status, so double clicks can't pay twice) ----
-        async function createDealRequest(buyer, amount, itemName) {
+        async function createDealRequest(buyer, amount, itemName, itemId) {
             const dup = await db.execute({
-                sql: "SELECT id FROM deals WHERE seller = ? AND buyer = ? AND status = 'requested'",
-                args: [currentUser, buyer]
+                sql: "SELECT id FROM deals WHERE seller = ? AND buyer = ? AND COALESCE(itemId, '') = ? AND status = 'requested'",
+                args: [currentUser, buyer, itemId || '']
             });
             if (dup.rows.length) { showToast('You already have a pending payment request in this chat.'); return false; }
             const now = Date.now();
             await db.execute({
-                sql: "INSERT INTO deals (buyer, seller, itemName, amount, sellerAmount, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, 'requested', ?, ?)",
-                args: [buyer, currentUser, itemName || '', amount, round2(amount * SELLER_SHARE), now, now]
+                sql: "INSERT INTO deals (buyer, seller, itemName, amount, sellerAmount, status, createdAt, updatedAt, itemId) VALUES (?, ?, ?, ?, ?, 'requested', ?, ?, ?)",
+                args: [buyer, currentUser, itemName || '', amount, round2(amount * SELLER_SHARE), now, now, itemId || null]
             });
             return true;
         }
@@ -5336,7 +5485,7 @@ Your Terms of Service text goes here.
             const other = d.buyer === currentUser ? d.seller : d.buyer;
             const meObj = await getUserByUsername(currentUser);
             const snap = ((meObj && meObj.messages) || [])
-                .filter(m => m.sender === other || m.receiver === other)
+                .filter(m => msgThreadKey(m, currentUser) === tKey(other, d.itemId))
                 .map(m => ({ sender: m.sender, receiver: m.receiver, text: m.text, timestamp: m.timestamp }));
             const now = Date.now();
             const rs = await db.execute({
@@ -5378,13 +5527,14 @@ Your Terms of Service text goes here.
                 ? `You receive ${fmtMoney(round2(a * SELLER_SHARE))} (90%) after payment. It stays on hold until the buyer confirms delivery.`
                 : 'You receive 90% after payment. It stays on hold until the buyer confirms delivery.';
         }
-        function openRequestDialog(items) {
+        function openRequestDialog(items, lockToItem) {
             dealReqItems = items;
             dealReqItem.innerHTML = '<option value="">Custom</option>' +
                 items.map((it, i) => `<option value="${i}">${escapeHtml(it.name)} - $${escapeHtml(String(it.price))}</option>`).join('');
             dealReqName.value = '';
             dealReqAmount.value = '';
             updateDealReqHint();
+            if (lockToItem && items.length) { dealReqItem.value = '0'; dealReqItem.dispatchEvent(new Event('change')); }
             dealRequestModal.classList.add('active');
             return new Promise(res => { dealReqResolve = res; });
         }
@@ -5537,14 +5687,15 @@ Your Terms of Service text goes here.
             }
         }
 
-        function bindDealControls(root, targetUsername, me) {
+        function bindDealControls(root, targetUsername, me, threadKey, itemId) {
+            itemId = itemId || '';
             root.querySelectorAll('[data-deal-act]').forEach(b => {
                 b.addEventListener('click', async () => {
                     if (dealBusy) return;
                     dealBusy = true;
                     try {
                         await handleDealAction(b.dataset.dealAct, Number(b.dataset.dealId));
-                        await renderChatsList(targetUsername);
+                        await renderChatsList(threadKey);
                     } catch (e) {
                         console.error(e);
                         showToast('Something went wrong. Try again.');
@@ -5566,7 +5717,7 @@ Your Terms of Service text goes here.
                             });
                             showToast(`You rated ${targetUsername} ${n} star${n === 1 ? '' : 's'}`);
                         } catch (e) { showToast('Could not save your rating.'); }
-                        await renderChatsList(targetUsername);
+                        await renderChatsList(threadKey);
                     });
                 });
                 rateBox.addEventListener('mouseleave', () => stars.forEach(x => x.classList.toggle('on', Number(x.dataset.dealRate) <= chatMyRating)));
@@ -5574,7 +5725,7 @@ Your Terms of Service text goes here.
             root.querySelectorAll('[data-deal-rate-remove]').forEach(b => b.addEventListener('click', async () => {
                 try { await db.execute({ sql: "DELETE FROM ratings WHERE rater = ? AND target = ?", args: [currentUser, targetUsername] }); showToast('Rating removed'); }
                 catch (e) { showToast('Could not remove your rating.'); }
-                await renderChatsList(targetUsername);
+                await renderChatsList(threadKey);
             }));
 
             const ask = document.getElementById('ask-payment-btn');
@@ -5583,10 +5734,11 @@ Your Terms of Service text goes here.
                     if (dealBusy) return;
                     dealBusy = true;
                     try {
-                        const selling = (me.items || []).filter(i => i.tag === 'selling');
-                        const res = await openRequestDialog(selling);
-                        if (res && await createDealRequest(targetUsername, res.amount, res.itemName)) {
-                            await renderChatsList(targetUsername);
+                        let selling = (me.items || []).filter(i => i.tag === 'selling');
+                        if (itemId) selling = selling.filter(i => String(i.id) === itemId);
+                        const res = await openRequestDialog(selling, !!itemId);
+                        if (res && await createDealRequest(targetUsername, res.amount, res.itemName, itemId)) {
+                            await renderChatsList(threadKey);
                         }
                     } catch (e) {
                         console.error(e);
@@ -6134,6 +6286,7 @@ Your Terms of Service text goes here.
 
             modalUsernameText.textContent = userObj.displayName || userObj.username;
             modalUserIdText.textContent = `ID: ${displayId}`;
+            document.getElementById('modal-joined-text').textContent = fmtJoined(userObj.joinedAt);
 
             document.getElementById('modal-presence-dot').setAttribute('data-presence-user', userObj.username);
             document.getElementById('modal-presence-text').setAttribute('data-presence-text', userObj.username);
@@ -6410,6 +6563,7 @@ Your Terms of Service text goes here.
             saveItemBtn.textContent = 'List Item';
 
             itemNameInput.value = '';
+            refreshItemPicker('');
             document.getElementById('item-desc-input').value = '';
             itemTagSelect.value = 'selling';
             itemPriceInput.value = '0.10';
@@ -6454,6 +6608,13 @@ Your Terms of Service text goes here.
         }
 
         itemNameInput.addEventListener('input', updateItemPreview);
+        document.getElementById('item-pick-select').addEventListener('change', (e) => {
+            const v = e.target.value;
+            const ng = document.getElementById('item-name-group');
+            if (v === '__custom__') { ng.style.display = ''; itemNameInput.value = ''; itemNameInput.focus(); }
+            else { ng.style.display = 'none'; itemNameInput.value = v; }
+            updateItemPreview();
+        });
         itemPriceInput.addEventListener('input', updateItemPreview);
 
         itemPhotoFileInput.addEventListener('change', (e) => {
@@ -6478,7 +6639,9 @@ Your Terms of Service text goes here.
             const price = itemPriceInput.value.trim();
 
             if (!name) {
-                showToast('Please enter an item name.');
+                const pickEl = document.getElementById('item-pick-select');
+                const pickVisible = document.getElementById('item-pick-group').style.display !== 'none';
+                showToast(pickVisible && pickEl.value === '' ? 'Please select an item.' : 'Please enter an item name.');
                 return;
             }
 
