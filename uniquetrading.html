@@ -4145,6 +4145,35 @@ Your Terms of Service text goes here.
         // without spaces/symbols, e.g. "Swirly Axe" -> SwirlyAxe.webp, "Nik's Scythe" -> NiksScythe.webp
         const ITEM_IMG_DIR = 'ancients/';
         function itemImageFile(name) { return String(name).replace(/[^A-Za-z0-9]/g, '') + '.webp'; }
+        // Possible file names for an item (e.g. "Traveler's Axe" -> TravelersAxe.webp, then TravelerAxe.webp)
+        function itemImageCandidates(name) {
+            const list = [ITEM_IMG_DIR + itemImageFile(name)];
+            const noPossessive = ITEM_IMG_DIR + itemImageFile(String(name).replace(/['\u2019]s\b/gi, ''));
+            if (!list.includes(noPossessive)) list.push(noPossessive);
+            return list;
+        }
+        function isAncientItem(game, name) {
+            const g = GAME_ITEMS[game];
+            return !!(g && g['Ancients'] && g['Ancients'].includes(String(name || '').trim()));
+        }
+        // Tries the next candidate image when one fails to load, then the game's default thumbnail
+        function itemImgFallback(img) {
+            const alts = (img.dataset.alts || '').split('|').filter(Boolean);
+            if (alts.length) { img.dataset.alts = alts.slice(1).join('|'); img.src = alts[0]; return; }
+            if (img.dataset.fb) { const fb = img.dataset.fb; img.dataset.fb = ''; img.src = fb; return; }
+            img.onerror = null;
+            img.classList.add('missing');
+        }
+        // src + fallback attributes for an item image. Uploaded photo wins, then the Ancient's icon, then the game thumbnail.
+        function itemImgAttrs(item) {
+            if (item.photo) return `src="${item.photo}"`;
+            const fb = getGameThumb(item.game);
+            if (isAncientItem(item.game, item.name)) {
+                const c = itemImageCandidates(item.name);
+                return `src="${escapeHtml(c[0])}" data-alts="${escapeHtml(c.slice(1).join('|'))}" data-fb="${escapeHtml(fb)}" onerror="itemImgFallback(this)"`;
+            }
+            return `src="${fb}"`;
+        }
         let pickedItemCategory = '';
         let pickerActiveCat = '';
 
@@ -4174,7 +4203,7 @@ Your Terms of Service text goes here.
             listEl.classList.toggle('cards', pickerActiveCat === 'Ancients');
             listEl.innerHTML = list.length
                 ? list.map(n => pickerActiveCat === 'Ancients'
-                    ? `<button type="button" class="item-picker-card item-picker-item" data-name="${escapeHtml(n)}"><img class="card-img" src="${ITEM_IMG_DIR}${itemImageFile(n)}" alt="${escapeHtml(n)}" loading="lazy" onerror="this.classList.add('missing')"><span>${escapeHtml(n)}</span></button>`
+                    ? `<button type="button" class="item-picker-card item-picker-item" data-name="${escapeHtml(n)}"><img class="card-img" src="${escapeHtml(itemImageCandidates(n)[0])}" data-alts="${escapeHtml(itemImageCandidates(n).slice(1).join('|'))}" alt="${escapeHtml(n)}" loading="lazy" onerror="itemImgFallback(this)"><span>${escapeHtml(n)}</span></button>`
                     : `<button type="button" class="item-picker-item" data-name="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')
                 : '<div class="item-picker-empty">No items added to this category yet. You can type the item name below.</div>';
             listEl.querySelectorAll('.item-picker-item').forEach(b => b.addEventListener('click', () => chooseListingItem(b.dataset.name)));
@@ -4396,7 +4425,7 @@ Your Terms of Service text goes here.
                     photoSrc = getGameThumb(item.game);
                 }
 
-                let imgHtml = `<img class="global-item-img" src="${photoSrc}" alt="Item">`;
+                let imgHtml = `<img class="global-item-img" ${itemImgAttrs(item)} alt="Item">`;
 
                 let priceText = item.tag === 'selling' ? `$${item.price}` : 'Offers';
                 let timeAgo = getTimeAgo(item.id);
@@ -4717,7 +4746,7 @@ Your Terms of Service text goes here.
             if (!photoSrc) {
                 photoSrc = getGameThumb(item.game);
             }
-            detailMainImg.innerHTML = `<img src="${photoSrc}" style="width:100%; height:100%; border-radius:10px; object-fit:cover;" alt="Item">`;
+            detailMainImg.innerHTML = `<img ${itemImgAttrs(item)} style="width:100%; height:100%; border-radius:10px; object-fit:cover;" alt="Item">`;
 
             const firstLetter = item.sellerUsername.charAt(0).toUpperCase();
             const avatarColor = getColorFromName(item.sellerUsername);
@@ -6423,7 +6452,7 @@ Your Terms of Service text goes here.
                 let priceText = item.tag === 'selling' ? `$${item.price}` : 'Offers';
 
                 card.innerHTML = `
-                    <img class="item-card-img" src="${photoSrc}" alt="Item">
+                    <img class="item-card-img" ${itemImgAttrs(item)} alt="Item">
                     <div class="item-card-name">${escapeHtml(item.name)}</div>
                     <div class="item-card-price">${escapeHtml(priceText)}</div>
                 `;
@@ -6690,7 +6719,7 @@ Your Terms of Service text goes here.
             if (!photoSrc) {
                 photoSrc = getGameThumb(selectedGameForListing);
             }
-            previewCardImg.innerHTML = `<img src="${photoSrc}" style="width:100%; height:100%; border-radius:8px; object-fit:cover;" alt="Preview">`;
+            previewCardImg.innerHTML = `<img ${itemImgAttrs({ photo: uploadedItemPhotoData, name: itemNameInput.value.trim(), game: selectedGameForListing })} style="width:100%; height:100%; border-radius:8px; object-fit:cover;" alt="Preview">`;
         }
 
         itemNameInput.addEventListener('input', updateItemPreview);
