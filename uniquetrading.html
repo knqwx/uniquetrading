@@ -2529,6 +2529,20 @@
             .money-stats { grid-template-columns: 1fr; }
             .money-row { grid-template-columns: 40px 1fr 100px 100px; font-size: 13px; padding: 9px 10px; }
         }
+
+        /* ===== Unread badges ===== */
+        .msg-badge {
+            position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
+            background-color: #ff4d4d; color: #ffffff; border: 2px solid #1a1a1a; border-radius: 10px;
+            font-size: 11px; font-weight: 700; line-height: 14px; text-align: center; pointer-events: none;
+        }
+        .chat-unread {
+            flex-shrink: 0; min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box;
+            background-color: #ff7300; color: #ffffff; border-radius: 10px; font-size: 12px; font-weight: 700;
+            line-height: 20px; text-align: center;
+        }
+        .chat-item.unread .chat-item-last { color: #ffffff; font-weight: 600; }
+        .chat-item.unread .chat-item-name { color: #ffffff; }
     </style>
 </head>
 <body>
@@ -4065,6 +4079,7 @@ Your Terms of Service text goes here.
                         </div>
                         <button class="messages-icon-btn" id="header-messages-btn" title="Messages">
                             <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                            <span class="msg-badge" id="header-msg-badge" style="display: none;"></span>
                         </button>
                         <div class="user-profile-box" id="profile-dropdown-trigger">
                             ${avatarInner}
@@ -4108,6 +4123,7 @@ Your Terms of Service text goes here.
                     document.getElementById('header-messages-btn').addEventListener('click', () => {
                         openMessagesPage();
                     });
+                    startLiveUpdates();
 
                     document.getElementById('dropdown-profile-btn').addEventListener('click', () => {
                         openProfileModal(userObj);
@@ -4650,6 +4666,113 @@ Your Terms of Service text goes here.
             startChatPolling();
         }
 
+
+        // ===== Unread messages (badge on the envelope + per-chat counters) =====
+        // "read" positions are kept per account in this browser
+        let unreadState = { dm: {}, groups: {}, total: 0 };
+        function readStoreKey() { return 'ut_read_' + currentUser; }
+        function loadReadStore() {
+            let st = null;
+            try { st = JSON.parse(localStorage.getItem(readStoreKey())); } catch (e) {}
+            if (!st || typeof st !== 'object' || !st.r) st = { base: Date.now(), r: {} }; // existing history counts as read
+            return st;
+        }
+        function saveReadStore(st) { try { localStorage.setItem(readStoreKey(), JSON.stringify(st)); } catch (e) {} }
+
+        let refreshUnreadBusy = null;
+        function refreshUnread() {
+            if (refreshUnreadBusy) return refreshUnreadBusy;
+            refreshUnreadBusy = computeUnread().finally(() => { refreshUnreadBusy = null; });
+            return refreshUnreadBusy;
+        }
+        async function computeUnread() {
+            if (!currentUser) return unreadState;
+            try {
+                const st = loadReadStore();
+                const meRs = await db.execute({ sql: "SELECT balance, heldBalance, messages FROM users WHERE username = ?", args: [currentUser] });
+                if (!meRs.rows.length) return unreadState;
+                const row = meRs.rows[0];
+                applyLiveBalance(row.balance, row.heldBalance);
+
+                const viewing = (messagesPage.classList.contains('active') && !document.hidden) ? activeChatUsername : null;
+                let msgs = [];
+                try { msgs = JSON.parse(row.messages || '[]'); } catch (e) {}
+                const clears = {};
+                try {
+                    (await db.execute({ sql: "SELECT other, clearedAt FROM chat_clears WHERE user = ?", args: [currentUser] }))
+                        .rows.forEach(r => { clears[r.other] = Number(r.clearedAt) || 0; });
+                } catch (e) {}
+
+                const dm = {}, maxTs = {};
+                msgs.forEach(m => {
+                    if (!m || m.sender === currentUser) return;
+                    const t = Number(m.timestamp) || 0;
+                    if (t <= (clears[m.sender] || 0)) return;
+                    if (t > (maxTs[m.sender] || 0)) maxTs[m.sender] = t;
+                    if (t > (st.r[m.sender] !== undefined ? st.r[m.sender] : st.base)) dm[m.sender] = (dm[m.sender] || 0) + 1;
+                });
+
+                const groups = {}, gMax = {};
+                try {
+                    const myGroups = await getMyGroups();
+                    if (myGroups.length) {
+                        const marks = myGroups.map(() => '?').join(',');
+                        const gr = await db.execute({
+                            sql: `SELECT groupId, sender, timestamp FROM group_messages WHERE groupId IN (${marks}) AND sender != ? AND timestamp > ?`,
+                            args: [...myGroups.map(g => g.id), currentUser, st.base]
+                        });
+                        gr.rows.forEach(r => {
+                            const id = Number(r.groupId), t = Number(r.timestamp) || 0;
+                            if (t > (gMax[id] || 0)) gMax[id] = t;
+                            if (t > (st.r['g:' + id] !== undefined ? st.r['g:' + id] : st.base)) groups[id] = (groups[id] || 0) + 1;
+                        });
+                    }
+                } catch (e) {}
+
+                // the chat on screen is read: remember it and don't count it
+                if (viewing) {
+                    if (String(viewing).startsWith('g:')) {
+                        const id = Number(String(viewing).slice(2));
+                        if (gMax[id]) st.r[viewing] = Math.max(st.r[viewing] || 0, gMax[id]);
+                        delete groups[id];
+                    } else {
+                        if (maxTs[viewing]) st.r[viewing] = Math.max(st.r[viewing] || 0, maxTs[viewing]);
+                        delete dm[viewing];
+                    }
+                    saveReadStore(st);
+                } else if (!localStorage.getItem(readStoreKey())) {
+                    saveReadStore(st);
+                }
+
+                const total = Object.values(dm).reduce((a, b) => a + b, 0) + Object.values(groups).reduce((a, b) => a + b, 0);
+                unreadState = { dm, groups, total };
+                const badge = document.getElementById('header-msg-badge');
+                if (badge) {
+                    badge.style.display = total > 0 ? '' : 'none';
+                    badge.textContent = total > 99 ? '99+' : String(total);
+                }
+            } catch (e) { /* try again next tick */ }
+            return unreadState;
+        }
+
+        // ===== Live balance (header + wallet page) =====
+        function applyLiveBalance(balance, held) {
+            const b = Number(balance) || 0;
+            setBal(document.getElementById('header-balance-amount'), b);
+            setBal(document.getElementById('balance-page-amount'), b);
+            const hl = document.getElementById('balance-held-line');
+            if (hl) hl.textContent = `On hold: ${fmtMoney(Number(held) || 0)} (released when the buyer confirms delivery)`;
+        }
+
+        let liveUpdatesStarted = false;
+        function startLiveUpdates() {
+            if (liveUpdatesStarted || !currentUser) return;
+            liveUpdatesStarted = true;
+            refreshUnread();
+            setInterval(() => { if (!document.hidden) refreshUnread(); }, 3000);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshUnread(); });
+        }
+
         function startChatPolling() {
             if (chatPollTimer) return;
             chatPollTimer = setInterval(async () => {
@@ -4707,6 +4830,9 @@ Your Terms of Service text goes here.
             } else if (!activeChatUsername || !allKeys.includes(activeChatUsername)) {
                 activeChatUsername = allKeys[0];
             }
+            // the chat that is open counts as read; every other chat keeps its unread count
+            const unread = await refreshUnread();
+            const unreadBadge = n => n > 0 ? `<span class="chat-unread">${n > 99 ? '99+' : n}</span>` : '';
 
             if (myGroups.length) {
                 const lbl = document.createElement('div');
@@ -4716,9 +4842,10 @@ Your Terms of Service text goes here.
                 myGroups.forEach(g => {
                     const key = 'g:' + g.id;
                     const gi = document.createElement('div');
-                    gi.className = `chat-item ${activeChatUsername === key ? 'active' : ''}`;
+                    const gUn = unread.groups[g.id] || 0;
+                    gi.className = `chat-item ${activeChatUsername === key ? 'active' : ''} ${gUn > 0 ? 'unread' : ''}`;
                     const gcolor = getColorFromName('group-' + g.id + g.name);
-                    gi.innerHTML = `<div class="chat-item-avatar group-av" style="background-color: ${gcolor};">${escapeHtml((g.name.charAt(0) || 'G').toUpperCase())}</div><div class="chat-item-info"><div class="chat-item-name">${escapeHtml(g.name)}<span class="group-tag">GROUP</span></div><div class="chat-item-last">${g.members.length} members</div></div>`;
+                    gi.innerHTML = `<div class="chat-item-avatar group-av" style="background-color: ${gcolor};">${escapeHtml((g.name.charAt(0) || 'G').toUpperCase())}</div><div class="chat-item-info"><div class="chat-item-name">${escapeHtml(g.name)}<span class="group-tag">GROUP</span></div><div class="chat-item-last">${gUn > 0 ? `${gUn} new message${gUn === 1 ? '' : 's'}` : `${g.members.length} members`}</div></div>${unreadBadge(gUn)}`;
                     gi.addEventListener('click', () => {
                         activeChatUsername = key;
                         pendingChatItem = null;
@@ -4744,14 +4871,15 @@ Your Terms of Service text goes here.
                 let lastMsg = chatMsgs.length > 0 ? chatMsgs[chatMsgs.length - 1].text : 'No messages yet';
 
                 const item = document.createElement('div');
-                item.className = `chat-item ${activeChatUsername === username ? 'active' : ''}`;
+                const dUn = unread.dm[username] || 0;
+                item.className = `chat-item ${activeChatUsername === username ? 'active' : ''} ${dUn > 0 ? 'unread' : ''}`;
 
                 let avatarHtml = `<div class="chat-item-avatar" style="background-color: ${avatarColor};">${escapeHtml(firstLetter)}</div>`;
                 if (otherUser.avatar) {
                     avatarHtml = `<img class="chat-item-avatar" src="${otherUser.avatar}" alt="Avatar">`;
                 }
 
-                item.innerHTML = `<span class="av-wrap">${avatarHtml}${presenceDot(username)}</span><div class="chat-item-info"><div class="chat-item-name">${escapeHtml(otherUser.displayName || username)}${otherUser.isMiddleman ? '<span class="mm-badge sm">MM</span>' : ''}</div><div class="chat-item-last">${escapeHtml(lastMsg)}</div></div>`;
+                item.innerHTML = `<span class="av-wrap">${avatarHtml}${presenceDot(username)}</span><div class="chat-item-info"><div class="chat-item-name">${escapeHtml(otherUser.displayName || username)}${otherUser.isMiddleman ? '<span class="mm-badge sm">MM</span>' : ''}</div><div class="chat-item-last">${escapeHtml(lastMsg)}</div></div>${unreadBadge(dUn)}`;
 
                 item.addEventListener('click', () => {
                     activeChatUsername = username;
