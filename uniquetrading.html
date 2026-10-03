@@ -2499,6 +2499,36 @@
         .scam-tip { background-color: #1f1f1f; border: 1px solid #333333; border-left: 3px solid #ff7300; border-radius: 10px; padding: 14px 16px; }
         .scam-tip-title { color: #ffffff; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
         .scam-tip-text { color: #bbbbbb; font-size: 14px; line-height: 1.55; }
+
+        /* ===== Money page (knqw) ===== */
+        .money-container { max-width: 980px; }
+        .money-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+        .money-stat { background-color: #262626; border: 1px solid #383838; border-radius: 14px; padding: 18px 20px; }
+        .money-stat-label { color: #888888; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        .money-stat-value { color: #ffffff; font-size: 26px; font-weight: 700; word-break: break-word; }
+        .money-stat-sub { color: #777777; font-size: 12px; margin-top: 4px; min-height: 14px; }
+        .money-panel + .money-panel { margin-top: 20px; }
+        .money-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+        .money-filters .setting-input, .money-filters .setting-select { flex: 1; min-width: 150px; margin: 0; }
+        .money-filters .money-min { flex: 0 1 150px; min-width: 120px; }
+        .money-check { display: flex; align-items: center; gap: 6px; color: #cccccc; font-size: 14px; cursor: pointer; white-space: nowrap; }
+        .money-board { max-height: 460px; overflow-y: auto; border: 1px solid #383838; border-radius: 10px; background-color: #1f1f1f; }
+        .money-row { display: grid; grid-template-columns: 56px 1fr 150px 150px; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #2d2d2d; font-size: 14px; color: #ffffff; }
+        .money-row:last-child { border-bottom: none; }
+        .money-row.head { position: sticky; top: 0; background-color: #2a2a2a; color: #888888; font-size: 12px; font-weight: 700; z-index: 1; }
+        .money-row .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .money-row .rank { color: #888888; font-weight: 700; }
+        .money-row.top1 .rank { color: #ffd24a; } .money-row.top2 .rank { color: #cfd4da; } .money-row.top3 .rank { color: #d99058; }
+        .money-handle { color: #777777; font-size: 12px; margin-left: 6px; }
+        .money-held-num { color: #ffb020; }
+        .money-tx-note { color: #ffb020; font-size: 12px; margin-top: 6px; }
+        .status-pill.warn { background-color: rgba(255,176,32,0.15); color: #ffb020; }
+        .report-chat-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 14px; }
+        .report-chat-actions:empty { display: none; }
+        @media (max-width: 720px) {
+            .money-stats { grid-template-columns: 1fr; }
+            .money-row { grid-template-columns: 40px 1fr 100px 100px; font-size: 13px; padding: 9px 10px; }
+        }
     </style>
 </head>
 <body>
@@ -2563,6 +2593,7 @@ Your Terms of Service text goes here.
     <div class="side-admin-nav" id="side-admin-nav">
         <button class="side-admin-btn" id="reports-nav-btn" style="display: none;">Reports</button>
         <button class="side-admin-btn" id="appeals-nav-btn" style="display: none;">Appeals</button>
+        <button class="side-admin-btn" id="money-nav-btn" style="display: none;">Money</button>
     </div>
 
     <!-- Главная страница (Live Listings) -->
@@ -3224,6 +3255,46 @@ Your Terms of Service text goes here.
         </div>
     </div>
 
+    <!-- Money (только knqw) -->
+    <div class="middlemen-page" id="money-page">
+        <div class="middlemen-container money-container">
+            <div class="money-stats">
+                <div class="money-stat"><div class="money-stat-label">Total money</div><div class="money-stat-value" id="money-total">$0</div><div class="money-stat-sub">Wallets + held</div></div>
+                <div class="money-stat"><div class="money-stat-label">In wallets</div><div class="money-stat-value" id="money-wallets">$0</div><div class="money-stat-sub" id="money-wallets-sub"></div></div>
+                <div class="money-stat"><div class="money-stat-label">Held in transactions</div><div class="money-stat-value" id="money-held">$0</div><div class="money-stat-sub" id="money-held-sub"></div></div>
+            </div>
+            <div class="mm-panel money-panel">
+                <div class="mm-panel-title">Balances <span id="money-users-count"></span></div>
+                <div class="money-filters">
+                    <input type="text" class="setting-input" id="money-search" placeholder="Search user...">
+                    <select class="setting-select" id="money-sort">
+                        <option value="bal_desc">Balance: high to low</option>
+                        <option value="bal_asc">Balance: low to high</option>
+                        <option value="held_desc">On hold: high to low</option>
+                        <option value="total_desc">Wallet + hold: high to low</option>
+                        <option value="name_asc">Name: A to Z</option>
+                    </select>
+                    <input type="number" min="0" step="1" class="setting-input money-min" id="money-min" placeholder="Min balance">
+                    <label class="money-check"><input type="checkbox" id="money-hide-zero"><span>Hide $0</span></label>
+                </div>
+                <div class="money-board" id="money-board"></div>
+            </div>
+            <div class="mm-panel money-panel">
+                <div class="mm-panel-title">Held transactions <span id="money-tx-count"></span></div>
+                <div class="money-filters">
+                    <input type="text" class="setting-input" id="money-tx-search" placeholder="Search buyer, seller, item or #id...">
+                    <select class="setting-select" id="money-tx-status">
+                        <option value="">All statuses</option>
+                        <option value="paid">Waiting for buyer</option>
+                        <option value="not_received">Items not received</option>
+                        <option value="reported">Reported</option>
+                    </select>
+                </div>
+                <div class="mm-ticket-list" id="money-tx-list" style="max-height: none;"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Reports (только knqw) -->
     <div class="middlemen-page" id="reports-page">
         <div class="middlemen-container">
@@ -3240,6 +3311,7 @@ Your Terms of Service text goes here.
             <div class="confirm-title" id="report-chat-title">Reported deal</div>
             <div class="report-chat-meta" id="report-chat-meta"></div>
             <div class="report-chat-scroll" id="report-chat-scroll"></div>
+            <div class="report-chat-actions" id="report-chat-actions"></div>
         </div>
     </div>
 
@@ -3491,42 +3563,45 @@ Your Terms of Service text goes here.
             }
         }
 
-        async function saveUserToDB(userData) {
+        // opts.create = true only when a brand-new row is really wanted (username change).
+        // Everything else is UPDATE-only, so a deleted account can never be brought back by an open tab
+        // or by someone messaging that account.
+        async function saveUserToDB(userData, opts) {
+            const create = !!(opts && opts.create);
             try {
-                await db.execute({
-                    sql: `INSERT INTO users (customId, username, displayName, email, password, avatar, balance, lastUsernameChange, lastDisplayNameChange, items, lastItemTime, messages, card, isMiddleman, lastSeen)
-                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                          ON CONFLICT(username) DO UPDATE SET
-                            customId = excluded.customId,
-                            displayName = excluded.displayName,
-                            email = excluded.email,
-                            password = excluded.password,
-                            avatar = excluded.avatar,
-                            balance = excluded.balance,
-                            lastUsernameChange = excluded.lastUsernameChange,
-                            lastDisplayNameChange = excluded.lastDisplayNameChange,
-                            items = excluded.items,
-                            lastItemTime = excluded.lastItemTime,
-                            messages = excluded.messages,
-                            card = excluded.card`,
-                    args: [
-                        userData.customId || '1',
-                        userData.username,
-                        userData.displayName || userData.username,
-                        userData.email || '',
-                        userData.password || '',
-                        userData.avatar || null,
-                        userData.balance !== undefined ? userData.balance : 0.00,
-                        userData.lastUsernameChange || null,
-                        userData.lastDisplayNameChange || null,
-                        JSON.stringify(userData.items || []),
-                        userData.lastItemTime || 0,
-                        JSON.stringify(userData.messages || []),
-                        userData.card || null,
-                        userData.isMiddleman ? 1 : 0,
-                        userData.lastSeen || 0
-                    ]
-                });
+                const vals = [
+                    userData.customId || '1',
+                    userData.displayName || userData.username,
+                    userData.email || '',
+                    userData.password || '',
+                    userData.avatar || null,
+                    userData.balance !== undefined ? userData.balance : 0.00,
+                    userData.lastUsernameChange || null,
+                    userData.lastDisplayNameChange || null,
+                    JSON.stringify(userData.items || []),
+                    userData.lastItemTime || 0,
+                    JSON.stringify(userData.messages || []),
+                    userData.card || null
+                ];
+                if (create) {
+                    await db.execute({
+                        sql: `INSERT INTO users (customId, username, displayName, email, password, avatar, balance, lastUsernameChange, lastDisplayNameChange, items, lastItemTime, messages, card, isMiddleman, lastSeen)
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                              ON CONFLICT(username) DO UPDATE SET
+                                customId = excluded.customId, displayName = excluded.displayName, email = excluded.email,
+                                password = excluded.password, avatar = excluded.avatar, balance = excluded.balance,
+                                lastUsernameChange = excluded.lastUsernameChange, lastDisplayNameChange = excluded.lastDisplayNameChange,
+                                items = excluded.items, lastItemTime = excluded.lastItemTime, messages = excluded.messages, card = excluded.card`,
+                        args: [vals[0], userData.username, ...vals.slice(1), userData.isMiddleman ? 1 : 0, userData.lastSeen || 0]
+                    });
+                } else {
+                    await db.execute({
+                        sql: `UPDATE users SET customId = ?, displayName = ?, email = ?, password = ?, avatar = ?, balance = ?,
+                                lastUsernameChange = ?, lastDisplayNameChange = ?, items = ?, lastItemTime = ?, messages = ?, card = ?
+                              WHERE username = ?`,
+                        args: [...vals, userData.username]
+                    });
+                }
             } catch (e) {
                 console.error("Error saving user:", e);
             }
@@ -3534,12 +3609,14 @@ Your Terms of Service text goes here.
 
         async function deleteUserFromDB(username) {
             try {
-                await db.execute({
-                    sql: "DELETE FROM users WHERE username = ?",
-                    args: [username]
-                });
+                await db.execute({ sql: "DELETE FROM users WHERE username = ?", args: [username] });
+                const chk = await db.execute({ sql: "SELECT 1 FROM users WHERE username = ?", args: [username] });
+                if (chk.rows.length) return false;
+                try { await db.execute({ sql: "DELETE FROM tickets WHERE creator = ? OR partner = ?", args: [username, username] }); } catch (e) {}
+                return true;
             } catch (e) {
                 console.error("Error deleting user:", e);
+                return false;
             }
         }
         
@@ -3773,7 +3850,7 @@ Your Terms of Service text goes here.
                     }
                 }
                 await db.execute({ sql: "DELETE FROM group_messages WHERE timestamp < ?", args: [cutoff] });
-                await db.execute({ sql: "DELETE FROM deals WHERE status IN ('completed','cancelled') AND updatedAt < ?", args: [cutoff] });
+                await db.execute({ sql: "DELETE FROM deals WHERE status IN ('completed','cancelled','refunded','released') AND updatedAt < ?", args: [cutoff] });
                 await db.execute({ sql: "DELETE FROM chat_clears WHERE clearedAt < ?", args: [cutoff] });
             } catch (e) { console.error('Chat purge error:', e); }
         }
@@ -3959,6 +4036,7 @@ Your Terms of Service text goes here.
                 return;
             }
             startPresenceLoops();
+            startSessionWatch();
             if (currentUser) {
                 let userObj = await getUserByUsername(currentUser);
                 if (userObj && userObj.bannedUntil > 0 && userObj.bannedUntil <= Date.now()) {
@@ -4005,6 +4083,8 @@ Your Terms of Service text goes here.
                         if (rb) rb.style.display = '';
                         const ab = document.getElementById('appeals-nav-btn');
                         if (ab) ab.style.display = '';
+                        const mb = document.getElementById('money-nav-btn');
+                        if (mb) mb.style.display = '';
                         appealsAdmin = true;
                         updateAppealsBadge();
                     }
@@ -4985,7 +5065,7 @@ Your Terms of Service text goes here.
             const theirLeft = otherObj ? (otherObj.messages || []).some(m => m.sender === currentUser || m.receiver === currentUser) : false;
             if (theirs && !theirLeft) {
                 await db.execute({
-                    sql: "DELETE FROM deals WHERE status IN ('completed','cancelled') AND ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?))",
+                    sql: "DELETE FROM deals WHERE status IN ('completed','cancelled','refunded','released') AND ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?))",
                     args: [currentUser, other, other, currentUser]
                 });
                 await db.execute({
@@ -5252,6 +5332,14 @@ Your Terms of Service text goes here.
                             ${chatMyRating ? '<button type="button" class="rate-remove-btn" data-deal-rate-remove="1">Remove rating</button>' : ''}</div>`;
                     }
                     break;
+                case 'refunded':
+                    cls = 'muted'; title = 'Refunded';
+                    text = isBuyer ? `After a review, the money was returned to you (${amt}).` : `After a review, the deal was refunded to ${buyerN}. The ${mine} that was on hold was removed.`;
+                    break;
+                case 'released':
+                    cls = 'done'; title = 'Money released';
+                    text = isBuyer ? 'After a review, the money was released to the seller.' : `After a review, ${mine} was released to your balance.`;
+                    break;
                 case 'cancelled':
                     cls = 'muted'; title = 'Request cancelled';
                     text = 'The payment request was cancelled.';
@@ -5392,7 +5480,7 @@ Your Terms of Service text goes here.
 
         async function openReportsPage() {
             if (!(await isKnqw())) { showToast('Only knqw can view reports.'); return; }
-            closeAppealsPage();
+            closeAppealsPage(); closeMoneyPage();
             currentViewMode = 'reports';
             [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
             reportsNavBtn.classList.add('active');
@@ -5486,7 +5574,9 @@ Your Terms of Service text goes here.
             document.getElementById('report-chat-meta').innerHTML =
                 `<b>${userLinkHtml(d.buyer)}</b> (buyer) &rarr; <b>${userLinkHtml(d.seller)}</b> (seller)<br>` +
                 `Item: ${escapeHtml(d.itemName || '-')} &middot; Paid ${fmtMoney(d.amount)} &middot; On hold for seller ${fmtMoney(d.sellerAmount)}<br>` +
-                `Reported ${escapeHtml(getExactDate(d.reportedAt))} by <b>${userLinkHtml(d.reportedBy || d.buyer)}</b> (${(d.reportedBy || d.buyer) === d.seller ? 'seller' : 'buyer'})`;
+                (d.reportedAt
+                    ? `Reported ${escapeHtml(getExactDate(d.reportedAt))} by <b>${userLinkHtml(d.reportedBy || d.buyer)}</b> (${(d.reportedBy || d.buyer) === d.seller ? 'seller' : 'buyer'})`
+                    : `Status: ${escapeHtml(dealStatusLabel(d.status))}`);
             bindUserLinks(document.getElementById('report-chat-meta'));
 
             const box = document.getElementById('report-chat-scroll');
@@ -5498,6 +5588,7 @@ Your Terms of Service text goes here.
             }).join('') : '<div class="reports-empty">No messages between these users.</div>';
 
             bindUserLinks(box);
+            renderReportChatActions(d);
             reportChatModal.classList.add('active');
             box.scrollTop = box.scrollHeight;
         }
@@ -5507,7 +5598,7 @@ Your Terms of Service text goes here.
         reportChatModal.addEventListener('click', e => { if (e.target === reportChatModal) reportChatModal.classList.remove('active'); });
         // Any other main navigation closes the reports page
         document.querySelector('header').addEventListener('click', e => {
-            if (e.target.closest('#home-link, .nav-left button:not(#reports-nav-btn):not(#appeals-nav-btn), #header-balance-box, #header-messages-btn')) { closeReportsPage(); closeAppealsPage(); }
+            if (e.target.closest('#home-link, .nav-left button:not(#reports-nav-btn):not(#appeals-nav-btn):not(#money-nav-btn), #header-balance-box, #header-messages-btn')) { closeReportsPage(); closeAppealsPage(); closeMoneyPage(); }
         }, true);
         setInterval(() => {
             if (reportsPage.classList.contains('active') && !document.hidden) renderReports();
@@ -6144,7 +6235,7 @@ Your Terms of Service text goes here.
                 localStorage.setItem('currentUser', newUsername);
             }
 
-            await saveUserToDB(userObj);
+            await saveUserToDB(userObj, { create: newUsername !== currentUser });
             showToast('Profile updated successfully!');
             settingsModal.classList.remove('active');
             location.reload();
@@ -6521,7 +6612,13 @@ Your Terms of Service text goes here.
                     return;
                 }
 
-                await deleteUserFromDB(userToDelete);
+                const deleted = await deleteUserFromDB(userToDelete);
+                if (!deleted) {
+                    showToast('Could not delete this account. Please try again.');
+                    confirmModal.classList.remove('active');
+                    openDbBtn.click();
+                    return;
+                }
                 let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
                 savedAccounts = savedAccounts.filter(acc => acc !== userToDelete);
                 localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
@@ -6665,6 +6762,64 @@ Your Terms of Service text goes here.
             }, 10000);
         }
 
+
+        // ===== Live session watch: bans / IP bans / deleted accounts show up without a reload =====
+        let sessionWatchStarted = false, sessionWatchBusy = false;
+        function showDeletedScreen() {
+            localStorage.removeItem('currentUser');
+            try {
+                let saved = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+                localStorage.setItem('savedAccounts', JSON.stringify(saved.filter(a => a !== currentUser)));
+            } catch (e) {}
+            document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+            document.body.style.overflow = 'hidden';
+            document.getElementById('ban-screen').classList.add('active');
+            document.getElementById('ban-title').textContent = 'Your account was deleted';
+            document.getElementById('ban-rows').innerHTML = '<div class="ban-row"><span>Status</span><span>This account no longer exists.</span></div>';
+            document.getElementById('ban-delete-warning').style.display = 'none';
+            document.getElementById('ban-appeal-area').innerHTML = '';
+            const btn = document.getElementById('ban-logout-btn');
+            btn.textContent = 'Continue';
+            btn.onclick = () => location.reload();
+        }
+        async function checkSession() {
+            if (sessionWatchBusy) return;
+            if (document.getElementById('ban-screen').classList.contains('active')) return;
+            sessionWatchBusy = true;
+            try {
+                let me = null;
+                if (currentUser) {
+                    let rs;
+                    try { rs = await db.execute({ sql: "SELECT username, customId, bannedUntil, bannedAt, banReason, appeal, appealAt, appealStatus FROM users WHERE username = ?", args: [currentUser] }); }
+                    catch (e) { return; } // network hiccup: never log anyone out because of it
+                    if (!rs.rows.length) { showDeletedScreen(); return; }
+                    const row = rs.rows[0];
+                    me = { username: row.username, customId: row.customId, ...banFields(row) };
+                    if (isBanned(me)) {
+                        document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+                        showBanScreen(me);
+                        return;
+                    }
+                }
+                if (!(me && me.customId === 'knqw')) {
+                    const ip = await getMyIp();
+                    const ipBan = ip ? await getActiveIpBan(ip) : null;
+                    if (ipBan) {
+                        document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+                        showIpBanScreen(ipBan);
+                    }
+                }
+            } catch (e) { /* try again next tick */ }
+            finally { sessionWatchBusy = false; }
+        }
+        function startSessionWatch() {
+            if (sessionWatchStarted) return;
+            sessionWatchStarted = true;
+            setInterval(() => { if (!document.hidden) checkSession(); }, 4000);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) checkSession(); });
+            window.addEventListener('focus', checkSession);
+        }
+
         // ===== Ban modal (knqw) =====
         const banModal = document.getElementById('ban-modal');
         const banDurationSel = document.getElementById('ban-duration');
@@ -6772,7 +6927,7 @@ Your Terms of Service text goes here.
 
         async function openAppealsPage() {
             if (!(await isKnqw())) { showToast('Only knqw can view appeals.'); return; }
-            closeReportsPage();
+            closeReportsPage(); closeMoneyPage();
             currentViewMode = 'appeals';
             [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
             appealsNavBtn.classList.add('active');
@@ -6840,6 +6995,220 @@ Your Terms of Service text goes here.
         setInterval(() => {
             if (appealsPage.classList.contains('active') && !document.hidden) renderAppeals();
         }, 8000);
+
+
+        // ===== Money page (knqw only) =====
+        const moneyPage = document.getElementById('money-page');
+        const moneyNavBtn = document.getElementById('money-nav-btn');
+        let moneyData = { users: [], deals: [] };
+
+        function dealStatusLabel(st) {
+            return ({ paid: 'Waiting for buyer', not_received: 'Items not received', reported: 'Reported' })[st] || st;
+        }
+        function dealStatusPillClass(st) { return st === 'paid' ? 'ok' : (st === 'reported' ? 'banned' : 'warn'); }
+
+        async function openMoneyPage() {
+            if (!(await isKnqw())) { showToast('Only knqw can view this page.'); return; }
+            closeReportsPage(); closeAppealsPage();
+            currentViewMode = 'money';
+            [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
+            moneyNavBtn.classList.add('active');
+            mainContentArea.style.display = 'none';
+            [middlemenPage, itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
+             selectGameModal, createItemModal, switchModal, dbModal, confirmModal, linkCardModal, ticketModal
+            ].forEach(el => el.classList.remove('active'));
+            moneyPage.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            await loadMoney();
+        }
+        function closeMoneyPage() {
+            moneyPage.classList.remove('active');
+            moneyNavBtn.classList.remove('active');
+        }
+
+        async function loadMoney() {
+            if (!(await isKnqw())) return;
+            try {
+                const [u, d] = await Promise.all([
+                    db.execute("SELECT username, displayName, customId, balance, heldBalance, bannedUntil FROM users"),
+                    db.execute("SELECT id, buyer, seller, itemName, amount, sellerAmount, status, createdAt, updatedAt, reportedAt, reportedBy FROM deals WHERE status IN ('paid','not_received','reported') ORDER BY updatedAt DESC")
+                ]);
+                moneyData.users = u.rows.map(r => ({
+                    username: r.username, displayName: r.displayName || r.username, customId: r.customId || '',
+                    balance: Number(r.balance) || 0, held: Number(r.heldBalance) || 0, bannedUntil: Number(r.bannedUntil) || 0
+                }));
+                moneyData.deals = d.rows.map(mapDeal);
+            } catch (e) { console.error('Money load error:', e); return; }
+            renderMoney();
+        }
+
+        function renderMoney() {
+            const users = moneyData.users, deals = moneyData.deals;
+            const wallets = users.reduce((a, x) => a + x.balance, 0);
+            const heldTx = deals.reduce((a, x) => a + x.sellerAmount, 0);
+            document.getElementById('money-wallets').textContent = fmtBal(wallets);
+            document.getElementById('money-held').textContent = fmtBal(heldTx);
+            document.getElementById('money-total').textContent = fmtBal(wallets + heldTx);
+            document.getElementById('money-wallets-sub').textContent = `${users.length} account${users.length === 1 ? '' : 's'}`;
+            document.getElementById('money-held-sub').textContent = `${deals.length} transaction${deals.length === 1 ? '' : 's'}`;
+            renderMoneyBoard();
+            renderMoneyTx();
+        }
+
+        function renderMoneyBoard() {
+            const users = moneyData.users;
+            // rank is always by wallet balance, so it stays the same while you filter / re-sort
+            const rankOf = new Map([...users].sort((a, b) => b.balance - a.balance || a.username.localeCompare(b.username)).map((x, i) => [x.username, i + 1]));
+            const q = document.getElementById('money-search').value.trim().toLowerCase();
+            const sort = document.getElementById('money-sort').value;
+            const minRaw = document.getElementById('money-min').value;
+            const min = minRaw === '' ? null : Number(minRaw);
+            const hideZero = document.getElementById('money-hide-zero').checked;
+
+            let list = users.filter(x => {
+                if (q && !(x.username.toLowerCase().includes(q) || x.displayName.toLowerCase().includes(q))) return false;
+                if (hideZero && x.balance <= 0 && x.held <= 0) return false;
+                if (min !== null && !isNaN(min) && x.balance < min) return false;
+                return true;
+            });
+            const by = {
+                bal_desc: (a, b) => b.balance - a.balance,
+                bal_asc: (a, b) => a.balance - b.balance,
+                held_desc: (a, b) => b.held - a.held,
+                total_desc: (a, b) => (b.balance + b.held) - (a.balance + a.held),
+                name_asc: (a, b) => a.username.localeCompare(b.username)
+            }[sort] || ((a, b) => b.balance - a.balance);
+            list.sort((a, b) => by(a, b) || a.username.localeCompare(b.username));
+
+            document.getElementById('money-users-count').textContent = `(${list.length}${list.length !== users.length ? ' of ' + users.length : ''})`;
+            const board = document.getElementById('money-board');
+            const head = '<div class="money-row head"><span>#</span><span>User</span><span class="num">Balance</span><span class="num">On hold</span></div>';
+            if (!list.length) { board.innerHTML = head + '<div class="reports-empty">No users match.</div>'; return; }
+            board.innerHTML = head + list.map(x => {
+                const rank = rankOf.get(x.username);
+                const cls = rank <= 3 ? ' top' + rank : '';
+                const banned = isBanned(x) ? ' <span class="status-pill banned" style="font-size:11px;padding:2px 8px;">Banned</span>' : '';
+                const dn = x.displayName !== x.username ? `<span class="money-handle">${escapeHtml(x.displayName)}</span>` : '';
+                return `<div class="money-row${cls}"><span class="rank">${rank}</span><span>${userLinkHtml(x.username)}${dn}${banned}</span><span class="num">${fmtBal(x.balance)}</span><span class="num ${x.held > 0 ? 'money-held-num' : ''}">${x.held > 0 ? fmtBal(x.held) : '-'}</span></div>`;
+            }).join('');
+            bindUserLinks(board);
+        }
+
+        function renderMoneyTx() {
+            const names = new Set(moneyData.users.map(x => x.username));
+            const q = document.getElementById('money-tx-search').value.trim().toLowerCase().replace(/^#/, '');
+            const st = document.getElementById('money-tx-status').value;
+            const deals = moneyData.deals.filter(d => {
+                if (st && d.status !== st) return false;
+                if (q && !(String(d.id) === q || d.buyer.toLowerCase().includes(q) || d.seller.toLowerCase().includes(q) || (d.itemName || '').toLowerCase().includes(q))) return false;
+                return true;
+            });
+            document.getElementById('money-tx-count').textContent = moneyData.deals.length ? `(${deals.length}${deals.length !== moneyData.deals.length ? ' of ' + moneyData.deals.length : ''})` : '';
+            const list = document.getElementById('money-tx-list');
+            if (!deals.length) { list.innerHTML = `<div class="reports-empty">${moneyData.deals.length ? 'No transactions match.' : 'No money is being held right now.'}</div>`; return; }
+            list.innerHTML = deals.map(d => {
+                const buyerGone = !names.has(d.buyer), sellerGone = !names.has(d.seller);
+                const notes = [];
+                if (buyerGone) notes.push(`Buyer account ${escapeHtml(d.buyer)} no longer exists.`);
+                if (sellerGone) notes.push(`Seller account ${escapeHtml(d.seller)} no longer exists.`);
+                return `
+                <div class="mm-ticket">
+                    <div class="mm-ticket-top">
+                        <div class="mm-ticket-users">${userLinkHtml(d.buyer)}<i>&rarr;</i>${userLinkHtml(d.seller)} <span class="status-pill ${dealStatusPillClass(d.status)}" style="margin-left:8px;">${escapeHtml(dealStatusLabel(d.status))}</span></div>
+                        <div class="mm-ticket-time" title="${escapeHtml(getExactDate(d.createdAt))}">${escapeHtml(getTimeAgo(d.updatedAt || d.createdAt))}</div>
+                    </div>
+                    <div class="mm-ticket-desc">Deal #${d.id} &middot; Item: ${escapeHtml(d.itemName || '-')}\nBuyer paid: ${fmtMoney(d.amount)} &middot; Seller's share on hold: ${fmtMoney(d.sellerAmount)}${d.status === 'reported' ? `\nReported by: ${userLinkHtml(d.reportedBy || d.buyer)}` : ''}</div>
+                    ${notes.length ? `<div class="money-tx-note">${notes.join(' ')}</div>` : ''}
+                    <div class="mm-ticket-actions">
+                        <button class="mm-ticket-btn" data-tx-chat="${d.id}" type="button">View chat</button>
+                        <button class="mm-ticket-btn danger" data-tx-refund="${d.id}" type="button" ${buyerGone ? 'disabled style="opacity:.4;cursor:not-allowed;"' : ''}>Return to buyer</button>
+                        <button class="mm-ticket-btn primary" data-tx-pay="${d.id}" type="button" ${sellerGone ? 'disabled style="opacity:.4;cursor:not-allowed;"' : ''}>Pay seller</button>
+                    </div>
+                </div>`;
+            }).join('');
+            bindUserLinks(list);
+            list.querySelectorAll('[data-tx-chat]').forEach(b => b.addEventListener('click', () => openReportChat(Number(b.dataset.txChat))));
+            list.querySelectorAll('[data-tx-refund]:not([disabled])').forEach(b => b.addEventListener('click', () => adminResolveDeal(Number(b.dataset.txRefund), 'refund')));
+            list.querySelectorAll('[data-tx-pay]:not([disabled])').forEach(b => b.addEventListener('click', () => adminResolveDeal(Number(b.dataset.txPay), 'pay')));
+        }
+
+        // knqw decides a held transaction: send everything back to the buyer, or release the seller's share
+        let adminDealBusy = false;
+        async function adminResolveDeal(id, mode) {
+            if (adminDealBusy) return false;
+            if (!(await isKnqw())) { showToast('Only knqw can do this.'); return false; }
+            const d = await getDeal(id);
+            if (!d || !['paid', 'not_received', 'reported'].includes(d.status)) {
+                showToast('This transaction was already handled.');
+                await loadMoney(); renderReports();
+                return false;
+            }
+            const refund = mode === 'refund';
+            const ok = await askDealConfirm(
+                refund ? `Return ${fmtMoney(d.amount)} to ${d.buyer}?` : `Pay ${fmtMoney(d.sellerAmount)} to ${d.seller}?`,
+                refund
+                    ? `${d.buyer} gets back everything they paid (${fmtMoney(d.amount)}) and the ${fmtMoney(d.sellerAmount)} on hold for ${d.seller} is removed. Both of them will see the result in their chat. This cannot be undone.`
+                    : `The ${fmtMoney(d.sellerAmount)} on hold moves to ${d.seller}'s balance and the deal is closed. Both of them will see the result in their chat. This cannot be undone.`,
+                refund ? 'Return to buyer' : 'Pay seller', refund);
+            if (!ok) return false;
+
+            adminDealBusy = true;
+            try {
+                const finalStatus = refund ? 'refunded' : 'released';
+                const claim = await db.execute({
+                    sql: "UPDATE deals SET status = ?, updatedAt = ? WHERE id = ? AND status = ?",
+                    args: [finalStatus, Date.now(), id, d.status]
+                });
+                if (!claim.rowsAffected) { showToast('This transaction was already handled.'); return false; }
+                const revert = () => db.execute({ sql: "UPDATE deals SET status = ?, updatedAt = ? WHERE id = ? AND status = ?", args: [d.status, Date.now(), id, finalStatus] });
+
+                if (refund) {
+                    const credit = await db.execute({
+                        sql: "UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE username = ?",
+                        args: [d.amount, d.buyer]
+                    });
+                    if (!credit.rowsAffected) { await revert(); showToast('The buyer account no longer exists.'); return false; }
+                    await db.execute({
+                        sql: "UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?) WHERE username = ?",
+                        args: [d.sellerAmount, d.seller]
+                    });
+                    showToast(`${fmtMoney(d.amount)} returned to ${d.buyer}`);
+                } else {
+                    const rel = await db.execute({
+                        sql: "UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?), balance = COALESCE(balance, 0) + ? WHERE username = ?",
+                        args: [d.sellerAmount, d.sellerAmount, d.seller]
+                    });
+                    if (!rel.rowsAffected) { await revert(); showToast('The seller account no longer exists.'); return false; }
+                    showToast(`${fmtMoney(d.sellerAmount)} paid to ${d.seller}`);
+                }
+                reportChatModal.classList.remove('active');
+                await loadMoney();
+                renderReports();
+                return true;
+            } catch (e) {
+                console.error('Resolve deal error:', e);
+                showToast('Something went wrong. Check the balances and try again.');
+                return false;
+            } finally { adminDealBusy = false; }
+        }
+
+        // buttons inside the chat viewer (reports page + money page)
+        function renderReportChatActions(d) {
+            const box = document.getElementById('report-chat-actions');
+            if (!box) return;
+            if (!['paid', 'not_received', 'reported'].includes(d.status)) { box.innerHTML = ''; return; }
+            box.innerHTML = `<button class="mm-ticket-btn danger" id="rc-refund" type="button">Return ${fmtMoney(d.amount)} to buyer</button><button class="mm-ticket-btn primary" id="rc-pay" type="button">Pay ${fmtMoney(d.sellerAmount)} to seller</button>`;
+            document.getElementById('rc-refund').onclick = () => adminResolveDeal(d.id, 'refund');
+            document.getElementById('rc-pay').onclick = () => adminResolveDeal(d.id, 'pay');
+        }
+
+        moneyNavBtn.addEventListener('click', openMoneyPage);
+        ['money-search', 'money-min'].forEach(id => document.getElementById(id).addEventListener('input', renderMoneyBoard));
+        document.getElementById('money-sort').addEventListener('change', renderMoneyBoard);
+        document.getElementById('money-hide-zero').addEventListener('change', renderMoneyBoard);
+        document.getElementById('money-tx-search').addEventListener('input', renderMoneyTx);
+        document.getElementById('money-tx-status').addEventListener('change', renderMoneyTx);
+        setInterval(() => { if (moneyPage.classList.contains('active') && !document.hidden && !adminDealBusy) loadMoney(); }, 8000);
 
         // ===== Ratings & vouches =====
         let profileViewUser = null;
@@ -7368,7 +7737,7 @@ Your Terms of Service text goes here.
             gamesNavBtn.classList.remove('active'); scamsNavBtn.classList.remove('active');
         }
         function openInfoPage(page, btn, mode) {
-            closeReportsPage(); closeAppealsPage(); closeInfoPages();
+            closeReportsPage(); closeAppealsPage(); closeMoneyPage(); closeInfoPages();
             currentViewMode = mode;
             [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
             btn.classList.add('active');
