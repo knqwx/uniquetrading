@@ -40,7 +40,13 @@
         .nav-left {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
+        }
+        @media (max-width: 1600px) {
+            .nav-home, .nav-middlemen, .nav-marketplace, .nav-trading, .nav-games, .nav-scams { font-size: 15px; padding: 8px 10px; }
+        }
+        @media (max-width: 1350px) and (min-width: 901px) {
+            .nav-home, .nav-middlemen, .nav-marketplace, .nav-trading, .nav-games, .nav-scams { font-size: 13px; padding: 8px 7px; }
         }
 
         .site-brand {
@@ -62,7 +68,7 @@
             display: block;
         }
 
-        .nav-home, .nav-middlemen, .nav-marketplace, .nav-trading {
+        .nav-home, .nav-middlemen, .nav-marketplace, .nav-trading, .nav-games, .nav-scams {
             color: #888888;
             text-decoration: none;
             font-size: 17px;
@@ -77,8 +83,8 @@
             line-height: 1.2;
         }
 
-        .nav-home:hover, .nav-middlemen:hover, .nav-marketplace:hover, .nav-trading:hover,
-        .nav-home.active, .nav-middlemen.active, .nav-marketplace.active, .nav-trading.active {
+        .nav-home:hover, .nav-middlemen:hover, .nav-marketplace:hover, .nav-trading:hover, .nav-games:hover, .nav-scams:hover,
+        .nav-home.active, .nav-middlemen.active, .nav-marketplace.active, .nav-trading.active, .nav-games.active, .nav-scams.active {
             color: #ffffff;
             background-color: #262626;
         }
@@ -86,7 +92,7 @@
         @media (max-width: 900px) {
             .top-bar { padding: 0 16px; }
             .nav-left { gap: 2px; }
-            .nav-home, .nav-middlemen, .nav-marketplace, .nav-trading { font-size: 14px; padding: 8px 9px; }
+            .nav-home, .nav-middlemen, .nav-marketplace, .nav-trading, .nav-games, .nav-scams { font-size: 12px; padding: 8px 5px; }
         }
 
         .auth-buttons {
@@ -2480,6 +2486,19 @@
         .chat-ttl-note { align-self: center; text-align: center; color: #777777; font-size: 12px; background-color: #1f1f1f; border: 1px solid #2f2f2f; border-radius: 20px; padding: 6px 14px; margin-bottom: 4px; }
         .chat-delete-btn { background: none; border: 1px solid #4a4a4a; color: #bbbbbb; border-radius: 8px; padding: 7px 12px; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
         .chat-delete-btn:hover { border-color: #ff4d4d; color: #ff4d4d; }
+
+        /* ===== Games + Prevent scams pages ===== */
+        .games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+        .games-card { background-color: #1f1f1f; border: 1px solid #333333; border-radius: 12px; overflow: hidden; cursor: pointer; transition: border-color 0.2s, transform 0.15s; }
+        .games-card:hover { border-color: #ff7300; transform: translateY(-2px); }
+        .games-card img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; background: #2a2a2a; }
+        .games-card-body { padding: 10px 12px 12px; }
+        .games-card-name { color: #ffffff; font-size: 14px; font-weight: 600; }
+        .games-card-count { color: #888888; font-size: 12px; margin-top: 3px; }
+        .scam-list { display: flex; flex-direction: column; gap: 12px; }
+        .scam-tip { background-color: #1f1f1f; border: 1px solid #333333; border-left: 3px solid #ff7300; border-radius: 10px; padding: 14px 16px; }
+        .scam-tip-title { color: #ffffff; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+        .scam-tip-text { color: #bbbbbb; font-size: 14px; line-height: 1.55; }
     </style>
 </head>
 <body>
@@ -2499,6 +2518,8 @@
             <button class="nav-marketplace" id="marketplace-nav-btn">Marketplace</button>
             <button class="nav-trading" id="trading-nav-btn">Trading</button>
             <button class="nav-middlemen" id="middlemen-nav-btn">Middlemen</button>
+            <button class="nav-games" id="games-nav-btn">Games</button>
+            <button class="nav-scams" id="scams-nav-btn">Prevent scams</button>
         </div>
         <div class="auth-buttons" id="auth-container">
             <a href="login.html" class="btn btn-login">Log in</a>
@@ -2548,14 +2569,14 @@ Your Terms of Service text goes here.
     <main id="main-content-area">
         <div class="main-header-section">
             <h1 class="all-games-main-title" id="page-main-title">Live Listings</h1>
-            <div class="listing-search-row">
+            <div class="listing-search-row" id="listing-search-row" style="display: none;">
                 <div class="search-field" id="listing-search-field">
                     <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                     <input type="text" id="listing-search-input" placeholder="Search items by name..." autocomplete="off">
                     <button type="button" class="search-clear" id="listing-search-clear" title="Clear">&times;</button>
                 </div>
             </div>
-            <div class="filters-panel" id="filters-panel">
+            <div class="filters-panel" id="filters-panel" style="display: none;">
                 <div class="games-tags-group" id="tags-group">
                     <button class="game-tag-btn active" data-tag="All">All items</button>
                     <button class="game-tag-btn" data-tag="Murder Mystery 2">Murder Mystery 2</button>
@@ -2665,6 +2686,33 @@ Your Terms of Service text goes here.
                         <button class="admin-btn sub" id="admin-sub-btn" type="button">&minus; Subtract</button>
                     </div>
                     <div class="setting-hint">Free of charge. Balance can't go below $0.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Games page -->
+    <div class="middlemen-page" id="games-page">
+        <div class="middlemen-container">
+            <div class="mm-panel">
+                <div class="mm-panel-title">Games</div>
+                <div class="games-grid" id="games-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prevent scams page (edit the tips below as you like) -->
+    <div class="middlemen-page" id="scams-page">
+        <div class="middlemen-container">
+            <div class="mm-panel">
+                <div class="mm-panel-title">Prevent scams</div>
+                <div class="scam-list">
+                    <div class="scam-tip"><div class="scam-tip-title">Use the payment flow in the chat</div><div class="scam-tip-text">Pay only through the "Ask for payment" button inside the deal chat. The money is held until the buyer confirms they received the items. Never send money or items outside of the site.</div></div>
+                    <div class="scam-tip"><div class="scam-tip-title">Use a middleman for big trades</div><div class="scam-tip-text">Create a ticket on the Middlemen page and let a middleman handle expensive trades. Check a middleman's rating and vouches first.</div></div>
+                    <div class="scam-tip"><div class="scam-tip-title">Never share your password or codes</div><div class="scam-tip-text">Nobody from Unique Trading will ever ask for your password, email codes or Roblox login. Anyone asking for them is a scammer.</div></div>
+                    <div class="scam-tip"><div class="scam-tip-title">Check the person's profile</div><div class="scam-tip-text">Look at their rating, how long they have been around and what they have listed before trading. Be careful with brand-new accounts and prices that are too good to be true.</div></div>
+                    <div class="scam-tip"><div class="scam-tip-title">Don't confirm delivery too early</div><div class="scam-tip-text">Press "Yes, I received my items" only after the items are really in your inventory. Once confirmed, the money is released and can't be taken back.</div></div>
+                    <div class="scam-tip"><div class="scam-tip-title">Report scammers</div><div class="scam-tip-text">If you did not receive your items, press "No" and then "Report". Support reviews the whole chat and the money stays on hold meanwhile.</div></div>
                 </div>
             </div>
         </div>
@@ -3140,6 +3188,13 @@ Your Terms of Service text goes here.
                 <textarea class="setting-textarea" id="ban-reason" maxlength="300" placeholder="Why is this account being banned?"></textarea>
                 <div class="setting-hint" id="ban-perm-hint" style="display: none;">Permanent ban: the account is deleted automatically 30 days after the ban unless it is unbanned first.</div>
             </div>
+            <div class="setting-group">
+                <label class="group-pick-row" style="border: 1px solid #383838; border-radius: 10px; background: #1f1f1f;">
+                    <input type="checkbox" id="ban-ip-check">
+                    <span>Also ban this account's IP address <span style="color:#777;">(same duration)</span></span>
+                </label>
+                <div class="setting-hint" id="ban-ip-hint"></div>
+            </div>
             <div class="ban-modal-actions">
                 <button class="ban-modal-btn" id="ban-cancel-btn" type="button">Cancel</button>
                 <button class="ban-modal-btn danger" id="ban-confirm-btn" type="button">Ban</button>
@@ -3151,7 +3206,7 @@ Your Terms of Service text goes here.
     <div class="ban-screen" id="ban-screen">
         <div class="ban-card">
             <div class="ban-icon">!</div>
-            <div class="ban-title">Your account has been banned</div>
+            <div class="ban-title" id="ban-title">Your account has been banned</div>
             <div id="ban-rows"></div>
             <div class="ban-delete-warning" id="ban-delete-warning" style="display: none;"></div>
             <div class="ban-appeal-area" id="ban-appeal-area"></div>
@@ -3267,7 +3322,8 @@ Your Terms of Service text goes here.
                     "ALTER TABLE users ADD COLUMN appeal TEXT;",
                     "ALTER TABLE users ADD COLUMN appealAt INTEGER DEFAULT 0;",
                     "ALTER TABLE users ADD COLUMN appealStatus TEXT;",
-                    "ALTER TABLE users ADD COLUMN roblox TEXT;"
+                    "ALTER TABLE users ADD COLUMN roblox TEXT;",
+                    "ALTER TABLE users ADD COLUMN lastIp TEXT;"
                 ];
 
                 for (const sqlQuery of columnsToVerify) {
@@ -3343,6 +3399,15 @@ Your Terms of Service text goes here.
                     )
                 `);
                 await db.execute(`
+                    CREATE TABLE IF NOT EXISTS ip_bans (
+                        ip TEXT PRIMARY KEY,
+                        bannedUntil INTEGER,
+                        bannedAt INTEGER,
+                        reason TEXT,
+                        username TEXT
+                    )
+                `);
+                await db.execute(`
                     CREATE TABLE IF NOT EXISTS chat_clears (
                         user TEXT,
                         other TEXT,
@@ -3374,6 +3439,7 @@ Your Terms of Service text goes here.
                     items: row.items ? JSON.parse(row.items) : [],
                     lastItemTime: row.lastItemTime || 0,
                     roblox: row.roblox || '',
+                    lastIp: row.lastIp || '',
                     messages: row.messages ? JSON.parse(row.messages) : [],
                     card: row.card || null,
                     isMiddleman: Number(row.isMiddleman) === 1,
@@ -3411,6 +3477,7 @@ Your Terms of Service text goes here.
                     items: row.items ? JSON.parse(row.items) : [],
                     lastItemTime: row.lastItemTime || 0,
                     roblox: row.roblox || '',
+                    lastIp: row.lastIp || '',
                     messages: row.messages ? JSON.parse(row.messages) : [],
                     card: row.card || null,
                     isMiddleman: Number(row.isMiddleman) === 1,
@@ -3880,6 +3947,17 @@ Your Terms of Service text goes here.
 
         async function initHeaderAuth() {
             await initDB();
+            const visitorIp = await getMyIp();
+            let viewer = currentUser ? await getUserByUsername(currentUser) : null;
+            if (visitorIp && viewer && !isBanned(viewer)) {
+                // remember the last IP of this account (used for IP bans)
+                try { await db.execute({ sql: "UPDATE users SET lastIp = ? WHERE username = ?", args: [visitorIp, currentUser] }); } catch (e) {}
+            }
+            const ipBan = (viewer && viewer.customId === 'knqw') ? null : await getActiveIpBan(visitorIp);
+            if (ipBan) {
+                showIpBanScreen(ipBan);
+                return;
+            }
             startPresenceLoops();
             if (currentUser) {
                 let userObj = await getUserByUsername(currentUser);
@@ -4418,7 +4496,11 @@ Your Terms of Service text goes here.
             middlemenNavBtn.classList.remove('active'); marketplaceNavBtn.classList.remove('active'); tradingNavBtn.classList.remove('active');
             
             pageMainTitle.textContent = 'Live Listings';
-            filtersPanel.style.display = 'flex';
+            filtersPanel.style.display = 'none';
+            document.getElementById('listing-search-row').style.display = 'none';
+            const _si = document.getElementById('listing-search-input'); if (_si) _si.value = '';
+            document.getElementById('listing-search-field').classList.remove('has-value');
+            sortSelect.value = 'recently';
             mainContentArea.style.display = 'block';
             middlemenPage.classList.remove('active');
             ticketModal.classList.remove('active');
@@ -5340,9 +5422,22 @@ Your Terms of Service text goes here.
                         <div class="mm-ticket-time" title="${escapeHtml(getExactDate(d.reportedAt))}">Reported ${escapeHtml(getTimeAgo(d.reportedAt))}</div>
                     </div>
                     <div class="mm-ticket-desc">Item: ${escapeHtml(d.itemName || '-')}\nPaid: ${fmtMoney(d.amount)} &middot; Seller's share on hold: ${fmtMoney(d.sellerAmount)}\nReported by: ${userLinkHtml(d.reportedBy || d.buyer)} (${(d.reportedBy || d.buyer) === d.seller ? 'seller' : 'buyer'})</div>
-                    <div class="mm-ticket-actions"><button class="mm-ticket-btn primary" data-report-id="${d.id}" type="button">View chat</button></div>
+                    <div class="mm-ticket-actions"><button class="mm-ticket-btn primary" data-report-id="${d.id}" type="button">View chat</button><button class="mm-ticket-btn danger" data-cancel-report="${d.id}" type="button">Cancel report</button></div>
                 </div>`).join('');
             bindUserLinks(list);
+            list.querySelectorAll('[data-cancel-report]').forEach(b => b.addEventListener('click', async () => {
+                if (!(await isKnqw())) return;
+                const ok = await askDealConfirm('Cancel this report?',
+                    'The report will be dismissed and removed from this list. The deal goes back to "items not received" (money stays on hold) so the buyer and seller can continue or report again.',
+                    'Cancel report', true);
+                if (!ok) return;
+                const rs = await db.execute({
+                    sql: "UPDATE deals SET status = 'not_received', reportedAt = 0, reportedBy = NULL, chatSnapshot = NULL, updatedAt = ? WHERE id = ? AND status = 'reported'",
+                    args: [Date.now(), Number(b.dataset.cancelReport)]
+                });
+                showToast(rs.rowsAffected ? 'Report cancelled' : 'This report was already handled.');
+                renderReports();
+            }));
             list.querySelectorAll('[data-report-id]').forEach(b => {
                 b.addEventListener('click', () => openReportChat(Number(b.dataset.reportId)));
             });
@@ -5656,7 +5751,7 @@ Your Terms of Service text goes here.
                             : (involved
                                 ? (t.status === 'claimed' && t.claimedBy
                                     ? `<span class="mm-ticket-status">Claimed by ${escapeHtml(nameOf(t.claimedBy))}</span><button class="mm-ticket-btn" data-act="msg" data-user="${escapeHtml(t.claimedBy)}">Message ${escapeHtml(nameOf(t.claimedBy))}</button>`
-                                    : '<span class="mm-ticket-time">Your own ticket - waiting for a middleman</span>')
+                                    : '<span class="mm-ticket-time">Your own ticket - waiting for a middleman</span>') + (t.creator === currentUser ? '<button class="mm-ticket-btn danger" data-act="cancel">Cancel ticket</button>' : '')
                                 : `<button class="mm-ticket-btn primary" data-act="claim">Claim</button>`)}
                     </div>
                 `;
@@ -5669,6 +5764,8 @@ Your Terms of Service text goes here.
                             await claimTicket(id);
                         } else if (act === 'close') {
                             await closeTicket(id);
+                        } else if (act === 'cancel') {
+                            await cancelTicket(id);
                         }
                     });
                 });
@@ -5692,6 +5789,19 @@ Your Terms of Service text goes here.
             } catch (e) {
                 console.error(e);
                 showToast('Failed to claim ticket.');
+            }
+            await renderTickets();
+        }
+
+        async function cancelTicket(id) {
+            const ok = await askDealConfirm('Cancel ticket?', 'Your ticket will be deleted. Middlemen will no longer see it.', 'Cancel ticket', true);
+            if (!ok) return;
+            try {
+                const rs = await db.execute({ sql: "DELETE FROM tickets WHERE id = ? AND creator = ? AND status IN ('open', 'claimed')", args: [id, currentUser] });
+                showToast(rs.rowsAffected ? 'Ticket cancelled.' : 'This ticket is already gone.');
+            } catch (e) {
+                console.error(e);
+                showToast('Failed to cancel the ticket.');
             }
             await renderTickets();
         }
@@ -5724,6 +5834,8 @@ Your Terms of Service text goes here.
         function switchToListing(mode) {
             switchToHome();
             listingMode = mode;
+            filtersPanel.style.display = 'flex';
+            document.getElementById('listing-search-row').style.display = '';
             homeLink.classList.remove('active');
             (mode === 'marketplace' ? marketplaceNavBtn : tradingNavBtn).classList.add('active');
             pageMainTitle.textContent = mode === 'marketplace' ? 'Marketplace' : 'Trading';
@@ -6263,6 +6375,8 @@ Your Terms of Service text goes here.
             let allUsers = await getAllUsersFromDB();
 
             dbTbody.innerHTML = '';
+            const ipBannedSet = new Set();
+            try { (await db.execute("SELECT username FROM ip_bans WHERE bannedUntil = -1 OR bannedUntil > " + Date.now())).rows.forEach(r => ipBannedSet.add(r.username)); } catch (e) {}
             allUsers.forEach(u => {
                 const isProtected = u.customId === 'knqw';
                 const tr = document.createElement('tr');
@@ -6276,7 +6390,7 @@ Your Terms of Service text goes here.
                 const banned = isBanned(u);
                 const permBan = u.bannedUntil === -1;
                 const statusHtml = banned
-                    ? `<span class="status-pill banned">Banned</span><div class="status-sub">${permBan ? `Permanent &middot; deleted in ${escapeHtml(fmtLeft(banDeleteAt(u) - Date.now()))}` : `${escapeHtml(fmtLeft(u.bannedUntil - Date.now()))} left`}${u.appealStatus === 'pending' ? ' &middot; appeal pending' : ''}</div>`
+                    ? `<span class="status-pill banned">Banned</span><div class="status-sub">${permBan ? `Permanent &middot; deleted in ${escapeHtml(fmtLeft(banDeleteAt(u) - Date.now()))}` : `${escapeHtml(fmtLeft(u.bannedUntil - Date.now()))} left`}${u.appealStatus === 'pending' ? ' &middot; appeal pending' : ''}${ipBannedSet.has(u.username) ? ' &middot; IP banned' : ''}</div>`
                     : '<span class="status-pill ok">Active</span>';
                 tr.innerHTML = `
                     <td>${escapeHtml(u.customId || '1')}</td>
@@ -6336,6 +6450,7 @@ Your Terms of Service text goes here.
                     const uname = e.currentTarget.getAttribute('data-username');
                     if (!(await isKnqw())) { showToast('Only knqw can unban accounts.'); return; }
                     await unbanUser(uname);
+                    try { await db.execute({ sql: "DELETE FROM ip_bans WHERE username = ?", args: [uname] }); } catch (e) {}
                     showToast(`${uname} has been unbanned`);
                     updateAppealsBadge();
                     openDbBtn.click();
@@ -6561,8 +6676,14 @@ Your Terms of Service text goes here.
         const banConfirmBtn = document.getElementById('ban-confirm-btn');
         let banTarget = null;
 
-        function openBanModal(username) {
+        async function openBanModal(username) {
             banTarget = username;
+            document.getElementById('ban-ip-check').checked = false;
+            const tu = await getUserByUsername(username);
+            document.getElementById('ban-ip-check').disabled = !(tu && tu.lastIp);
+            document.getElementById('ban-ip-hint').textContent = (tu && tu.lastIp)
+                ? `Last known IP: ${tu.lastIp}. Everyone on this IP will be blocked from the site while the ban lasts.`
+                : 'No IP on record for this account yet (it is saved the next time the user visits the site).';
             document.getElementById('ban-modal-title').textContent = `Ban "${username}"`;
             banDurationSel.value = '86400000';
             banCustomNum.value = '';
@@ -6612,7 +6733,12 @@ Your Terms of Service text goes here.
             banConfirmBtn.disabled = true;
             try {
                 await banUser(banTarget, until, banReasonInput.value.trim());
-                showToast(until === -1 ? `${banTarget} was permanently banned` : `${banTarget} was banned`);
+                let ipNote = '';
+                if (document.getElementById('ban-ip-check').checked && target.lastIp) {
+                    await banIp(target.lastIp, until, banReasonInput.value.trim(), banTarget);
+                    ipNote = ' (IP banned too)';
+                }
+                showToast((until === -1 ? `${banTarget} was permanently banned` : `${banTarget} was banned`) + ipNote);
             } catch (e) {
                 showToast('Could not ban this account.');
             }
@@ -6751,49 +6877,19 @@ Your Terms of Service text goes here.
             return out;
         }
 
+        // Ratings are shown here, but can only be given in a chat after a deal is completed.
         async function renderProfileRating(userObj) {
             const box = document.getElementById('profile-rating');
-            const canRate = !!currentUser && userObj.username !== currentUser;
             box.innerHTML = `${starsHtml(0)}<div class="profile-rating-text">0.0 (0 ratings)</div>`;
             const s = await getRatingSummary(userObj.username);
             if (!profileViewUser || profileViewUser.username !== userObj.username) return;
 
             let html = `${starsHtml(s.avg)}<div class="profile-rating-text">${s.avg.toFixed(1)} (${s.count} rating${s.count === 1 ? '' : 's'})</div>`;
-            if (canRate) {
-                html += `<div class="profile-rate-box"><span class="profile-rate-label">${s.mine ? 'Your rating' : 'Rate this user'}</span><div class="rate-input">` +
-                    [1, 2, 3, 4, 5].map(n => `<button type="button" class="rate-star ${n <= s.mine ? 'on' : ''}" data-stars="${n}" title="${n} star${n === 1 ? '' : 's'}">★</button>`).join('') +
-                    `</div>${s.mine ? '<button type="button" class="rate-remove-btn" id="rate-remove-mine">Remove my rating</button>' : ''}</div>`;
-            }
             const isAdminViewer = await isKnqw();
             if (!profileViewUser || profileViewUser.username !== userObj.username) return;
             if (isAdminViewer) html += '<button type="button" class="rating-admin-btn" id="rating-admin-btn">Manage ratings</button>';
             box.innerHTML = html;
-            document.getElementById('rate-remove-mine')?.addEventListener('click', async () => {
-                try { await db.execute({ sql: "DELETE FROM ratings WHERE rater = ? AND target = ?", args: [currentUser, userObj.username] }); showToast('Rating removed'); }
-                catch (e) { showToast('Could not remove your rating.'); }
-                renderProfileRating(userObj);
-            });
             document.getElementById('rating-admin-btn')?.addEventListener('click', () => openRatingManager(userObj));
-            box.querySelectorAll('.rate-star').forEach(b => {
-                b.addEventListener('mouseenter', () => {
-                    const n = Number(b.dataset.stars);
-                    box.querySelectorAll('.rate-star').forEach(x => x.classList.toggle('on', Number(x.dataset.stars) <= n));
-                });
-                b.addEventListener('click', async () => {
-                    const n = Number(b.dataset.stars);
-                    try {
-                        await db.execute({
-                            sql: "INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(rater, target) DO UPDATE SET stars = excluded.stars, createdAt = excluded.createdAt",
-                            args: [currentUser, userObj.username, n, Date.now()]
-                        });
-                        showToast(`You rated ${userObj.displayName || userObj.username} ${n} star${n === 1 ? '' : 's'}`);
-                    } catch (e) { showToast('Could not save your rating.'); }
-                    renderProfileRating(userObj);
-                });
-            });
-            box.querySelector('.rate-input')?.addEventListener('mouseleave', () => {
-                box.querySelectorAll('.rate-star').forEach(x => x.classList.toggle('on', Number(x.dataset.stars) <= s.mine));
-            });
         }
 
         // ---- knqw: add / remove ratings of any user ----
@@ -7260,6 +7356,125 @@ Your Terms of Service text goes here.
             } catch (e) { /* try again next tick */ }
         }, 5000);
         document.addEventListener('visibilitychange', () => { if (!document.hidden && listingsSigLast !== null) listingsSigLast = '__stale__'; });
+
+        // ===== Games + Prevent scams pages =====
+        const gamesPage = document.getElementById('games-page');
+        const scamsPage = document.getElementById('scams-page');
+        const gamesNavBtn = document.getElementById('games-nav-btn');
+        const scamsNavBtn = document.getElementById('scams-nav-btn');
+
+        function closeInfoPages() {
+            gamesPage.classList.remove('active'); scamsPage.classList.remove('active');
+            gamesNavBtn.classList.remove('active'); scamsNavBtn.classList.remove('active');
+        }
+        function openInfoPage(page, btn, mode) {
+            closeReportsPage(); closeAppealsPage(); closeInfoPages();
+            currentViewMode = mode;
+            [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+            mainContentArea.style.display = 'none';
+            [middlemenPage, itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
+             selectGameModal, createItemModal, switchModal, dbModal, confirmModal, linkCardModal, ticketModal
+            ].forEach(el => el.classList.remove('active'));
+            page.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        async function openGamesPage() {
+            openInfoPage(gamesPage, gamesNavBtn, 'games');
+            const counts = {};
+            try {
+                (await getAllUsersFromDB()).forEach(u => {
+                    if (isBanned(u)) return;
+                    (u.items || []).forEach(it => { const g = it.game || 'Murder Mystery 2'; counts[g] = (counts[g] || 0) + 1; });
+                });
+            } catch (e) {}
+            document.getElementById('games-grid').innerHTML = GAMES.map(g => `
+                <div class="games-card" data-game="${escapeHtml(g.name)}">
+                    <img src="${escapeHtml(getGameThumb(g.name))}" alt="${escapeHtml(g.name)}">
+                    <div class="games-card-body">
+                        <div class="games-card-name">${escapeHtml(g.name)}</div>
+                        <div class="games-card-count">${counts[g.name] || 0} listing${(counts[g.name] || 0) === 1 ? '' : 's'}</div>
+                    </div>
+                </div>`).join('');
+            document.querySelectorAll('#games-grid .games-card').forEach(card => card.addEventListener('click', () => {
+                closeInfoPages();
+                switchToListing('marketplace');
+                activeGameTag = card.dataset.game;
+                document.querySelectorAll('.game-tag-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tag') === activeGameTag));
+                renderGlobalItems();
+            }));
+        }
+        gamesNavBtn.addEventListener('click', openGamesPage);
+        scamsNavBtn.addEventListener('click', () => openInfoPage(scamsPage, scamsNavBtn, 'scams'));
+        // any other main navigation closes these pages
+        document.querySelector('header').addEventListener('click', e => {
+            if (e.target.closest('#home-link, #home-brand-link, .nav-left button:not(#games-nav-btn):not(#scams-nav-btn), #header-balance-box, #header-messages-btn')) closeInfoPages();
+        }, true);
+
+        // ===== IP bans (time or forever) =====
+        // Note: the site has no server, so the visitor's IP comes from a public lookup (ipify) and the check runs in the page.
+        let myIp = null;
+        async function getMyIp() {
+            if (myIp !== null) return myIp;
+            const cached = sessionStorage.getItem('myIp');
+            if (cached) { myIp = cached; return myIp; }
+            for (const url of ['https://api.ipify.org?format=json', 'https://api64.ipify.org?format=json']) {
+                try {
+                    const ctl = new AbortController();
+                    const t = setTimeout(() => ctl.abort(), 4000);
+                    const r = await fetch(url, { signal: ctl.signal });
+                    clearTimeout(t);
+                    const j = await r.json();
+                    if (j && j.ip) { myIp = String(j.ip); sessionStorage.setItem('myIp', myIp); return myIp; }
+                } catch (e) { /* try the next one */ }
+            }
+            myIp = '';
+            return myIp;
+        }
+        async function getActiveIpBan(ip) {
+            if (!ip) return null;
+            try {
+                const rs = await db.execute({ sql: "SELECT * FROM ip_bans WHERE ip = ?", args: [ip] });
+                if (!rs.rows.length) return null;
+                const r = rs.rows[0];
+                const until = Number(r.bannedUntil);
+                if (until !== -1 && until <= Date.now()) {
+                    await db.execute({ sql: "DELETE FROM ip_bans WHERE ip = ?", args: [ip] });
+                    return null;
+                }
+                return { ip: r.ip, until, at: Number(r.bannedAt) || 0, reason: r.reason || '' };
+            } catch (e) { console.error(e); return null; }
+        }
+        async function banIp(ip, until, reason, username) {
+            await db.execute({
+                sql: "INSERT INTO ip_bans (ip, bannedUntil, bannedAt, reason, username) VALUES (?, ?, ?, ?, ?) ON CONFLICT(ip) DO UPDATE SET bannedUntil = excluded.bannedUntil, bannedAt = excluded.bannedAt, reason = excluded.reason, username = excluded.username",
+                args: [ip, until, Date.now(), reason || '', username || '']
+            });
+        }
+        function showIpBanScreen(ban) {
+            document.body.style.overflow = 'hidden';
+            document.getElementById('ban-screen').classList.add('active');
+            document.getElementById('ban-title').textContent = 'Your IP address has been banned';
+            const perm = ban.until === -1;
+            document.getElementById('ban-rows').innerHTML = `
+                <div class="ban-row"><span>Reason</span><span>${escapeHtml(ban.reason || 'No reason provided')}</span></div>
+                <div class="ban-row"><span>Banned on</span><span>${escapeHtml(getExactDate(ban.at))}</span></div>
+                <div class="ban-row"><span>Duration</span><span>${perm ? 'Permanent' : 'Until ' + escapeHtml(getExactDate(ban.until))}</span></div>
+                ${perm ? '' : '<div class="ban-row"><span>Time left</span><span id="ban-left"></span></div>'}`;
+            document.getElementById('ban-delete-warning').style.display = 'none';
+            document.getElementById('ban-appeal-area').innerHTML = '';
+            document.getElementById('ban-logout-btn').onclick = () => { localStorage.removeItem('currentUser'); location.reload(); };
+            if (!perm) {
+                const tick = async () => {
+                    const left = ban.until - Date.now();
+                    if (left <= 0) { await getActiveIpBan(ban.ip); location.reload(); return; }
+                    const el = document.getElementById('ban-left');
+                    if (el) el.textContent = fmtLeft(left);
+                };
+                tick();
+                setInterval(tick, 1000);
+            }
+        }
 
         // ===== Help / Copyright / Terms =====
         [['help-btn', 'help-modal'], ['copyright-btn', 'copyright-modal'], ['terms-btn', 'terms-modal']].forEach(([b, m]) => {
