@@ -2650,6 +2650,29 @@
         .top-link.discord-link { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; color: #8c9eff; padding: 6px 10px; }
         .top-link.discord-link svg { display: block; }
         .top-link.discord-link:hover { color: #ffffff; background-color: #5865f2; }
+
+        /* ===== About / FAQ / Report item ===== */
+        .about-links { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+        .about-discord { display: inline-flex; align-items: center; gap: 8px; background: #5865f2; color: #fff; text-decoration: none; font-weight: 600; font-size: 14px; padding: 10px 16px; border-radius: 10px; }
+        .about-discord:hover { opacity: 0.88; }
+        .faq-list { display: flex; flex-direction: column; gap: 8px; }
+        .faq-item { background: #262626; border-radius: 10px; padding: 0; overflow: hidden; }
+        .faq-item summary { cursor: pointer; padding: 13px 16px; color: #fff; font-weight: 600; font-size: 14px; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item summary::after { content: '+'; color: #ff7300; font-size: 20px; line-height: 1; }
+        .faq-item[open] summary::after { content: '\2212'; }
+        .faq-item .faq-a { padding: 0 16px 14px; color: #cccccc; font-size: 14px; line-height: 1.6; }
+        #faq-modal .info-modal-text, #about-modal .info-modal-text { white-space: normal; }
+        .report-item-btn { width: 100%; background: transparent; color: #ff6b6b; border: 1px solid #5a2a2a; border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; margin-bottom: 18px; transition: background 0.2s; }
+        .report-item-btn:hover { background: rgba(255,77,77,0.12); }
+        .report-item-modal { width: 460px; max-width: 94vw; text-align: left; }
+        .report-item-modal label { display: block; color: #bbb; font-size: 13px; margin: 14px 0 6px; }
+        .report-item-modal select, .report-item-modal textarea { width: 100%; background: #262626; color: #fff; border: 1px solid #3a3a3a; border-radius: 10px; padding: 11px 12px; font-size: 14px; font-family: 'Inter', sans-serif; box-sizing: border-box; outline: none; }
+        .report-item-modal textarea { min-height: 110px; resize: vertical; }
+        .report-item-modal select:focus, .report-item-modal textarea:focus { border-color: #ff7300; }
+        .report-item-sub { color: #bbb; font-size: 13px; line-height: 1.5; }
+        .report-item-sub b { color: #fff; }
+        .report-item-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
     </style>
 </head>
 <body>
@@ -2660,11 +2683,12 @@
             <img src="unique.png" alt="Unique Trading">
         </a>
         <nav class="top-links" aria-label="Info">
+            <button class="top-link" id="about-btn" type="button">About</button>
+            <button class="top-link" id="faq-btn" type="button">FAQ</button>
             <button class="top-link" id="help-btn" type="button">Help</button>
             <button class="top-link" id="copyright-btn" type="button">Copyright</button>
             <button class="top-link" id="terms-btn" type="button"><span class="long">Terms of Service</span><span class="short">Terms</span></button>
-            <!-- ====== PUT YOUR DISCORD INVITE LINK IN href BELOW ====== -->
-            <a class="top-link discord-link" id="discord-link" href="https://discord.gg/YOUR_INVITE_CODE" target="_blank" rel="noopener noreferrer" title="Join our Discord" aria-label="Join our Discord"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg></a>
+            <a class="top-link discord-link" id="discord-link" href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" title="Join our Discord" aria-label="Join our Discord"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg></a>
         </nav>
         <div class="nav-left">
             <a class="nav-home active" id="home-link">Home</a>
@@ -2696,6 +2720,66 @@
             } catch (e) {}
         })();
     </script>
+
+
+    <!-- About -->
+    <div class="modal-overlay" id="about-modal" style="z-index: 270;">
+        <div class="modal-content info-modal">
+            <button class="close-modal" data-close-info="about-modal">&times;</button>
+            <div class="info-modal-title">About Unique Trading</div>
+            <div class="info-modal-text">
+                <p style="margin:0 0 12px;">Unique Trading is a marketplace where players buy, sell and trade in-game items safely. Every deal can be backed by a middleman, payments are held until the buyer confirms delivery, and every profile has vouches and a star rating so you can see who you are dealing with.</p>
+                <p style="margin:0;">Need help, want to suggest something, or found a scammer? Join our Discord community.</p>
+                <div class="about-links">
+                    <a class="about-discord" href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer">Join our Discord</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ -->
+    <div class="modal-overlay" id="faq-modal" style="z-index: 270;">
+        <div class="modal-content info-modal">
+            <button class="close-modal" data-close-info="faq-modal">&times;</button>
+            <div class="info-modal-title">FAQ</div>
+            <div class="info-modal-text">
+                <div class="faq-list">
+                    <details class="faq-item"><summary>How do I buy an item?</summary><div class="faq-a">Open a listing and press "Contact Seller" (or "Make an Offer" for trades). The seller can then send you a payment request inside the chat.</div></details>
+                    <details class="faq-item"><summary>How does payment work?</summary><div class="faq-a">When you pay, the money is held by the site. The seller only receives it after you confirm that you received your items. The seller gets 90% of the price.</div></details>
+                    <details class="faq-item"><summary>What is a middleman?</summary><div class="faq-a">A middleman is a trusted member who holds the items during a trade so neither side can scam the other. A middleman is required when you trade across different games or with more than 4 Murder Mystery 2 items. Create a ticket on the Middlemen page to get one.</div></details>
+                    <details class="faq-item"><summary>I did not receive my items. What now?</summary><div class="faq-a">Press "No" when asked to confirm delivery, then press "Report". Support reviews the whole chat and the money stays on hold until it is resolved.</div></details>
+                    <details class="faq-item"><summary>How do I report a listing?</summary><div class="faq-a">Open the listing and press "Report item". Choose a reason, add details and send it. Our team will review it.</div></details>
+                    <details class="faq-item"><summary>What does "Looking for specific trade" mean?</summary><div class="faq-a">The seller picks the exact items they want in return and they are shown on the listing under "Looking for".</div></details>
+                    <details class="faq-item"><summary>I was banned. Can I appeal?</summary><div class="faq-a">Yes. When you log in while banned you can send an appeal. It will be reviewed by the admin.</div></details>
+                    <details class="faq-item"><summary>Where can I get more help?</summary><div class="faq-a">Join our Discord: <a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a></div></details>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report item -->
+    <div class="modal-overlay" id="report-item-modal" style="z-index: 270;">
+        <div class="modal-content report-item-modal">
+            <button class="close-modal" id="report-item-close">&times;</button>
+            <div class="info-modal-title">Report item</div>
+            <div class="report-item-sub" id="report-item-sub"></div>
+            <label for="report-item-reason">Reason</label>
+            <select id="report-item-reason">
+                <option>Scam or suspected scammer</option>
+                <option>Fake or misleading listing</option>
+                <option>Wrong game or category</option>
+                <option>Inappropriate content</option>
+                <option>Spam</option>
+                <option>Other</option>
+            </select>
+            <label for="report-item-details">Details</label>
+            <textarea id="report-item-details" maxlength="1000" placeholder="Tell us what is wrong with this listing..."></textarea>
+            <div class="report-item-actions">
+                <button class="deal-btn" id="report-item-cancel" type="button">Cancel</button>
+                <button class="deal-btn danger" id="report-item-submit" type="button">Send report</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Help / Copyright / Terms of Service: put your text inside the .info-modal-text blocks -->
     <div class="modal-overlay" id="help-modal" style="z-index: 270;">
@@ -2937,6 +3021,7 @@ Your Terms of Service text goes here.
                 <div class="detail-time-val" id="detail-time-val" title="Click to toggle date format">Just now</div>
                 
                 <button class="buy-item-action-btn" id="buy-item-action-btn">Contact Seller</button>
+                <button class="report-item-btn" id="report-item-btn" type="button" style="display:none;">Report item</button>
 
                 <div class="detail-seller-info" id="detail-seller-box" title="View Profile">
                     <div class="detail-seller-avatar" id="detail-seller-avatar">U</div>
@@ -3507,6 +3592,10 @@ Your Terms of Service text goes here.
                 <div class="mm-panel-title">Reported deals <span id="reports-count"></span></div>
                 <div class="mm-ticket-list" id="reports-list" style="max-height: none;"></div>
             </div>
+            <div class="mm-panel" style="margin-top: 20px;">
+                <div class="mm-panel-title">Reported items <span id="item-reports-count"></span></div>
+                <div class="mm-ticket-list" id="item-reports-list" style="max-height: none;"></div>
+            </div>
         </div>
     </div>
 
@@ -3652,6 +3741,19 @@ Your Terms of Service text goes here.
                 `);
                 try { await db.execute("ALTER TABLE deals ADD COLUMN reportedBy TEXT"); } catch (e) { /* уже есть */ }
                 try { await db.execute("ALTER TABLE deals ADD COLUMN itemId TEXT"); } catch (e) { /* уже есть */ }
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS item_reports (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        itemId TEXT,
+                        itemName TEXT,
+                        itemGame TEXT,
+                        seller TEXT,
+                        reporter TEXT,
+                        reason TEXT,
+                        details TEXT,
+                        createdAt INTEGER
+                    )
+                `);
                 await db.execute(`
                     CREATE TABLE IF NOT EXISTS chat_groups (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -4961,6 +5063,7 @@ Your Terms of Service text goes here.
             }
             detailSellerName.textContent = item.sellerDisplayName;
 
+            document.getElementById('report-item-btn').style.display = (currentUser && currentUser !== item.sellerUsername) ? '' : 'none';
             itemDetailPage.classList.add('active');
         }
 
@@ -6570,6 +6673,7 @@ Your Terms of Service text goes here.
         async function renderReports() {
             const list = document.getElementById('reports-list');
             if (!(await isKnqw())) { list.innerHTML = ''; return; }
+            renderItemReports();
             const deals = await getReportedDeals();
             document.getElementById('reports-count').textContent = deals.length ? `(${deals.length})` : '';
             if (!deals.length) { list.innerHTML = '<div class="reports-empty">No reported deals.</div>'; return; }
@@ -8949,12 +9053,78 @@ Your Terms of Service text goes here.
             }
         }
 
+
+        // ===== Report item (listing reports) =====
+        let reportItemTarget = null;
+        const reportItemModal = document.getElementById('report-item-modal');
+        function closeReportItemModal() { reportItemModal.classList.remove('active'); }
+        document.getElementById('report-item-btn').addEventListener('click', () => {
+            if (!currentUser) { showToast('Please log in to report an item.'); return; }
+            if (!currentActiveItem || currentActiveItem.sellerUsername === currentUser) return;
+            reportItemTarget = currentActiveItem;
+            document.getElementById('report-item-sub').innerHTML = `Item: <b>${escapeHtml(reportItemTarget.name || '-')}</b> &middot; Seller: <b>${escapeHtml(reportItemTarget.sellerUsername)}</b>`;
+            document.getElementById('report-item-reason').selectedIndex = 0;
+            document.getElementById('report-item-details').value = '';
+            reportItemModal.classList.add('active');
+        });
+        document.getElementById('report-item-close').addEventListener('click', closeReportItemModal);
+        document.getElementById('report-item-cancel').addEventListener('click', closeReportItemModal);
+        reportItemModal.addEventListener('click', e => { if (e.target === reportItemModal) closeReportItemModal(); });
+        document.getElementById('report-item-submit').addEventListener('click', async () => {
+            const it = reportItemTarget;
+            if (!it || !currentUser) return;
+            const reason = document.getElementById('report-item-reason').value;
+            const details = document.getElementById('report-item-details').value.trim();
+            if (reason === 'Other' && !details) { showToast('Please describe the problem.'); return; }
+            const btn = document.getElementById('report-item-submit');
+            btn.disabled = true;
+            try {
+                const dup = await db.execute({ sql: "SELECT id FROM item_reports WHERE itemId = ? AND reporter = ? LIMIT 1", args: [String(it.id), currentUser] });
+                if (dup.rows.length) { showToast('You already reported this item.'); closeReportItemModal(); return; }
+                await db.execute({
+                    sql: "INSERT INTO item_reports (itemId, itemName, itemGame, seller, reporter, reason, details, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    args: [String(it.id), it.name || '', it.game || 'Murder Mystery 2', it.sellerUsername, currentUser, reason, details.slice(0, 1000), Date.now()]
+                });
+                showToast('Item reported. Thank you!');
+                closeReportItemModal();
+            } catch (e) {
+                console.error('report item error:', e);
+                showToast('Could not send the report. Try again.');
+            } finally { btn.disabled = false; }
+        });
+
+        async function renderItemReports() {
+            const list = document.getElementById('item-reports-list');
+            if (!list) return;
+            if (!(await isKnqw())) { list.innerHTML = ''; return; }
+            let rows = [];
+            try { rows = (await db.execute("SELECT * FROM item_reports ORDER BY createdAt DESC")).rows; } catch (e) { console.error(e); }
+            document.getElementById('item-reports-count').textContent = rows.length ? `(${rows.length})` : '';
+            if (!rows.length) { list.innerHTML = '<div class="reports-empty">No reported items.</div>'; return; }
+            list.innerHTML = rows.map(r => `
+                <div class="mm-ticket">
+                    <div class="mm-ticket-top">
+                        <div class="mm-ticket-users">${userLinkHtml(r.reporter)}<i>&rarr;</i>${userLinkHtml(r.seller)}</div>
+                        <div class="mm-ticket-time" title="${escapeHtml(getExactDate(Number(r.createdAt)))}">Reported ${escapeHtml(getTimeAgo(Number(r.createdAt)))}</div>
+                    </div>
+                    <div class="mm-ticket-desc">Item: ${escapeHtml(r.itemName || '-')} (${escapeHtml(r.itemGame || '')})\nReason: ${escapeHtml(r.reason || '-')}\n${escapeHtml(r.details || 'No details.')}</div>
+                    <div class="mm-ticket-actions"><button class="mm-ticket-btn danger" data-dismiss-item-report="${Number(r.id)}" type="button">Dismiss</button></div>
+                </div>`).join('');
+            bindUserLinks(list);
+            list.querySelectorAll('[data-dismiss-item-report]').forEach(b => b.addEventListener('click', async () => {
+                if (!(await isKnqw())) return;
+                await db.execute({ sql: "DELETE FROM item_reports WHERE id = ?", args: [Number(b.dataset.dismissItemReport)] });
+                showToast('Report dismissed');
+                renderItemReports();
+            }));
+        }
+
         // ===== Help / Copyright / Terms =====
-        [['help-btn', 'help-modal'], ['copyright-btn', 'copyright-modal'], ['terms-btn', 'terms-modal']].forEach(([b, m]) => {
+        [['about-btn', 'about-modal'], ['faq-btn', 'faq-modal'], ['help-btn', 'help-modal'], ['copyright-btn', 'copyright-modal'], ['terms-btn', 'terms-modal']].forEach(([b, m]) => {
             document.getElementById(b).addEventListener('click', () => document.getElementById(m).classList.add('active'));
         });
         document.querySelectorAll('[data-close-info]').forEach(b => b.addEventListener('click', () => document.getElementById(b.dataset.closeInfo).classList.remove('active')));
-        ['help-modal', 'copyright-modal', 'terms-modal'].forEach(id => {
+        ['about-modal', 'faq-modal', 'help-modal', 'copyright-modal', 'terms-modal'].forEach(id => {
             const el = document.getElementById(id);
             el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
         });
