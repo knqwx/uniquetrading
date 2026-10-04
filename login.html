@@ -218,6 +218,20 @@
         .age-check { display: flex; gap: 8px; align-items: flex-start; color: #b0b0b0; font-size: 12.5px; line-height: 1.4; }
         .age-check input { margin-top: 2px; accent-color: #ff7300; }
         .age-check a { color: #8c9eff; text-decoration: none; }
+
+        .terms-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; z-index: 500; padding: 16px; box-sizing: border-box; }
+        .terms-overlay.active { opacity: 1; pointer-events: auto; }
+        .terms-window { background: #262626; border-radius: 12px; padding: 26px; width: 620px; max-width: 100%; max-height: 86vh; overflow-y: auto; position: relative; box-shadow: 0 4px 30px rgba(0,0,0,0.6); box-sizing: border-box; }
+        .terms-title { color: #fff; font-size: 22px; font-weight: 700; margin-bottom: 14px; padding-right: 30px; }
+        .terms-text { color: #cccccc; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+        .terms-text b { color: #fff; }
+        .terms-close { position: absolute; top: 12px; right: 14px; background: none; border: none; color: #aaa; font-size: 26px; cursor: pointer; line-height: 1; }
+        .terms-close:hover { color: #fff; }
+        .field-status { font-size: 12px; margin-top: 6px; min-height: 16px; color: #8a8a8a; }
+        .field-status.ok { color: #2ecc71; }
+        .field-status.bad { color: #ff6b6b; }
+        .field-status.checking { color: #b0b0b0; }
+        .input-group { max-height: 120px; }
     </style>
 </head>
 <body>
@@ -233,12 +247,14 @@
         <form id="auth-form">
             <div class="input-group collapsed" id="username-group">
                 <label>Username</label>
-                <input type="text" id="username-input" placeholder="Choose a username">
+                <input type="text" id="username-input" placeholder="Choose a username" autocomplete="off">
+                <div class="field-status" id="username-status"></div>
             </div>
 
             <div class="input-group">
                 <label id="main-label">Username or email</label>
                 <input type="text" id="main-input" placeholder="Enter your username or email">
+                <div class="field-status" id="email-status"></div>
             </div>
 
             <div class="input-group">
@@ -255,14 +271,12 @@
                     <li data-rule="upper">Uppercase letter</li>
                     <li data-rule="num">A number</li>
                     <li data-rule="sym">A symbol (!@#$...)</li>
-                    <li data-rule="common">Not a common password</li>
-                    <li data-rule="pattern">No 1234 / aaaa patterns</li>
                     <li data-rule="personal">Not your name or email</li>
                 </ul>
             </div>
 
             <div class="signup-only" id="age-wrap">
-                <label class="age-check"><input type="checkbox" id="age-checkbox"> <span>I am at least 13 years old and I agree to the <a href="uniquetrading.html" target="_blank" rel="noopener">Terms of Service</a>.</span></label>
+                <label class="age-check"><input type="checkbox" id="age-checkbox"> <span>I am at least 13 years old and I agree to the <a href="#" id="terms-open-link">Terms of Service</a>.</span></label>
             </div>
 
             <!-- Математическая капча -->
@@ -280,6 +294,55 @@
                 <span id="footer-text">Don't have an account?</span> <button type="button" id="toggle-btn">Sign up</button>
             </div>
         </form>
+    </div>
+
+
+    <div class="terms-overlay" id="terms-overlay">
+        <div class="terms-window" role="dialog" aria-modal="true" aria-labelledby="terms-title">
+            <button type="button" class="terms-close" id="terms-close" aria-label="Close">&times;</button>
+            <div class="terms-title" id="terms-title">Terms of Service</div>
+            <div class="terms-text"><b>Last updated: October 4, 2026</b>
+
+<b>1. Acceptance</b>
+By using Unique Trading you agree to these Terms of Service. If you do not agree, do not use the platform.
+
+<b>2. Minimum age</b>
+You must be at least 13 years old to use Unique Trading. If you are under the age of majority where you live, you must have permission from a parent or guardian. We may remove any account that belongs to someone under 13.
+
+<b>3. Not affiliated with Roblox or any game developer</b>
+Unique Trading is an independent community marketplace. It is not affiliated with, endorsed by or sponsored by Roblox Corporation or any other game developer or publisher. All game names, item names, logos and images belong to their respective owners and are used only to identify items.
+
+<b>4. Accounts</b>
+Give accurate information and keep your password safe. You are responsible for everything that happens on your account. One person may have one account. Only one account can be created per day. Do not use extra accounts to avoid a ban, a timeout or a rate limit.
+
+<b>5. Listings</b>
+Only list items you really own and describe them honestly. Items are listed at most once every 10 minutes. Pictures must be 500 KB or smaller and must not contain inappropriate, hateful or illegal content. Fake, misleading or duplicate listings may be removed.
+
+<b>6. Payments and deals</b>
+When a buyer pays, the money is held by the platform until the buyer confirms that the items were received. The seller receives 90% of the price, and 10% is kept as a platform fee. If the items were not received, the deal can be reported and our staff reviews the whole chat while the money stays on hold. Staff decisions on reported deals are final.
+
+<b>7. Middlemen</b>
+Middlemen are trusted members who help complete trades. Their vouches and ratings are shown on their profiles. A middleman is required when a trade involves different games or more than 4 Murder Mystery 2 items. Middlemen can be reported like any other user. Always keep trades inside the platform chat and ticket system. We cannot help with losses from trades made outside the platform.
+
+<b>8. Rules</b>
+You must not: scam or try to scam other users, harass or threaten others, spam, impersonate other people or staff, share illegal content, abuse bugs, or try to break or bypass the platform.
+
+<b>9. Spam and rate limits</b>
+Sending messages too quickly causes an automatic timeout. The first timeout lasts 15 seconds, the next 3 minutes, then 1 hour, then 1 day. Staff can remove or extend timeouts. Other limits (such as listing items and creating accounts) may also apply.
+
+<b>10. Reports and moderation</b>
+You can report items, users, middlemen and deals. Staff may remove listings, hold money, time out or ban accounts (temporarily or permanently) to protect the community. Banned users can send an appeal. Permanently banned accounts are deleted after 30 days.
+
+<b>11. No guarantees</b>
+The platform is provided as is. Trading virtual items carries risk and virtual items have no guaranteed real-world value. Unique Trading is not responsible for losses caused by other users, game updates, game bans or changes made by the game developers.
+
+<b>12. Changes</b>
+We may update these Terms at any time. Using the platform after a change means you accept the new Terms.
+
+<b>13. Contact</b>
+Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a></div>
+            <button type="button" class="submit-btn" id="terms-ok" style="margin-top:16px;">Close</button>
+        </div>
     </div>
 
     <!-- Подключаем Turso Client через стабильный ESM-модуль -->
@@ -441,28 +504,6 @@
 
 
         // ===== Password strength =====
-        const COMMON_PASSWORDS = new Set(['password','password1','password12','password123','passw0rd','p@ssw0rd','p@ssword','123456','1234567','12345678','123456789','1234567890','12345678910','qwerty','qwerty123','qwertyuiop','qwerty12345','111111','000000','abc123','abcd1234','iloveyou','admin','admin123','welcome','welcome1','letmein','monkey','dragon','football','baseball','master','login','princess','sunshine','shadow','superman','trustno1','whatever','freedom','hello123','zaq12wsx','1q2w3e4r','1qaz2wsx','qazwsx','asdfgh','asdfghjkl','zxcvbnm','roblox','roblox123','robux','minecraft','fortnite','murdermystery','mm2','mm2trading','uniquetrading','unique123','unique','trading','trading123','killer','godly','changeme','default','secret','test1234','guest','pokemon','naruto','batman','cheese']);
-        const COMMON_ROOTS = ['password', 'passw0rd', 'qwerty', 'iloveyou', 'welcome', 'letmein', 'football', 'baseball', 'superman', 'trustno', 'whatever', 'freedom', 'sunshine', 'princess', 'dragon', 'monkey', 'master', 'shadow', 'roblox', 'robux', 'minecraft', 'fortnite', 'murdermystery', 'uniquetrading', 'changeme', 'admin', 'login', 'secret', 'letmein', 'asdfgh', 'zxcvbn', 'pokemon', 'naruto', 'batman'];
-        function isCommonPassword(pw) {
-            const l = pw.toLowerCase();
-            if (COMMON_PASSWORDS.has(l)) return true;
-            // undo simple leetspeak (p@ssw0rd -> password) and keep letters only
-            const letters = l.replace(/@/g, 'a').replace(/0/g, 'o').replace(/[1!|]/g, 'i').replace(/3/g, 'e').replace(/[$5]/g, 's').replace(/[^a-z]/g, '');
-            if (COMMON_PASSWORDS.has(letters)) return true;
-            return COMMON_ROOTS.some(r => letters.includes(r));
-        }
-        function hasSequence(pw) {
-            const l = pw.toLowerCase();
-            if (/(.)\1{3,}/.test(l)) return true; // aaaa
-            const seqs = ['abcdefghijklmnopqrstuvwxyz', '01234567890', 'qwertyuiopasdfghjklzxcvbnm', '09876543210'];
-            for (const q of seqs) {
-                for (let i = 0; i + 4 <= q.length; i++) {
-                    const part = q.slice(i, i + 4);
-                    if (l.includes(part) || l.includes(part.split('').reverse().join(''))) return true;
-                }
-            }
-            return false;
-        }
         function passwordChecks(pw, username, email) {
             const l = pw.toLowerCase();
             const u = (username || '').trim().toLowerCase();
@@ -474,8 +515,6 @@
                 upper: /[A-Z]/.test(pw),
                 num: /[0-9]/.test(pw),
                 sym: /[^A-Za-z0-9]/.test(pw),
-                common: pw.length > 0 && !isCommonPassword(pw),
-                pattern: pw.length > 0 && !hasSequence(pw),
                 personal: pw.length > 0 && personal
             };
         }
@@ -488,7 +527,7 @@
             if (/[^A-Za-z0-9]/.test(pw)) pool += 32;
             const bits = pw.length * Math.log2(Math.max(pool, 2));
             let score = bits < 36 ? 1 : bits < 52 ? 2 : bits < 70 ? 3 : 4;
-            if (!checks.common || !checks.pattern || !checks.personal) score = Math.min(score, 1);
+            if (!checks.personal) score = Math.min(score, 1);
             if (!checks.len) score = Math.min(score, 2);
             return score;
         }
@@ -576,6 +615,59 @@
             }
             return wait;
         }
+
+
+        // ===== Live availability (username / email) =====
+        const usernameStatus = document.getElementById('username-status');
+        const emailStatus = document.getElementById('email-status');
+        function setStatus(el, cls, text) { el.className = 'field-status ' + cls; el.textContent = text; }
+        let userCheckSeq = 0, emailCheckSeq = 0, userTimer = null, emailTimer = null;
+        async function runUsernameCheck() {
+            const seq = ++userCheckSeq;
+            const name = usernameInput.value.trim();
+            if (isLoginMode || !name) { setStatus(usernameStatus, '', ''); return; }
+            if (name.length < 3) { setStatus(usernameStatus, 'bad', 'Username must be at least 3 characters.'); return; }
+            setStatus(usernameStatus, 'checking', 'Checking...');
+            try {
+                const rs = await db.execute({ sql: "SELECT 1 FROM users WHERE username = ? LIMIT 1", args: [name] });
+                if (seq !== userCheckSeq) return;
+                if (rs.rows.length) setStatus(usernameStatus, 'bad', 'This username is already taken.');
+                else setStatus(usernameStatus, 'ok', 'Username is available.');
+            } catch (e) { if (seq === userCheckSeq) setStatus(usernameStatus, '', ''); }
+        }
+        async function runEmailCheck() {
+            const seq = ++emailCheckSeq;
+            const email = mainInput.value.trim().toLowerCase();
+            if (isLoginMode || !email) { setStatus(emailStatus, '', ''); return; }
+            if (!email.includes('@') || email.endsWith('@')) { setStatus(emailStatus, 'checking', 'Keep typing your email...'); return; }
+            setStatus(emailStatus, 'checking', 'Checking...');
+            try {
+                const err = await checkEmail(email);
+                if (seq !== emailCheckSeq) return;
+                if (err) { setStatus(emailStatus, 'bad', err); return; }
+                const rs = await db.execute({ sql: "SELECT 1 FROM users WHERE lower(email) = ? LIMIT 1", args: [email] });
+                if (seq !== emailCheckSeq) return;
+                if (rs.rows.length) setStatus(emailStatus, 'bad', 'This email is already registered.');
+                else setStatus(emailStatus, 'ok', 'Email is available.');
+            } catch (e) { if (seq === emailCheckSeq) setStatus(emailStatus, '', ''); }
+        }
+        usernameInput.addEventListener('input', () => { clearTimeout(userTimer); setStatus(usernameStatus, usernameInput.value.trim() ? 'checking' : '', usernameInput.value.trim() ? 'Checking...' : ''); userTimer = setTimeout(runUsernameCheck, 450); });
+        mainInput.addEventListener('input', () => { if (isLoginMode) return; clearTimeout(emailTimer); emailTimer = setTimeout(runEmailCheck, 600); });
+        // reset the messages when switching between Log in / Sign up
+        toggleBtn.addEventListener('click', () => {
+            userCheckSeq++; emailCheckSeq++;
+            setStatus(usernameStatus, '', ''); setStatus(emailStatus, '', '');
+            if (!isLoginMode) { if (usernameInput.value.trim()) runUsernameCheck(); if (mainInput.value.trim()) runEmailCheck(); }
+        });
+
+        // ===== Terms of Service window =====
+        const termsOverlay = document.getElementById('terms-overlay');
+        document.getElementById('terms-open-link').addEventListener('click', (e) => { e.preventDefault(); termsOverlay.classList.add('active'); });
+        const closeTerms = () => termsOverlay.classList.remove('active');
+        document.getElementById('terms-close').addEventListener('click', closeTerms);
+        document.getElementById('terms-ok').addEventListener('click', closeTerms);
+        termsOverlay.addEventListener('click', (e) => { if (e.target === termsOverlay) closeTerms(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeTerms(); });
 
         authForm.addEventListener('submit', async (e) => {
             e.preventDefault();
