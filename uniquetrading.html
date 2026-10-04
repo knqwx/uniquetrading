@@ -4389,7 +4389,45 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             } catch (e) { /* не критично */ }
         }
 
-        const currentUser = localStorage.getItem('currentUser');
+        // ===== Session comes from the server (httpOnly cookie) =====
+        let currentUser = null;
+        try {
+            const meRes = await fetch('/api/me', { credentials: 'same-origin', cache: 'no-store' });
+            if (meRes.ok) {
+                currentUser = String((await meRes.json()).username || '') || null;
+                if (currentUser) localStorage.setItem('currentUser', currentUser);
+            } else if (meRes.status === 401) {
+                localStorage.removeItem('currentUser');
+                document.documentElement.classList.remove('has-session');
+            } else {
+                currentUser = localStorage.getItem('currentUser');   // server hiccup: keep the UI usable
+            }
+        } catch (e) {
+            currentUser = localStorage.getItem('currentUser');       // offline / server unreachable
+        }
+        async function logoutAndReload() {
+            try { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
+            try { localStorage.removeItem('currentUser'); } catch (e) {}
+            location.reload();
+        }
+        // The server sees the real visitor IP, so IP-ban checks go through the API
+        async function getServerIpBan() {
+            try {
+                const r = await fetch('/api/ip-status', { credentials: 'same-origin', cache: 'no-store' });
+                if (!r.ok) return null;
+                const j = await r.json();
+                return j && j.banned ? { message: j.message || 'Your IP address is banned.' } : null;
+            } catch (e) { return null; }
+        }
+        function showIpBanMessage(ban) {
+            document.body.style.overflow = 'hidden';
+            document.getElementById('ban-screen').classList.add('active');
+            document.getElementById('ban-title').textContent = 'Your IP address has been banned';
+            document.getElementById('ban-rows').innerHTML = `<div class="ban-row"><span>Details</span><span>${escapeHtml(ban.message)}</span></div>`;
+            document.getElementById('ban-delete-warning').style.display = 'none';
+            document.getElementById('ban-appeal-area').innerHTML = '';
+            document.getElementById('ban-logout-btn').onclick = () => logoutAndReload();
+        }
         const authContainer = document.getElementById('auth-container');
         const homeLink = document.getElementById('home-link');
         const homeBrandLink = document.getElementById('home-brand-link');
@@ -4713,15 +4751,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         async function initHeaderAuth() {
             await initDB();
-            const visitorIp = await getMyIp();
             let viewer = currentUser ? await getUserByUsername(currentUser) : null;
-            if (visitorIp && viewer && !isBanned(viewer)) {
-                // remember the last IP of this account (used for IP bans)
-                try { await db.execute({ sql: "UPDATE users SET lastIp = ? WHERE username = ?", args: [visitorIp, currentUser] }); } catch (e) {}
-            }
-            const ipBan = (viewer && viewer.customId === 'knqw') ? null : await getActiveIpBan(visitorIp);
+            const ipBan = (viewer && viewer.customId === 'knqw') ? null : await getServerIpBan();
             if (ipBan) {
-                showIpBanScreen(ipBan);
+                showIpBanMessage(ipBan);
                 return;
             }
             startPresenceLoops();
@@ -4821,8 +4854,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     });
 
                     document.getElementById('dropdown-logout-btn').addEventListener('click', () => {
-                        localStorage.removeItem('currentUser');
-                        location.reload();
+                        logoutAndReload();
                     });
                 } else {
                     document.documentElement.classList.remove('has-session');
@@ -7604,6 +7636,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             }
 
             await saveUserToDB(userObj, { create: newUsername !== currentUser });
+            if (newUsername !== currentUser) {
+                try { await db.execute({ sql: "UPDATE sessions SET username = ? WHERE username = ?", args: [newUsername, currentUser] }); } catch (e) { console.error(e); }
+            }
             showToast('Profile updated successfully!');
             settingsModal.classList.remove('active');
             location.reload();
@@ -7860,8 +7895,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         return;
                     }
                     if (!isCurrent) {
-                        localStorage.setItem('currentUser', username);
-                        location.reload();
+                        window.location.href = 'login.html?u=' + encodeURIComponent(username);
                     }
                 });
 
@@ -8040,8 +8074,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
 
                 if (currentUser === userToDelete) {
-                    localStorage.removeItem('currentUser');
-                    location.reload();
+                    logoutAndReload();
                 } else {
                     confirmModal.classList.remove('active');
                     openDbBtn.click();
@@ -8060,8 +8093,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             document.body.style.overflow = 'hidden';
             document.getElementById('ban-screen').classList.add('active');
             document.getElementById('ban-logout-btn').onclick = () => {
-                localStorage.removeItem('currentUser');
-                location.reload();
+                logoutAndReload();
             };
             renderBanScreen(u);
             startBanTimers();
@@ -8142,8 +8174,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const left = banDeleteAt(u) - now;
                 if (left <= 0) {
                     await purgeExpiredBans();
-                    localStorage.removeItem('currentUser');
-                    location.reload();
+                    logoutAndReload();
                     return;
                 }
                 const el = document.getElementById('ban-delete-left');
@@ -8182,6 +8213,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         // ===== Live session watch: bans / IP bans / deleted accounts show up without a reload =====
         let sessionWatchStarted = false, sessionWatchBusy = false;
         function showDeletedScreen() {
+            fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
             localStorage.removeItem('currentUser');
             try {
                 let saved = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -8218,11 +8250,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     }
                 }
                 if (!(me && me.customId === 'knqw')) {
-                    const ip = await getMyIp();
-                    const ipBan = ip ? await getActiveIpBan(ip) : null;
+                    const ipBan = await getServerIpBan();
                     if (ipBan) {
                         document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
-                        showIpBanScreen(ipBan);
+                        showIpBanMessage(ipBan);
                     }
                 }
             } catch (e) { /* try again next tick */ }
@@ -9249,7 +9280,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 ${perm ? '' : '<div class="ban-row"><span>Time left</span><span id="ban-left"></span></div>'}`;
             document.getElementById('ban-delete-warning').style.display = 'none';
             document.getElementById('ban-appeal-area').innerHTML = '';
-            document.getElementById('ban-logout-btn').onclick = () => { localStorage.removeItem('currentUser'); location.reload(); };
+            document.getElementById('ban-logout-btn').onclick = () => { logoutAndReload(); };
             if (!perm) {
                 const tick = async () => {
                     const left = ban.until - Date.now();
