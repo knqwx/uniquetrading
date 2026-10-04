@@ -2643,6 +2643,8 @@
         @media (max-width: 600px) { .item-picker-body { flex-direction: column; } .item-picker-cats { width: 100%; flex-direction: row; flex-wrap: wrap; max-height: none; } }
         /* per-item chat label, join date, item picker */
         .chat-item-sub { color: #ff9a44; font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
+        .mini-item-icon { width: 18px; height: 18px; border-radius: 4px; object-fit: cover; vertical-align: middle; margin-right: 6px; background: #1a1a1a; flex: none; }
+        .mini-item-icon.missing { display: none; }
         .chat-header-item { color: #ff9a44; font-size: 12px; font-weight: 600; }
         .modal-joined { color: #888888; font-size: 12px; margin-top: 2px; }
         .top-link.discord-link { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; color: #8c9eff; padding: 6px 10px; }
@@ -4280,15 +4282,35 @@ Your Terms of Service text goes here.
         };
         // Ancients show as cards with a weapon image. Put the images in this folder, named like the item
         // without spaces/symbols, e.g. "Swirly Axe" -> SwirlyAxe.webp, "Nik's Scythe" -> NiksScythe.webp
-        const ITEM_IMG_DIR = 'ancients/';
+        const ITEM_IMG_DIR = 'MM2items/';
         function itemImageFile(name) { return String(name).replace(/[^A-Za-z0-9]/g, '') + '.webp'; }
         // Only the exact file name is used, e.g. "Traveler's Axe" -> TravelersAxe.webp
         function itemImageCandidates(name) {
             return [ITEM_IMG_DIR + itemImageFile(name)];
         }
+        // every Murder Mystery 2 item (all categories, Ancients included) uses an image from MM2items/
         function isAncientItem(game, name) {
             const g = GAME_ITEMS[game];
-            return !!(g && g['Ancients'] && g['Ancients'].includes(String(name || '').trim()));
+            if (!g) return false;
+            const n = String(name || '').trim();
+            return Object.keys(g).some(c => g[c].includes(n));
+        }
+        function isMM2Game(game) { return game === 'Murder Mystery 2'; }
+        // 1000 -> 1,000 (cents only when the price has them)
+        function fmtPriceNum(v) {
+            const t = String(v == null ? '' : v).trim();
+            const n = Number(t.replace(/,/g, ''));
+            if (!t || !isFinite(n)) return t;
+            const whole = Math.abs(n % 1) < 0.005;
+            return n.toLocaleString('en-US', { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2 });
+        }
+        function fmtPriceText(t) {
+            return String(t == null ? '' : t).replace(/\$(\d[\d,]*(?:\.\d+)?)/g, (m, x) => '$' + fmtPriceNum(x));
+        }
+        // small icon for the item a chat is about
+        function miniItemIconHtml(game, name, items) {
+            const list = (items && items.length) ? items : String(name || '').split(', ').map(x => x.replace(/ x\d+$/, ''));
+            return `<img class="mini-item-icon" ${itemImgAttrs({ game: game || '', name: list[0] || name, items: list })} alt="">`;
         }
         // Tries the next candidate image when one fails to load, then the game's default thumbnail
         function itemImgFallback(img) {
@@ -4365,9 +4387,9 @@ Your Terms of Service text goes here.
             const list = groups[pickerActiveCat] || [];
             document.getElementById('item-picker-cat-title').textContent = pickerActiveCat;
             const listEl = document.getElementById('item-picker-list');
-            listEl.classList.toggle('cards', pickerActiveCat === 'Ancients');
+            listEl.classList.toggle('cards', isMM2Game(selectedGameForListing));
             listEl.innerHTML = list.length
-                ? list.map(n => pickerActiveCat === 'Ancients'
+                ? list.map(n => isMM2Game(selectedGameForListing)
                     ? `<button type="button" class="item-picker-card item-picker-item" data-name="${escapeHtml(n)}"><img class="card-img" src="${escapeHtml(itemImageCandidates(n)[0])}" data-alts="${escapeHtml(itemImageCandidates(n).slice(1).join('|'))}" alt="${escapeHtml(n)}" loading="lazy" onerror="itemImgFallback(this)"><span>${escapeHtml(n)}</span></button>`
                     : `<button type="button" class="item-picker-item" data-name="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')
                 : '<div class="item-picker-empty">No items added to this category yet. You can type the item name below.</div>';
@@ -4599,7 +4621,7 @@ Your Terms of Service text goes here.
 
                 let imgHtml = `<img class="global-item-img" ${itemImgAttrs(item)} alt="Item">`;
 
-                let priceText = item.tag === 'selling' ? `$${item.price}` : (item.tag === 'specific' ? 'Trade' : 'Offers');
+                let priceText = item.tag === 'selling' ? `$${fmtPriceNum(item.price)}` : (item.tag === 'specific' ? 'Trade' : 'Offers');
                 let timeAgo = getTimeAgo(item.id);
 
                 card.innerHTML = `
@@ -4906,7 +4928,7 @@ Your Terms of Service text goes here.
             }
             
             if (item.tag === 'selling') {
-                detailPriceVal.textContent = `$${item.price}`;
+                detailPriceVal.textContent = `$${fmtPriceNum(item.price)}`;
                 buyItemActionBtn.textContent = (currentUser && currentUser === item.sellerUsername) ? 'Edit Item' : 'Contact Seller';
             } else {
                 detailPriceVal.textContent = item.tag === 'specific' ? 'Specific trade' : 'Looking for Offers';
@@ -5030,7 +5052,7 @@ Your Terms of Service text goes here.
         }
 
         function itemPriceLabel(item) {
-            return item.tag === 'selling' ? `$${item.price}` : (item.tag === 'specific' ? 'Specific trade' : 'Looking for Offers');
+            return item.tag === 'selling' ? `$${fmtPriceNum(item.price)}` : (item.tag === 'specific' ? 'Specific trade' : 'Looking for Offers');
         }
 
         async function openMessagesPage(targetUsername = null, item = null) {
@@ -5189,8 +5211,21 @@ Your Terms of Service text goes here.
             }, 3000);
         }
 
+        // Updates `live` to match `buf` but keeps every child whose markup is unchanged (no flicker, no image reload)
+        function reconcileChildren(live, buf) {
+            const a = Array.from(live.children), b = Array.from(buf.children);
+            b.forEach((nb, i) => {
+                const ob = a[i];
+                if (ob && ob.outerHTML === nb.outerHTML) return;
+                if (ob) ob.replaceWith(nb); else live.appendChild(nb);
+            });
+            for (let i = b.length; i < a.length; i++) a[i].remove();
+            if (!b.length) live.innerHTML = '';
+        }
+        let lastChatShellSig = '', lastChatBubblesHtml = '';
         async function renderChatsList(selectUsername = null) {
-            const chatsContainer = document.getElementById('chats-items-container');
+            const chatsLive = document.getElementById('chats-items-container');
+            const chatsContainer = document.createElement('div'); // built off-screen, then merged so unchanged rows never re-render
             const chatWindowCol = document.getElementById('chat-window-col');
 
             let allUsers = await getAllUsersFromDB();
@@ -5218,7 +5253,7 @@ Your Terms of Service text goes here.
 
             chatsContainer.innerHTML = '';
             if (interlocutors.length === 0 && myGroups.length === 0) {
-                chatsContainer.innerHTML = '<div style="color: #777; font-size: 13px; text-align: center; padding: 20px;">No conversations yet.</div>';
+                chatsLive.innerHTML = '<div style="color: #777; font-size: 13px; text-align: center; padding: 20px;">No conversations yet.</div>';
                 chatWindowCol.innerHTML = '<div class="no-chat-selected">Select a chat to start messaging</div>';
                 renderedChatUser = null;
                 return;
@@ -5298,6 +5333,8 @@ Your Terms of Service text goes here.
 
                 chatsContainer.appendChild(item);
             });
+
+            reconcileChildren(chatsLive, chatsContainer);
 
             if (activeChatUsername) {
                 if (String(activeChatUsername).startsWith('g:')) {
@@ -5543,14 +5580,14 @@ Your Terms of Service text goes here.
                 catsEl.innerHTML = Object.keys(groups).map(c => `<button type="button" class="item-picker-cat ${c === st.cat ? 'active' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
                 catsEl.querySelectorAll('.item-picker-cat').forEach(b => b.addEventListener('click', () => { st.cat = b.dataset.cat; renderItemsDialog(); }));
                 titleEl.textContent = st.cat;
-                listEl.classList.toggle('cards', st.cat === 'Ancients');
+                listEl.classList.toggle('cards', isMM2Game(st.game));
                 const list = groups[st.cat] || [];
                 const cnt = {};
                 st.items.forEach(n => { cnt[n] = (cnt[n] || 0) + 1; });
                 listEl.innerHTML = list.map(n => {
                     const c = cnt[n] || 0;
                     const sel = c ? ` selected" data-count="${c}` : '';
-                    return st.cat === 'Ancients'
+                    return isMM2Game(st.game)
                         ? `<button type="button" class="item-picker-card item-picker-item${sel}" data-name="${escapeHtml(n)}"><img class="card-img" ${itemImgAttrs({ game: st.game, name: n })} alt="${escapeHtml(n)}" loading="lazy"><span>${escapeHtml(n)}</span></button>`
                         : `<button type="button" class="item-picker-item${sel}" data-name="${escapeHtml(n)}">${escapeHtml(n)}</button>`;
                 }).join('') || '<div class="item-picker-empty">No items added to this category yet. You can type the item name below.</div>';
@@ -5692,8 +5729,8 @@ Your Terms of Service text goes here.
                 const inMine = (me.items || []).find(i => String(i.id) === itemId);
                 const liveItem = inOther || inMine;
                 const refMsg = [...chatMsgs].reverse().find(m => m.itemRef && m.itemRef.name);
-                if (liveItem) ctxItem = { name: liveItem.name, tag: liveItem.tag, price: liveItem.price, game: liveItem.game, wanted: liveItem.wanted, owner: inOther ? targetUsername : currentUser };
-                else if (pendingChatItem && String(pendingChatItem.id) === itemId) ctxItem = { name: pendingChatItem.name, tag: pendingChatItem.tag, price: pendingChatItem.price, game: pendingChatItem.game, wanted: pendingChatItem.wanted, owner: pendingChatItem.sellerUsername || targetUsername };
+                if (liveItem) ctxItem = { name: liveItem.name, items: liveItem.items, tag: liveItem.tag, price: liveItem.price, game: liveItem.game, wanted: liveItem.wanted, owner: inOther ? targetUsername : currentUser };
+                else if (pendingChatItem && String(pendingChatItem.id) === itemId) ctxItem = { name: pendingChatItem.name, items: pendingChatItem.items, tag: pendingChatItem.tag, price: pendingChatItem.price, game: pendingChatItem.game, wanted: pendingChatItem.wanted, owner: pendingChatItem.sellerUsername || targetUsername };
                 else ctxItem = { name: refMsg ? refMsg.itemRef.name : 'Item', game: (refMsg && refMsg.itemRef.game) || '', label: refMsg ? refMsg.itemRef.price : '', owner: (refMsg && refMsg.itemRef.seller) || '', gone: true };
             }
 
@@ -5717,51 +5754,15 @@ Your Terms of Service text goes here.
             const canOffer = !!(ctxItem && !ctxItem.gone && (ctxItem.tag === 'offers' || ctxItem.tag === 'specific') && ctxItem.owner !== currentUser && ctxItem.game && targetUsername !== currentUser);
             const askBtnHtml = (canAskPayment || canOffer) ? '<div class="deal-toolbar">' + (canOffer ? '<button class="ask-payment-btn" id="make-offer-btn" type="button">Make an offer</button>' : '') + (canAskPayment ? '<button class="ask-payment-btn" id="ask-payment-btn" type="button">Ask for payment</button>' : '') + '</div>' : '';
             const msgEntries = chatMsgs.map(m => ({ t: m.timestamp, html: (() => {
-                const ref = (m.itemRef && !itemId) ? `<div class="msg-item-ref"><b>${escapeHtml(m.itemRef.name)}</b><span>${escapeHtml(m.itemRef.price)}</span></div>` : '';
+                const ref = (m.itemRef && !itemId) ? `<div class="msg-item-ref"><b>${miniItemIconHtml(m.itemRef.game, m.itemRef.name)}${escapeHtml(m.itemRef.name)}</b><span>${escapeHtml(fmtPriceText(m.itemRef.price))}</span></div>` : '';
                 return chatBubbleHtml(m, ref);
             })() }));
             const bubblesHtml = [...msgEntries, ...dealsHere.map(d => ({ t: d.createdAt, html: dealCardHtml(d, currentUser) }))]
                 .sort((a, b) => a.t - b.t).map(x => x.html).join('');
 
-            const ctxHtml = ctxItem ? `<div class="chat-item-context" id="chat-item-context"><div class="ctx-info"><div class="ctx-label">This chat is about</div><div class="ctx-name">${escapeHtml(ctxItem.name)}</div><div class="ctx-price">${escapeHtml(ctxItem.label || itemPriceLabel(ctxItem))}${ctxItem.gone ? ' &middot; no longer listed' : ''}</div>${(ctxItem.tag === 'specific' && ctxItem.wanted && ctxItem.wanted.items && ctxItem.wanted.items.length) ? `<div class="ctx-price" style="color:#ff9a44;">Wants: ${escapeHtml(fmtItemList(ctxItem.wanted.items))}</div>` : ''}</div></div>` : '';
+            const ctxHtml = ctxItem ? `<div class="chat-item-context" id="chat-item-context"><div class="ctx-info"><div class="ctx-label">This chat is about</div><div class="ctx-name">${miniItemIconHtml(ctxItem.game, ctxItem.name, ctxItem.items)}${escapeHtml(ctxItem.name)}</div><div class="ctx-price">${escapeHtml(fmtPriceText(ctxItem.label || itemPriceLabel(ctxItem)))}${ctxItem.gone ? ' &middot; no longer listed' : ''}</div>${(ctxItem.tag === 'specific' && ctxItem.wanted && ctxItem.wanted.items && ctxItem.wanted.items.length) ? `<div class="ctx-price" style="color:#ff9a44;">Wants: ${escapeHtml(fmtItemList(ctxItem.wanted.items))}</div>` : ''}</div></div>` : '';
 
-            chatWindowCol.innerHTML = `
-                <div class="chat-header-row">
-                    <span class="av-wrap">${headerAvatarHtml}${presenceDot(targetUsername)}</span>
-                    <div class="chat-header-meta">
-                        <div class="chat-header-name">${escapeHtml(otherUser.displayName || targetUsername)}${otherUser.isMiddleman ? '<span class="mm-badge">Middleman</span>' : ''}</div>
-                        ${presenceLabel(targetUsername)}
-                        ${ctxItem ? `<div class="chat-header-item">&#127991; ${escapeHtml(ctxItem.name)}</div>` : ''}
-                    </div>
-                    <div class="chat-header-spacer"></div>
-                    <button class="chat-delete-btn" id="chat-delete-btn" type="button" title="Removes this chat only for you. Chats are also deleted automatically after 2 weeks.">Delete chat</button>
-                </div>
-                <div class="chat-messages-container" id="chat-messages-scroll">
-                    <div class="chat-ttl-note">This conversation will be automatically deleted in 14 days.</div>
-                    ${chatMsgs.length === 0 && dealsHere.length === 0 ? '<div class="no-chat-selected">No messages yet. Send a message to start conversation!</div>' : ''}
-                    ${bubblesHtml}
-                </div>
-                ${ctxHtml}
-                ${askBtnHtml}
-                <div class="typing-indicator" id="typing-indicator"></div>
-                <div class="chat-staged" id="chat-staged" style="display:none;">
-                    <img alt="Picture to send">
-                    <button type="button" class="chat-staged-x" id="chat-staged-x" title="Remove picture">&times;</button>
-                    <span class="chat-staged-hint">Press Send to send this picture (you can add a message too)</span>
-                </div>
-                <div class="chat-input-row">
-                    <input type="file" id="chat-image-file" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none;">
-                    <button class="chat-attach-btn" id="chat-attach-btn" type="button" title="Send a picture">&#128247;</button>
-                    <textarea class="chat-input" id="chat-message-input" placeholder="Type a message...">${escapeHtml(keepDraft)}</textarea>
-                    <button class="chat-send-btn" id="chat-send-btn">Send</button>
-                </div>
-            `;
-
-            const scrollContainer = document.getElementById('chat-messages-scroll');
-            scrollContainer.scrollTop = scrollContainer.scrollHeight;
-            const hdrName = chatWindowCol.querySelector('.chat-header-name');
-            if (hdrName) { hdrName.style.cursor = 'pointer'; hdrName.addEventListener('click', () => openProfileByUsername(targetUsername)); }
-
+            const wireChatMessages = (scrollContainer) => {
             const messageBubbles = scrollContainer.querySelectorAll('.message-bubble');
             messageBubbles.forEach(bubble => {
                 bubble.addEventListener('contextmenu', (e) => {
@@ -5838,10 +5839,69 @@ Your Terms of Service text goes here.
                 try { await handleOfferAction(btn.getAttribute('data-offer-act'), msg, threadKey); }
                 finally { btn.disabled = false; }
             });
+            bindDealControls(scrollContainer, targetUsername, me, threadKey, itemId);
+            };
+            const shellSig = threadKey + '|' + JSON.stringify(ctxItem || null).length + '|' + (ctxItem ? JSON.stringify(ctxItem) : '') + '|' + askBtnHtml + '|' + ctxHtml + '|' + headerAvatarHtml + '|' + String(otherUser.displayName || '') + '|' + (otherUser.isMiddleman ? 1 : 0);
+            const oldScroll = document.getElementById('chat-messages-scroll');
+            if (sameChat && oldScroll && shellSig === lastChatShellSig && chatWindowCol.querySelector('#chat-message-input')) {
+                // same chat, header/toolbar unchanged: only swap the message list, leave everything else untouched
+                if (bubblesHtml === lastChatBubblesHtml) return;
+                lastChatBubblesHtml = bubblesHtml;
+                const wasNearBottom = (oldScroll.scrollHeight - oldScroll.scrollTop - oldScroll.clientHeight) < 80;
+                const prevTop = oldScroll.scrollTop;
+                const fresh = document.createElement('div');
+                fresh.className = 'chat-messages-container';
+                fresh.id = 'chat-messages-scroll';
+                fresh.innerHTML = `<div class="chat-ttl-note">This conversation will be automatically deleted in 14 days.</div>${chatMsgs.length === 0 && dealsHere.length === 0 ? '<div class="no-chat-selected">No messages yet. Send a message to start conversation!</div>' : ''}${bubblesHtml}`;
+                oldScroll.replaceWith(fresh);
+                fresh.scrollTop = wasNearBottom ? fresh.scrollHeight : prevTop;
+                wireChatMessages(fresh);
+                loadChatImages(fresh).then(() => { if (wasNearBottom) fresh.scrollTop = fresh.scrollHeight; });
+                return;
+            }
+            lastChatShellSig = shellSig;
+            lastChatBubblesHtml = bubblesHtml;
+            chatWindowCol.innerHTML = `
+                <div class="chat-header-row">
+                    <span class="av-wrap">${headerAvatarHtml}${presenceDot(targetUsername)}</span>
+                    <div class="chat-header-meta">
+                        <div class="chat-header-name">${escapeHtml(otherUser.displayName || targetUsername)}${otherUser.isMiddleman ? '<span class="mm-badge">Middleman</span>' : ''}</div>
+                        ${presenceLabel(targetUsername)}
+                        ${ctxItem ? `<div class="chat-header-item">${miniItemIconHtml(ctxItem.game, ctxItem.name, ctxItem.items)}${escapeHtml(ctxItem.name)}</div>` : ''}
+                    </div>
+                    <div class="chat-header-spacer"></div>
+                    <button class="chat-delete-btn" id="chat-delete-btn" type="button" title="Removes this chat only for you. Chats are also deleted automatically after 2 weeks.">Delete chat</button>
+                </div>
+                <div class="chat-messages-container" id="chat-messages-scroll">
+                    <div class="chat-ttl-note">This conversation will be automatically deleted in 14 days.</div>
+                    ${chatMsgs.length === 0 && dealsHere.length === 0 ? '<div class="no-chat-selected">No messages yet. Send a message to start conversation!</div>' : ''}
+                    ${bubblesHtml}
+                </div>
+                ${ctxHtml}
+                ${askBtnHtml}
+                <div class="typing-indicator" id="typing-indicator"></div>
+                <div class="chat-staged" id="chat-staged" style="display:none;">
+                    <img alt="Picture to send">
+                    <button type="button" class="chat-staged-x" id="chat-staged-x" title="Remove picture">&times;</button>
+                    <span class="chat-staged-hint">Press Send to send this picture (you can add a message too)</span>
+                </div>
+                <div class="chat-input-row">
+                    <input type="file" id="chat-image-file" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none;">
+                    <button class="chat-attach-btn" id="chat-attach-btn" type="button" title="Send a picture">&#128247;</button>
+                    <textarea class="chat-input" id="chat-message-input" placeholder="Type a message...">${escapeHtml(keepDraft)}</textarea>
+                    <button class="chat-send-btn" id="chat-send-btn">Send</button>
+                </div>
+            `;
+
+            const scrollContainer = document.getElementById('chat-messages-scroll');
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+            const hdrName = chatWindowCol.querySelector('.chat-header-name');
+            if (hdrName) { hdrName.style.cursor = 'pointer'; hdrName.addEventListener('click', () => openProfileByUsername(targetUsername)); }
+
+            wireChatMessages(scrollContainer);
             showStagedPreview(threadKey);
             document.getElementById('chat-staged-x').addEventListener('click', () => { stagedChatImage = null; showStagedPreview(threadKey); });
             loadChatImages(scrollContainer).then(() => { scrollContainer.scrollTop = scrollContainer.scrollHeight; });
-            bindDealControls(scrollContainer, targetUsername, me, threadKey, itemId);
             document.getElementById('chat-delete-btn').addEventListener('click', () => deleteChatForMe(threadKey));
 
             const ctxCloseBtn = document.getElementById('chat-ctx-close');
@@ -7022,7 +7082,7 @@ Your Terms of Service text goes here.
             document.getElementById('modal-presence-text').setAttribute('data-presence-text', userObj.username);
             document.getElementById('modal-mm-badge').style.display = userObj.isMiddleman ? 'inline-block' : 'none';
             applyPresenceToDom();
-            yourItemsTitleText.textContent = `${userObj.displayName || userObj.username}'s Items`;
+            yourItemsTitleText.textContent = (!!currentUser && userObj.username === currentUser) ? 'Your Items' : `${userObj.displayName || userObj.username}'s Items`;
 
             profileViewUser = userObj;
             const isSelfView = !!currentUser && userObj.username === currentUser;
@@ -7058,7 +7118,7 @@ Your Terms of Service text goes here.
                     photoSrc = getGameThumb(item.game);
                 }
 
-                let priceText = item.tag === 'selling' ? `$${item.price}` : (item.tag === 'specific' ? 'Trade' : 'Offers');
+                let priceText = item.tag === 'selling' ? `$${fmtPriceNum(item.price)}` : (item.tag === 'specific' ? 'Trade' : 'Offers');
 
                 card.innerHTML = `
                     <img class="item-card-img" ${itemImgAttrs(item)} alt="Item">
@@ -7352,7 +7412,7 @@ Your Terms of Service text goes here.
             const tag = itemTagSelect.value;
 
             previewCardName.textContent = name;
-            previewCardPrice.textContent = tag === 'selling' ? (price ? `$${price}` : 'Price') : (tag === 'specific' ? 'Trade' : 'Offers');
+            previewCardPrice.textContent = tag === 'selling' ? (price ? `$${fmtPriceNum(price)}` : 'Price') : (tag === 'specific' ? 'Trade' : 'Offers');
 
             let photoSrc = uploadedItemPhotoData;
             if (!photoSrc) {
