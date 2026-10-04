@@ -3211,7 +3211,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             <div class="setting-group">
                 <label class="setting-label">Password</label>
-                <input type="password" class="setting-input" id="setting-password-input" placeholder="New password">
+                <input type="password" class="setting-input" id="setting-current-password-input" placeholder="Current password" autocomplete="current-password" style="margin-bottom:8px">
+                <input type="password" class="setting-input" id="setting-password-input" placeholder="New password (min 10 chars, upper, lower, number, symbol)" autocomplete="new-password">
             </div>
 
             <div class="setting-group">
@@ -5103,9 +5104,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     showToast('Payment provider is not connected.');
                     return;
                 }
-                const newBalance = await adjustBalance(currentUser, amount);
-                if (newBalance === null) { showToast('Account not found.'); return; }
-                showMyBalance(newBalance);
+                const tr = await srv('/api/wallet/topup', 'POST', { amount });
+                if (!tr.ok) { srvFail(tr); return; }
+                showMyBalance(Number(tr.data.balance) || 0);
                 resetTopUpForm();
                 showToast(`${fmtMoney(amount)} added to your balance!`);
             } catch (e) {
@@ -5168,10 +5169,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         async function loadAdminUserList(selectUsername) {
             const keep = selectUsername || adminUserSelect.value;
-            const rs = await db.execute("SELECT customId, username, displayName, balance FROM users ORDER BY username");
-            adminUsersCache = rs.rows.map(r => ({
-                customId: r.customId, username: r.username, displayName: r.displayName,
-                balance: r.balance !== undefined && r.balance !== null ? Number(r.balance) : 0
+            const ur = await srv('/api/admin/users');
+            if (!ur.ok) return;
+            adminUsersCache = (ur.data.users || []).map(r => ({
+                customId: r.customId, username: r.username, displayName: r.displayName, balance: Number(r.balance) || 0
             }));
             adminUserSelect.value = adminUsersCache.some(r => r.username === keep) ? keep : '';
             renderAdminUserList();
@@ -5202,8 +5203,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             adminAddBtn.disabled = adminSubBtn.disabled = true;
             try {
-                const newBalance = await adjustBalance(target, sign * amount);
-                if (newBalance === null) { showToast('User not found.'); return; }
+                const ar = await srv('/api/admin/adjust', 'POST', { username: target, delta: sign * amount });
+                if (!ar.ok) { srvFail(ar); return; }
+                const newBalance = Number(ar.data.balance) || 0;
                 if (target === currentUser) showMyBalance(newBalance);
                 await loadAdminUserList(target);
                 adminAmountInput.value = '';
@@ -6445,16 +6447,23 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const MAX_DEAL = 1000000;
         const round2 = n => Math.round(Number(n) * 100) / 100;
 
-        // Atomic balance change (also used by wallet top-up and the admin panel). Never goes below $0.
-        async function adjustBalance(username, delta) {
-            const rs = await db.execute({
-                sql: "UPDATE users SET balance = MAX(0, COALESCE(balance, 0) + ?) WHERE username = ?",
-                args: [delta, username]
-            });
-            if (!rs.rowsAffected) return null;
-            const r = await db.execute({ sql: "SELECT balance FROM users WHERE username = ?", args: [username] });
-            return Number(r.rows[0].balance || 0);
+        // All money logic runs on the server (/api/wallet, /api/deals, /api/admin/...). The browser only asks.
+        async function srv(path, method, body) {
+            try {
+                const r = await fetch(path, {
+                    method: method || 'GET', credentials: 'same-origin', cache: 'no-store',
+                    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+                    body: body !== undefined ? JSON.stringify(body) : undefined
+                });
+                let data = {};
+                try { data = await r.json(); } catch (e) {}
+                if (r.status === 401) { location.href = 'login.html'; }
+                return { ok: r.ok, status: r.status, data: data || {} };
+            } catch (e) {
+                return { ok: false, status: 0, data: { error: 'Cannot reach the server. Check your connection.' } };
+            }
         }
+        const srvFail = (r) => showToast(r.data.error || 'Something went wrong. Try again.');
 
         function mapDeal(r) {
             return {
@@ -6463,103 +6472,52 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 createdAt: Number(r.createdAt) || 0, updatedAt: Number(r.updatedAt) || 0,
                 reportedAt: Number(r.reportedAt) || 0, chatSnapshot: r.chatSnapshot || null, reportedBy: r.reportedBy || '',
                 itemId: r.itemId ? String(r.itemId) : ''
-
             };
         }
         async function getDeal(id) {
-            const rs = await db.execute({ sql: "SELECT * FROM deals WHERE id = ?", args: [id] });
-            return rs.rows.length ? mapDeal(rs.rows[0]) : null;
+            const r = await srv('/api/deals/' + encodeURIComponent(id));
+            return r.ok ? mapDeal(r.data.deal) : null;
         }
         async function getDealsBetween(a, b) {
-            try {
-                const rs = await db.execute({
-                    sql: "SELECT * FROM deals WHERE (buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?) ORDER BY createdAt ASC",
-                    args: [a, b, b, a]
-                });
-                return rs.rows.map(mapDeal);
-            } catch (e) { console.error('Deals load error:', e); return []; }
+            const other = a === currentUser ? b : a;
+            const r = await srv('/api/deals?with=' + encodeURIComponent(other));
+            return r.ok ? (r.data.deals || []).map(mapDeal) : [];
         }
         async function getReportedDeals() {
-            const rs = await db.execute("SELECT * FROM deals WHERE status = 'reported' ORDER BY reportedAt DESC");
-            return rs.rows.map(mapDeal);
+            const r = await srv('/api/admin/deals?status=reported');
+            return r.ok ? (r.data.deals || []).map(mapDeal) : [];
         }
         async function getDealSig(username) {
-            try {
-                const rs = await db.execute({
-                    sql: "SELECT COUNT(*) AS c, COALESCE(SUM(updatedAt), 0) AS s FROM deals WHERE buyer = ? OR seller = ?",
-                    args: [username, username]
-                });
-                return `${Number(rs.rows[0].c)}:${Number(rs.rows[0].s)}`;
-            } catch (e) { return ''; }
+            const r = await srv('/api/deals/sig');
+            return r.ok ? String(r.data.sig || '') : '';
         }
 
-        // ---- state changes (each one is guarded by the expected current status, so double clicks can't pay twice) ----
+        // ---- state changes (the server checks who you are and the deal's current status) ----
         async function createDealRequest(buyer, amount, itemName, itemId) {
-            const dup = await db.execute({
-                sql: "SELECT id FROM deals WHERE seller = ? AND buyer = ? AND COALESCE(itemId, '') = ? AND status = 'requested'",
-                args: [currentUser, buyer, itemId || '']
-            });
-            if (dup.rows.length) { showToast('You already have a pending payment request in this chat.'); return false; }
-            const now = Date.now();
-            await db.execute({
-                sql: "INSERT INTO deals (buyer, seller, itemName, amount, sellerAmount, status, createdAt, updatedAt, itemId) VALUES (?, ?, ?, ?, ?, 'requested', ?, ?, ?)",
-                args: [buyer, currentUser, itemName || '', amount, round2(amount * SELLER_SHARE), now, now, itemId || null]
-            });
+            const r = await srv('/api/deals', 'POST', { buyer, amount, itemName: itemName || '', itemId: itemId || '' });
+            if (!r.ok) { srvFail(r); return false; }
             return true;
         }
 
         async function payDeal(id) {
-            const d = await getDeal(id);
-            if (!d) return null;
-            const claim = await db.execute({
-                sql: "UPDATE deals SET status = 'paid', updatedAt = ? WHERE id = ? AND status = 'requested' AND buyer = ?",
-                args: [Date.now(), id, currentUser]
-            });
-            if (!claim.rowsAffected) { showToast('This request is no longer available.'); return null; }
-            const revert = () => db.execute({ sql: "UPDATE deals SET status = 'requested', updatedAt = ? WHERE id = ?", args: [Date.now(), id] });
-
-            const debit = await db.execute({
-                sql: "UPDATE users SET balance = balance - ? WHERE username = ? AND COALESCE(balance, 0) >= ?",
-                args: [d.amount, currentUser, d.amount]
-            });
-            if (!debit.rowsAffected) { await revert(); showToast('Not enough balance.'); return null; }
-
-            const credit = await db.execute({
-                sql: "UPDATE users SET heldBalance = COALESCE(heldBalance, 0) + ? WHERE username = ?",
-                args: [d.sellerAmount, d.seller]
-            });
-            if (!credit.rowsAffected) {
-                await adjustBalance(currentUser, d.amount);
-                await revert();
-                showToast('Seller account not found. You were not charged.');
-                return null;
-            }
-            const r = await db.execute({ sql: "SELECT balance FROM users WHERE username = ?", args: [currentUser] });
-            return Number(r.rows[0].balance || 0);
+            const r = await srv('/api/deals/' + id + '/pay', 'POST', {});
+            if (!r.ok) { srvFail(r); return null; }
+            return Number(r.data.balance) || 0;
         }
 
         async function completeDeal(id) {
-            const d = await getDeal(id);
-            if (!d) return false;
-            const claim = await db.execute({
-                sql: "UPDATE deals SET status = 'completed', updatedAt = ? WHERE id = ? AND status IN ('paid', 'not_received') AND buyer = ?",
-                args: [Date.now(), id, currentUser]
-            });
-            if (!claim.rowsAffected) { showToast('This deal can no longer be confirmed.'); return false; }
-            await db.execute({
-                sql: "UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?), balance = COALESCE(balance, 0) + ? WHERE username = ?",
-                args: [d.sellerAmount, d.sellerAmount, d.seller]
-            });
+            const r = await srv('/api/deals/' + id + '/complete', 'POST', {});
+            if (!r.ok) { srvFail(r); return false; }
             return true;
         }
 
+        const DEAL_ACTION_PATH = { 'paid>not_received': 'not-received', 'requested>cancelled': 'cancel' };
         async function setDealStatus(id, from, to) {
-            const rs = await db.execute({
-                sql: `UPDATE deals SET status = ?, updatedAt = ? WHERE id = ? AND status = ? AND (buyer = ? OR seller = ?)`,
-                args: [to, Date.now(), id, from, currentUser, currentUser]
-            });
-            if (!rs.rowsAffected) showToast('This deal was already updated.');
-            return rs.rowsAffected > 0;
+            const p = DEAL_ACTION_PATH[from + '>' + to];
+            if (!p) return false;
+            const r = await srv('/api/deals/' + id + '/' + p, 'POST', {});
+            if (!r.ok) srvFail(r);
+            return r.ok;
         }
 
         async function reportDeal(id) {
@@ -6570,13 +6528,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const snap = ((meObj && meObj.messages) || [])
                 .filter(m => msgThreadKey(m, currentUser) === tKey(other, d.itemId))
                 .map(m => ({ sender: m.sender, receiver: m.receiver, text: m.text, timestamp: m.timestamp }));
-            const now = Date.now();
-            const rs = await db.execute({
-                sql: "UPDATE deals SET status = 'reported', reportedAt = ?, updatedAt = ?, chatSnapshot = ?, reportedBy = ? WHERE id = ? AND status = 'not_received' AND (buyer = ? OR seller = ?)",
-                args: [now, now, JSON.stringify(snap), currentUser, id, currentUser, currentUser]
-            });
-            if (!rs.rowsAffected) showToast('This deal was already updated.');
-            return rs.rowsAffected > 0;
+            const r = await srv('/api/deals/' + id + '/report', 'POST', { snapshot: snap });
+            if (!r.ok) srvFail(r);
+            return r.ok;
         }
 
         // ---- dialogs ----
@@ -7503,6 +7457,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             settingEmailInput.value = userObj.email || '';
             settingPasswordInput.value = '';
+            { const c = document.getElementById('setting-current-password-input'); if (c) c.value = ''; }
             activeUserCard = userObj.card || null;
             activeRoblox = userObj.roblox || '';
 
@@ -7649,10 +7604,19 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (!userObj) return;
 
             const newEmail = settingEmailInput.value.trim();
-            const newPassword = settingPasswordInput.value.trim();
+            const newPassword = settingPasswordInput.value;
+            const curPwEl = document.getElementById('setting-current-password-input');
+            const currentPassword = curPwEl ? curPwEl.value : '';
+
+            if (newPassword) {
+                if (!currentPassword) { showToast('Enter your current password to change it.'); return; }
+                const pr = await srv('/api/change-password', 'POST', { currentPassword, newPassword });
+                if (!pr.ok) { srvFail(pr); return; }
+                userObj = await getUserByUsername(currentUser);
+                if (!userObj) return;
+            }
 
             userObj.email = newEmail;
-            if (newPassword) userObj.password = newPassword;
             userObj.card = activeUserCard;
 
             await saveUserToDB(userObj);
@@ -8476,15 +8440,13 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         async function loadMoney() {
             if (!(await isKnqw())) return;
             try {
-                const [u, d] = await Promise.all([
-                    db.execute("SELECT username, displayName, customId, balance, heldBalance, bannedUntil FROM users"),
-                    db.execute("SELECT id, buyer, seller, itemName, amount, sellerAmount, status, createdAt, updatedAt, reportedAt, reportedBy FROM deals WHERE status IN ('paid','not_received','reported') ORDER BY updatedAt DESC")
-                ]);
-                moneyData.users = u.rows.map(r => ({
+                const [u, d] = await Promise.all([srv('/api/admin/users'), srv('/api/admin/deals?status=held')]);
+                if (!u.ok || !d.ok) return;
+                moneyData.users = (u.data.users || []).map(r => ({
                     username: r.username, displayName: r.displayName || r.username, customId: r.customId || '',
-                    balance: Number(r.balance) || 0, held: Number(r.heldBalance) || 0, bannedUntil: Number(r.bannedUntil) || 0
+                    balance: Number(r.balance) || 0, held: Number(r.held) || 0, bannedUntil: Number(r.bannedUntil) || 0
                 }));
-                moneyData.deals = d.rows.map(mapDeal);
+                moneyData.deals = (d.data.deals || []).map(mapDeal);
             } catch (e) { console.error('Money load error:', e); return; }
             renderMoney();
         }
@@ -8601,33 +8563,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             adminDealBusy = true;
             try {
-                const finalStatus = refund ? 'refunded' : 'released';
-                const claim = await db.execute({
-                    sql: "UPDATE deals SET status = ?, updatedAt = ? WHERE id = ? AND status = ?",
-                    args: [finalStatus, Date.now(), id, d.status]
-                });
-                if (!claim.rowsAffected) { showToast('This transaction was already handled.'); return false; }
-                const revert = () => db.execute({ sql: "UPDATE deals SET status = ?, updatedAt = ? WHERE id = ? AND status = ?", args: [d.status, Date.now(), id, finalStatus] });
-
-                if (refund) {
-                    const credit = await db.execute({
-                        sql: "UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE username = ?",
-                        args: [d.amount, d.buyer]
-                    });
-                    if (!credit.rowsAffected) { await revert(); showToast('The buyer account no longer exists.'); return false; }
-                    await db.execute({
-                        sql: "UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?) WHERE username = ?",
-                        args: [d.sellerAmount, d.seller]
-                    });
-                    showToast(`${fmtMoney(d.amount)} returned to ${d.buyer}`);
-                } else {
-                    const rel = await db.execute({
-                        sql: "UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?), balance = COALESCE(balance, 0) + ? WHERE username = ?",
-                        args: [d.sellerAmount, d.sellerAmount, d.seller]
-                    });
-                    if (!rel.rowsAffected) { await revert(); showToast('The seller account no longer exists.'); return false; }
-                    showToast(`${fmtMoney(d.sellerAmount)} paid to ${d.seller}`);
-                }
+                const r = await srv('/api/admin/deals/' + id + '/resolve', 'POST', { mode: refund ? 'refund' : 'pay' });
+                if (!r.ok) { srvFail(r); return false; }
+                showToast(refund ? `${fmtMoney(d.amount)} returned to ${d.buyer}` : `${fmtMoney(d.sellerAmount)} paid to ${d.seller}`);
                 reportChatModal.classList.remove('active');
                 await loadMoney();
                 renderReports();
