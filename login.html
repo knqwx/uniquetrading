@@ -345,479 +345,264 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         </div>
     </div>
 
-    <!-- Подключаем Turso Client через стабильный ESM-модуль -->
-    <script type="module">
-        import { createClient } from "https://esm.sh/@libsql/client@0.6.0/web";
+    <script>
+(function () {
+    const $ = (id) => document.getElementById(id);
+    const formTitle = $('form-title');
+    const usernameGroup = $('username-group');
+    const usernameInput = $('username-input');
+    const mainLabel = $('main-label');
+    const mainInput = $('main-input');
+    const passwordInput = $('password-input');
+    const captchaQuestion = $('captcha-question');
+    const captchaInput = $('captcha-input');
+    const submitBtn = $('submit-btn');
+    const footerText = $('footer-text');
+    const toggleBtn = $('toggle-btn');
+    const authForm = $('auth-form');
+    const errorMsg = $('error-msg');
+    const usernameStatus = $('username-status');
+    const emailStatus = $('email-status');
 
-        const db = createClient({
-            url: "libsql://unique-knqw.aws-eu-west-1.turso.io",
-            authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA2MDU2NDIsImlkIjoiMDFhMGU1NjctNjYwMS03NmMyLWE2YzUtODQyNTEzYTk4MjgzIiwia2lkIjoiakdIakdfX1A3bTFmRGxXRHNhbFR1dGg0OHB6VTF5MFVMZGQ1TzhIUm94ZyIsInJpZCI6ImNjODc2N2NkLTMwYmYtNDJiNy04NDQ1LTIxNjRjY2E0OTNlMSJ9.0hZK9eeqN3Md2Dh7ZgWKDOJlk-3GHN8OZxGvKb_aGVjCQllclb1A3Z0EAstpv18ejSRHHGOB0yoOkm1se5A0Bg"
-        });
+    let isLoginMode = true;
+    let correctAnswer = 0;
+    let busy = false;
 
-        async function initDB() {
-            try {
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS users (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        customId TEXT,
-                        username TEXT UNIQUE,
-                        displayName TEXT,
-                        email TEXT,
-                        password TEXT,
-                        avatar TEXT,
-                        lastUsernameChange INTEGER,
-                        lastDisplayNameChange INTEGER,
-                        items TEXT
-                    )
-                `);
-            } catch (e) {
-                console.error("DB init error:", e);
-            }
+    // ===== API helper (the session cookie is set by the server; JS never sees it) =====
+    async function api(path, body) {
+        const opts = { credentials: 'same-origin', cache: 'no-store' };
+        if (body !== undefined) {
+            opts.method = 'POST';
+            opts.headers = { 'Content-Type': 'application/json' };
+            opts.body = JSON.stringify(body);
         }
-        initDB();
-
-        const formTitle = document.getElementById('form-title');
-        const usernameGroup = document.getElementById('username-group');
-        const usernameInput = document.getElementById('username-input');
-        const mainLabel = document.getElementById('main-label');
-        const mainInput = document.getElementById('main-input');
-        const passwordInput = document.getElementById('password-input');
-        const captchaQuestion = document.getElementById('captcha-question');
-        const captchaInput = document.getElementById('captcha-input');
-        const submitBtn = document.getElementById('submit-btn');
-        const footerText = document.getElementById('footer-text');
-        const toggleBtn = document.getElementById('toggle-btn');
-        const authForm = document.getElementById('auth-form');
-        const errorMsg = document.getElementById('error-msg');
-
-        let isLoginMode = true;
-        let correctAnswer = 0;
-
-        // Генерация новой капчи
-        function generateCaptcha() {
-            const num1 = Math.floor(Math.random() * 10) + 1;
-            const num2 = Math.floor(Math.random() * 10) + 1;
-            correctAnswer = num1 + num2;
-            captchaQuestion.textContent = `${num1} + ${num2} =`;
-            captchaInput.value = '';
+        try {
+            const r = await fetch(path, opts);
+            let data = {};
+            try { data = await r.json(); } catch (e) {}
+            return { ok: r.ok, status: r.status, data: data || {} };
+        } catch (e) {
+            return { ok: false, status: 0, data: { error: 'Cannot reach the server. Check your connection and try again.' } };
         }
+    }
 
+    // ===== Captcha (UI-only speed bump; the server enforces the real limits) =====
+    function generateCaptcha() {
+        const a = Math.floor(Math.random() * 10) + 1;
+        const b = Math.floor(Math.random() * 10) + 1;
+        correctAnswer = a + b;
+        captchaQuestion.textContent = `${a} + ${b} =`;
+        captchaInput.value = '';
+    }
+    generateCaptcha();
+
+    function showError(msg) {
+        errorMsg.textContent = msg;
+        errorMsg.style.display = 'block';
         generateCaptcha();
+    }
 
-        function setMode(loginMode) {
-            isLoginMode = loginMode;
-            errorMsg.style.display = 'none';
-            generateCaptcha();
+    function setMode(loginMode) {
+        isLoginMode = loginMode;
+        errorMsg.style.display = 'none';
+        generateCaptcha();
+        if (!isLoginMode) {
+            formTitle.textContent = 'Sign up';
+            usernameGroup.classList.remove('collapsed');
+            mainLabel.textContent = 'Email';
+            mainInput.placeholder = 'Enter your email';
+            submitBtn.textContent = 'Sign up';
+            passwordInput.placeholder = 'Create a strong password';
+            passwordInput.autocomplete = 'new-password';
+            $('pw-meter').classList.add('show');
+            $('age-wrap').classList.add('show');
+            updatePasswordMeter();
+            footerText.textContent = 'Already have an account?';
+            toggleBtn.textContent = 'Log in';
+        } else {
+            formTitle.textContent = 'Log in';
+            usernameGroup.classList.add('collapsed');
+            mainLabel.textContent = 'Username or email';
+            mainInput.placeholder = 'Enter your username or email';
+            submitBtn.textContent = 'Log in';
+            passwordInput.placeholder = 'Enter your password';
+            passwordInput.autocomplete = 'current-password';
+            $('pw-meter').classList.remove('show');
+            $('age-wrap').classList.remove('show');
+            footerText.textContent = "Don't have an account?";
+            toggleBtn.textContent = 'Sign up';
+        }
+    }
 
-            if (!isLoginMode) {
-                formTitle.textContent = 'Sign up';
-                usernameGroup.classList.remove('collapsed');
-                mainLabel.textContent = 'Email';
-                mainInput.placeholder = 'Enter your email';
-                submitBtn.textContent = 'Sign up';
-                passwordInput.placeholder = 'Create a strong password';
-                passwordInput.autocomplete = 'new-password';
-                document.getElementById('pw-meter').classList.add('show');
-                document.getElementById('age-wrap').classList.add('show');
-                updatePasswordMeter();
-                footerText.textContent = 'Already have an account?';
-                toggleBtn.textContent = 'Log in';
-            } else {
-                formTitle.textContent = 'Log in';
-                usernameGroup.classList.add('collapsed');
-                mainLabel.textContent = 'Username or email';
-                mainInput.placeholder = 'Enter your username or email';
-                submitBtn.textContent = 'Log in';
-                passwordInput.placeholder = 'Enter your password';
-                passwordInput.autocomplete = 'current-password';
-                document.getElementById('pw-meter').classList.remove('show');
-                document.getElementById('age-wrap').classList.remove('show');
-                footerText.textContent = "Don't have an account?";
-                toggleBtn.textContent = 'Sign up';
-            }
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('mode') === 'signup') setMode(false);
+    // "Switch account" sends people here with the username filled in
+    const prefill = urlParams.get('u');
+    if (prefill && isLoginMode) { mainInput.value = prefill; setTimeout(() => passwordInput.focus(), 50); }
+
+    // ===== IP ban notice (checked by the server) =====
+    (async () => {
+        const r = await api('/api/ip-status');
+        if (r.ok && r.data.banned) showError(r.data.message || 'Your IP address is banned.');
+    })();
+
+    // ===== Password strength (UX only; the server enforces the same rules) =====
+    function passwordChecks(pw, username, email) {
+        const l = pw.toLowerCase();
+        const u = (username || '').trim().toLowerCase();
+        const local = ((email || '').split('@')[0] || '').trim().toLowerCase();
+        const personal = !((u.length >= 3 && l.includes(u)) || (local.length >= 3 && l.includes(local)));
+        return {
+            len: pw.length >= 10,
+            lower: /[a-z]/.test(pw),
+            upper: /[A-Z]/.test(pw),
+            num: /[0-9]/.test(pw),
+            sym: /[^A-Za-z0-9]/.test(pw),
+            personal: pw.length > 0 && personal
+        };
+    }
+    function passwordScore(pw, checks) {
+        if (!pw) return 0;
+        let pool = 0;
+        if (/[a-z]/.test(pw)) pool += 26;
+        if (/[A-Z]/.test(pw)) pool += 26;
+        if (/[0-9]/.test(pw)) pool += 10;
+        if (/[^A-Za-z0-9]/.test(pw)) pool += 32;
+        const bits = pw.length * Math.log2(Math.max(pool, 2));
+        let score = bits < 36 ? 1 : bits < 52 ? 2 : bits < 70 ? 3 : 4;
+        if (!checks.personal) score = Math.min(score, 1);
+        if (!checks.len) score = Math.min(score, 2);
+        return score;
+    }
+    const passwordOk = (checks) => Object.values(checks).every(Boolean);
+    const pwFill = $('pw-bar-fill');
+    const pwText = $('pw-strength-text');
+    function updatePasswordMeter() {
+        const pw = passwordInput.value;
+        const checks = passwordChecks(pw, usernameInput.value, mainInput.value);
+        const score = passwordScore(pw, checks);
+        const labels = ['-', 'Weak', 'Fair', 'Good', 'Strong'];
+        const colors = ['#ff4d4d', '#ff4d4d', '#ffb020', '#9acd32', '#2ecc71'];
+        pwFill.style.width = (score * 25) + '%';
+        pwFill.style.backgroundColor = colors[score];
+        pwText.textContent = labels[score];
+        pwText.style.color = colors[score];
+        document.querySelectorAll('#pw-rules li').forEach(li => li.classList.toggle('ok', !!checks[li.dataset.rule]));
+    }
+    [passwordInput, usernameInput, mainInput].forEach(el => el.addEventListener('input', updatePasswordMeter));
+    updatePasswordMeter();
+
+    // ===== Live availability (username / email) via the API =====
+    function setStatus(el, cls, text) { el.className = 'field-status ' + cls; el.textContent = text; }
+    let userSeq = 0, emailSeq = 0, userTimer = null, emailTimer = null;
+
+    async function runUsernameCheck() {
+        const seq = ++userSeq;
+        const name = usernameInput.value.trim();
+        if (isLoginMode || !name) { setStatus(usernameStatus, '', ''); return; }
+        setStatus(usernameStatus, 'checking', 'Checking...');
+        const r = await api('/api/check-username?name=' + encodeURIComponent(name));
+        if (seq !== userSeq) return;
+        if (r.status === 429) { setStatus(usernameStatus, '', ''); return; }
+        if (!r.ok) { setStatus(usernameStatus, '', ''); return; }
+        setStatus(usernameStatus, r.data.ok ? 'ok' : 'bad', r.data.message || '');
+    }
+    async function runEmailCheck() {
+        const seq = ++emailSeq;
+        const email = mainInput.value.trim().toLowerCase();
+        if (isLoginMode || !email) { setStatus(emailStatus, '', ''); return; }
+        if (!email.includes('@') || email.endsWith('@')) { setStatus(emailStatus, 'checking', 'Keep typing your email...'); return; }
+        setStatus(emailStatus, 'checking', 'Checking...');
+        const r = await api('/api/check-email?email=' + encodeURIComponent(email));
+        if (seq !== emailSeq) return;
+        if (!r.ok) { setStatus(emailStatus, '', ''); return; }
+        setStatus(emailStatus, r.data.ok ? 'ok' : 'bad', r.data.message || '');
+    }
+    usernameInput.addEventListener('input', () => {
+        clearTimeout(userTimer);
+        const has = !!usernameInput.value.trim();
+        setStatus(usernameStatus, has ? 'checking' : '', has ? 'Checking...' : '');
+        userTimer = setTimeout(runUsernameCheck, 450);
+    });
+    mainInput.addEventListener('input', () => {
+        if (isLoginMode) return;
+        clearTimeout(emailTimer);
+        emailTimer = setTimeout(runEmailCheck, 600);
+    });
+    toggleBtn.addEventListener('click', () => {
+        setMode(!isLoginMode);
+        userSeq++; emailSeq++;
+        setStatus(usernameStatus, '', ''); setStatus(emailStatus, '', '');
+        if (!isLoginMode) {
+            if (usernameInput.value.trim()) runUsernameCheck();
+            if (mainInput.value.trim()) runEmailCheck();
+        }
+    });
+
+    // ===== Terms of Service window =====
+    const termsOverlay = $('terms-overlay');
+    $('terms-open-link').addEventListener('click', (e) => { e.preventDefault(); termsOverlay.classList.add('active'); });
+    const closeTerms = () => termsOverlay.classList.remove('active');
+    $('terms-close').addEventListener('click', closeTerms);
+    $('terms-ok').addEventListener('click', closeTerms);
+    termsOverlay.addEventListener('click', (e) => { if (e.target === termsOverlay) closeTerms(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeTerms(); });
+
+    // ===== Submit =====
+    function rememberAccount(username) {
+        try {
+            localStorage.setItem('currentUser', username);
+            localStorage.setItem('ut_age_ok', '1');
+            const saved = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+            if (!saved.includes(username)) { saved.push(username); localStorage.setItem('savedAccounts', JSON.stringify(saved)); }
+        } catch (e) {}
+    }
+
+    authForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (busy) return;
+        errorMsg.style.display = 'none';
+
+        const answer = parseInt(captchaInput.value.trim(), 10);
+        if (isNaN(answer) || answer !== correctAnswer) {
+            showError('Incorrect security answer. Please try again.');
+            return;
         }
 
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('mode') === 'signup') {
-            setMode(false);
-        }
-
-        toggleBtn.addEventListener('click', () => {
-            setMode(!isLoginMode);
-        });
-
-        function showError(msg) {
-            errorMsg.textContent = msg;
-            errorMsg.style.display = 'block';
-            generateCaptcha(); // Обновляем капчу при ошибке для безопасности
-        }
-
-
-        // ===== IP ban check (same rules as the main site) =====
-        let visitorIp = null;
-        async function getVisitorIp() {
-            if (visitorIp !== null) return visitorIp;
-            const cached = sessionStorage.getItem('myIp');
-            if (cached) { visitorIp = cached; return visitorIp; }
-            for (const url of ['https://api.ipify.org?format=json', 'https://api64.ipify.org?format=json']) {
-                try {
-                    const ctl = new AbortController();
-                    const t = setTimeout(() => ctl.abort(), 4000);
-                    const r = await fetch(url, { signal: ctl.signal });
-                    clearTimeout(t);
-                    const j = await r.json();
-                    if (j && j.ip) { visitorIp = String(j.ip); sessionStorage.setItem('myIp', visitorIp); return visitorIp; }
-                } catch (e) { /* try the next one */ }
-            }
-            visitorIp = '';
-            return visitorIp;
-        }
-        async function getActiveIpBan() {
-            const ip = await getVisitorIp();
-            if (!ip) return null;
-            try {
-                const rs = await db.execute({ sql: "SELECT * FROM ip_bans WHERE ip = ?", args: [ip] });
-                if (!rs.rows.length) return null;
-                const r = rs.rows[0];
-                const until = Number(r.bannedUntil);
-                if (until !== -1 && until <= Date.now()) {
-                    await db.execute({ sql: "DELETE FROM ip_bans WHERE ip = ?", args: [ip] });
-                    return null;
-                }
-                return { until, reason: r.reason || '' };
-            } catch (e) { return null; } // table does not exist yet -> no bans
-        }
-        function ipBanText(ban) {
-            let when = 'permanently';
-            if (ban.until !== -1) {
-                const ms = Math.max(0, ban.until - Date.now());
-                const d = Math.floor(ms / 86400000), h = Math.floor(ms / 3600000) % 24, m = Math.floor(ms / 60000) % 60;
-                when = 'for another ' + (d > 0 ? `${d}d ${h}h` : (h > 0 ? `${h}h ${m}m` : `${Math.max(1, m)}m`));
-            }
-            return `Your IP address is banned ${when}.` + (ban.reason ? ` Reason: ${ban.reason}` : '');
-        }
-        // Tell the visitor right away (the form stays usable only for the protected admin account)
-        (async () => {
-            const ban = await getActiveIpBan();
-            if (ban) showError(ipBanText(ban));
-        })();
-
-
-        // ===== Password strength =====
-        function passwordChecks(pw, username, email) {
-            const l = pw.toLowerCase();
-            const u = (username || '').trim().toLowerCase();
-            const local = ((email || '').split('@')[0] || '').trim().toLowerCase();
-            const personal = !((u.length >= 3 && l.includes(u)) || (local.length >= 3 && l.includes(local)));
-            return {
-                len: pw.length >= 10,
-                lower: /[a-z]/.test(pw),
-                upper: /[A-Z]/.test(pw),
-                num: /[0-9]/.test(pw),
-                sym: /[^A-Za-z0-9]/.test(pw),
-                personal: pw.length > 0 && personal
-            };
-        }
-        function passwordScore(pw, checks) {
-            if (!pw) return 0;
-            let pool = 0;
-            if (/[a-z]/.test(pw)) pool += 26;
-            if (/[A-Z]/.test(pw)) pool += 26;
-            if (/[0-9]/.test(pw)) pool += 10;
-            if (/[^A-Za-z0-9]/.test(pw)) pool += 32;
-            const bits = pw.length * Math.log2(Math.max(pool, 2));
-            let score = bits < 36 ? 1 : bits < 52 ? 2 : bits < 70 ? 3 : 4;
-            if (!checks.personal) score = Math.min(score, 1);
-            if (!checks.len) score = Math.min(score, 2);
-            return score;
-        }
-        function passwordOk(checks) { return Object.values(checks).every(Boolean); }
-        const pwFill = document.getElementById('pw-bar-fill');
-        const pwText = document.getElementById('pw-strength-text');
-        function updatePasswordMeter() {
-            const pw = passwordInput.value;
-            const checks = passwordChecks(pw, usernameInput.value, mainInput.value);
-            const score = passwordScore(pw, checks);
-            const labels = ['-', 'Weak', 'Fair', 'Good', 'Strong'];
-            const colors = ['#ff4d4d', '#ff4d4d', '#ffb020', '#9acd32', '#2ecc71'];
-            pwFill.style.width = (score * 25) + '%';
-            pwFill.style.backgroundColor = colors[score];
-            pwText.textContent = labels[score];
-            pwText.style.color = colors[score];
-            document.querySelectorAll('#pw-rules li').forEach(li => li.classList.toggle('ok', !!checks[li.dataset.rule]));
-        }
-        [passwordInput, usernameInput, mainInput].forEach(el => el.addEventListener('input', updatePasswordMeter));
-        updatePasswordMeter();
-
-        // ===== Disposable / burner emails =====
-        const BURNER_DOMAINS = new Set(('mailinator.com mailinator.net mailinator.org mailnator.com guerrillamail.com guerrillamail.net guerrillamail.org guerrillamail.biz guerrillamail.de guerrillamail.info guerrillamailblock.com sharklasers.com grr.la pokemail.net spam4.me 10minutemail.com 10minutemail.net 10minutemail.org 10mail.org 20minutemail.com temp-mail.org temp-mail.io temp-mail.ru tempmail.com tempmail.net tempmail.dev tempmail.plus tempmailo.com tempmailer.com tempmailaddress.com tempail.com tempr.email tempinbox.com tempsky.com tempm.com tmail.ws tmpmail.org tmpmail.net tmails.net throwawaymail.com throwam.com yopmail.com yopmail.fr yopmail.net cool.fr.nf jetable.fr.nf nospam.ze.tc nomail.xl.cx mega.zik.dj speed.1s.fr courriel.fr.nf moncourrier.fr.nf monemail.fr.nf monmail.fr.nf getnada.com nada.email dispostable.com maildrop.cc fakeinbox.com fakemailgenerator.com emailfake.com crazymailing.com trashmail.com trashmail.net trashmail.org trashmail.de trashmail.me trashmail.io trashmail.ws mailnesia.com mintemail.com mohmal.com emailondeck.com mytemp.email burnermail.io spamgourmet.com spamgourmet.net mailcatch.com mailnull.com anonbox.net discard.email discardmail.com discardmail.de spambox.us spamex.com spamfree24.org spam.la spamobox.com deadaddress.com sogetthis.com getairmail.com trbvm.com nowmymail.com bugmenot.com byom.de dropmail.me mailpoof.com fexbox.org fexpost.com fextemp.com mimimail.me cs.email mail.tm mail.gw chacuo.net mailtothis.com moakt.com moakt.cc inboxkitten.com harakirimail.com mailforspam.com mailsac.com incognitomail.com incognitomail.org mt2015.com armyspy.com cuvox.de dayrep.com einrot.com fleckens.hu gustr.com jourrapide.com rhyta.com superrito.com teleworm.us owlymail.com luxusmail.org bccto.me linshiyouxiang.net 1secmail.com 1secmail.org 1secmail.net esiix.com wwjmp.com xojxe.com yoggm.com vjuum.com laafd.com txcct.com dcctb.com kzccv.com qiott.com wuuvo.com icznn.com ezztt.com cdfaq.com oosln.com vddaz.com emltmp.com emailtemporanea.net temporary-mail.net mvrht.com rmqkr.net getnada.cc tempmailgen.com temp-mail.live tempmailin.com mailtemp.info mailbox92.biz spamdecoy.net 0-mail.com 0815.ru 10minut.xyz fakemail.net fake-mail.net33mail.com guerrillamail.co anonymbox.com dodgeit.com e4ward.com emailsensei.com eyepaste.com fastacura.com filzmail.com get2mail.fr haltospam.com hidemail.de imails.info jetable.org kasmail.com klassmaster.com letthemeatspam.com lookugly.com lroid.com mailexpire.com mailin8r.com mailmoat.com mailzilla.com meltmail.com mintemail.net mt2014.com mytrashmail.com neverbox.com no-spam.ws nobulk.com noclickemail.com nospamfor.us objectmail.com odaymail.com onewaymail.com pjjkp.com proxymail.eu putthisinyourspamdatabase.com quickinbox.com rcpt.at recode.me safetymail.info shieldedmail.com shitmail.me snakemail.com sneakemail.com sofort-mail.de spamavert.com spambog.com spambog.de spambog.ru spamcero.com spamcorptastic.com spamevader.com spamfighter.cf spamhole.com spamify.com spaml.com spammotel.com spamslicer.com spamspot.com spamthis.co.uk spamtroll.net supermailer.jp tempemail.net tempemail.com tempinbox.co.uk temporaryemail.net temporaryforwarding.com thankyou2010.com thisisnotmyrealemail.com tradermail.info trash-mail.com trash-mail.de trashymail.com trashymail.net trillianpro.com twinmail.de tyldd.com uggsrock.com veryrealemail.com wegwerfmail.de wegwerfmail.net wegwerfmail.org yepmail.net zippymail.info zoemail.org').split(/\s+/).filter(Boolean));
-        const BURNER_KEYWORDS = ['tempmail', 'temp-mail', 'tmpmail', '10minute', 'minutemail', 'throwaway', 'trashmail', 'trash-mail', 'mailinator', 'guerrilla', 'fakeinbox', 'disposable', 'burner', 'yopmail', 'spamgourmet', 'getnada', 'tempinbox', 'sharklasers', 'dispostable', 'maildrop', 'mohmal', 'fakemail', 'emailfake', 'instantemail', 'anonmail', 'spambox'];
-        function isBurnerDomain(domain) {
-            domain = domain.toLowerCase();
-            const parts = domain.split('.');
-            for (let i = 0; i < parts.length - 1; i++) {
-                if (BURNER_DOMAINS.has(parts.slice(i).join('.'))) return true;
-            }
-            return BURNER_KEYWORDS.some(k => domain.includes(k));
-        }
-        async function dnsHas(domain, type) {
-            const ctl = new AbortController();
-            const t = setTimeout(() => ctl.abort(), 4000);
-            try {
-                const r = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=${type}`, { signal: ctl.signal });
-                const j = await r.json();
-                return { status: j.Status, has: Array.isArray(j.Answer) && j.Answer.some(a => a.type === (type === 'MX' ? 15 : 1)) };
-            } finally { clearTimeout(t); }
-        }
-        // returns an error message, or '' when the email is fine
-        async function checkEmail(email) {
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 254) return 'Please enter a valid email address.';
-            const domain = email.split('@')[1].toLowerCase();
-            if (isBurnerDomain(domain)) return 'Disposable or burner email addresses are not allowed. Please use your real email.';
-            try {
-                const mx = await dnsHas(domain, 'MX');
-                if (mx.status === 3) return 'This email domain does not exist. Please check your email address.';
-                if (!mx.has) {
-                    const a = await dnsHas(domain, 'A');
-                    if (!a.has) return 'This email domain cannot receive mail. Please use a real email address.';
-                }
-            } catch (e) { /* DNS lookup unavailable: do not block real users */ }
-            return '';
-        }
-
-        // ===== 1 account per day (per IP and per device) =====
-        const SIGNUP_COOLDOWN = 24 * 60 * 60 * 1000;
-        function fmtWait(ms) {
-            const h = Math.floor(ms / 3600000), m = Math.max(1, Math.ceil((ms % 3600000) / 60000));
-            return h > 0 ? `${h}h ${m}m` : `${m}m`;
-        }
-        // returns the remaining wait in ms (0 = allowed)
-        async function signupWaitMs() {
-            const now = Date.now();
-            let wait = 0;
-            try {
-                const last = Number(localStorage.getItem('ut_last_signup')) || 0;
-                if (last && now - last < SIGNUP_COOLDOWN) wait = Math.max(wait, SIGNUP_COOLDOWN - (now - last));
-            } catch (e) {}
-            const ip = await getVisitorIp();
-            if (ip) {
-                try {
-                    await db.execute("CREATE TABLE IF NOT EXISTS signup_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ip TEXT, createdAt INTEGER)");
-                    const rs = await db.execute({ sql: "SELECT MAX(createdAt) AS t FROM signup_log WHERE ip = ?", args: [ip] });
-                    const t = Number(rs.rows[0] && rs.rows[0].t) || 0;
-                    if (t && now - t < SIGNUP_COOLDOWN) wait = Math.max(wait, SIGNUP_COOLDOWN - (now - t));
-                } catch (e) { console.error(e); }
-                try {
-                    const rs2 = await db.execute({ sql: "SELECT MAX(joinedAt) AS t FROM users WHERE lastIp = ?", args: [ip] });
-                    const t2 = Number(rs2.rows[0] && rs2.rows[0].t) || 0;
-                    if (t2 && now - t2 < SIGNUP_COOLDOWN) wait = Math.max(wait, SIGNUP_COOLDOWN - (now - t2));
-                } catch (e) { /* joinedAt/lastIp are created by the main site */ }
-            }
-            return wait;
-        }
-
-
-        // ===== Live availability (username / email) =====
-        const usernameStatus = document.getElementById('username-status');
-        const emailStatus = document.getElementById('email-status');
-        function setStatus(el, cls, text) { el.className = 'field-status ' + cls; el.textContent = text; }
-        let userCheckSeq = 0, emailCheckSeq = 0, userTimer = null, emailTimer = null;
-        async function runUsernameCheck() {
-            const seq = ++userCheckSeq;
-            const name = usernameInput.value.trim();
-            if (isLoginMode || !name) { setStatus(usernameStatus, '', ''); return; }
-            if (name.length < 3) { setStatus(usernameStatus, 'bad', 'Username must be at least 3 characters.'); return; }
-            setStatus(usernameStatus, 'checking', 'Checking...');
-            try {
-                const rs = await db.execute({ sql: "SELECT 1 FROM users WHERE username = ? LIMIT 1", args: [name] });
-                if (seq !== userCheckSeq) return;
-                if (rs.rows.length) setStatus(usernameStatus, 'bad', 'This username is already taken.');
-                else setStatus(usernameStatus, 'ok', 'Username is available.');
-            } catch (e) { if (seq === userCheckSeq) setStatus(usernameStatus, '', ''); }
-        }
-        async function runEmailCheck() {
-            const seq = ++emailCheckSeq;
-            const email = mainInput.value.trim().toLowerCase();
-            if (isLoginMode || !email) { setStatus(emailStatus, '', ''); return; }
-            if (!email.includes('@') || email.endsWith('@')) { setStatus(emailStatus, 'checking', 'Keep typing your email...'); return; }
-            setStatus(emailStatus, 'checking', 'Checking...');
-            try {
-                const err = await checkEmail(email);
-                if (seq !== emailCheckSeq) return;
-                if (err) { setStatus(emailStatus, 'bad', err); return; }
-                const rs = await db.execute({ sql: "SELECT 1 FROM users WHERE lower(email) = ? LIMIT 1", args: [email] });
-                if (seq !== emailCheckSeq) return;
-                if (rs.rows.length) setStatus(emailStatus, 'bad', 'This email is already registered.');
-                else setStatus(emailStatus, 'ok', 'Email is available.');
-            } catch (e) { if (seq === emailCheckSeq) setStatus(emailStatus, '', ''); }
-        }
-        usernameInput.addEventListener('input', () => { clearTimeout(userTimer); setStatus(usernameStatus, usernameInput.value.trim() ? 'checking' : '', usernameInput.value.trim() ? 'Checking...' : ''); userTimer = setTimeout(runUsernameCheck, 450); });
-        mainInput.addEventListener('input', () => { if (isLoginMode) return; clearTimeout(emailTimer); emailTimer = setTimeout(runEmailCheck, 600); });
-        // reset the messages when switching between Log in / Sign up
-        toggleBtn.addEventListener('click', () => {
-            userCheckSeq++; emailCheckSeq++;
-            setStatus(usernameStatus, '', ''); setStatus(emailStatus, '', '');
-            if (!isLoginMode) { if (usernameInput.value.trim()) runUsernameCheck(); if (mainInput.value.trim()) runEmailCheck(); }
-        });
-
-        // ===== Terms of Service window =====
-        const termsOverlay = document.getElementById('terms-overlay');
-        document.getElementById('terms-open-link').addEventListener('click', (e) => { e.preventDefault(); termsOverlay.classList.add('active'); });
-        const closeTerms = () => termsOverlay.classList.remove('active');
-        document.getElementById('terms-close').addEventListener('click', closeTerms);
-        document.getElementById('terms-ok').addEventListener('click', closeTerms);
-        termsOverlay.addEventListener('click', (e) => { if (e.target === termsOverlay) closeTerms(); });
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeTerms(); });
-
-        authForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            errorMsg.style.display = 'none';
-
-            // Проверка капчи (защита от ботов)
-            const userCaptchaAnswer = parseInt(captchaInput.value.trim(), 10);
-            if (isNaN(userCaptchaAnswer) || userCaptchaAnswer !== correctAnswer) {
-                showError('Incorrect security answer. Please try again.');
-                return;
-            }
-
+        const password = passwordInput.value;
+        let result;
+        busy = true;
+        submitBtn.disabled = true;
+        try {
             if (!isLoginMode) {
                 const username = usernameInput.value.trim();
                 const email = mainInput.value.trim().toLowerCase();
-                const password = passwordInput.value;
-
-                if (!username || !email || !password) {
-                    showError('Please fill in all fields.');
-                    return;
-                }
-
-                if (username.length < 3) {
-                    showError('Username must be at least 3 characters long.');
-                    return;
-                }
-
-                const emailErr = await checkEmail(email);
-                if (emailErr) {
-                    showError(emailErr);
-                    return;
-                }
-
-                const pwChecks = passwordChecks(password, username, email);
-                if (!passwordOk(pwChecks)) {
+                if (!username || !email || !password) { showError('Please fill in all fields.'); return; }
+                if (username.length < 3) { showError('Username must be at least 3 characters long.'); return; }
+                if (!passwordOk(passwordChecks(password, username, email))) {
                     showError('Your password is too weak. Meet every requirement shown under the password box.');
                     return;
                 }
-
-                if (!document.getElementById('age-checkbox').checked) {
-                    showError('You must confirm that you are at least 13 years old.');
-                    return;
-                }
-
-                const waitMs = await signupWaitMs();
-                if (waitMs > 0) {
-                    showError(`Only one account can be created per day. Please try again in ${fmtWait(waitMs)}.`);
-                    return;
-                }
-
-                const signupBan = await getActiveIpBan();
-                if (signupBan) {
-                    showError(ipBanText(signupBan));
-                    return;
-                }
-
-                try {
-                    const checkUser = await db.execute({
-                        sql: "SELECT * FROM users WHERE username = ?",
-                        args: [username]
-                    });
-                    if (checkUser.rows.length > 0) {
-                        showError('This username is already taken.');
-                        return;
-                    }
-
-                    const checkEmail = await db.execute({
-                        sql: "SELECT * FROM users WHERE lower(email) = ?",
-                        args: [email]
-                    });
-                    if (checkEmail.rows.length > 0) {
-                        showError('This email is already registered.');
-                        return;
-                    }
-
-                    const countRs = await db.execute("SELECT COUNT(*) as cnt FROM users");
-                    const countVal = countRs.rows.length > 0 ? Number(countRs.rows[0].cnt || 0) : 0;
-                    const newCustomId = String(countVal + 1);
-
-                    await db.execute({
-                        sql: `INSERT INTO users (customId, username, displayName, email, password, items) VALUES (?, ?, ?, ?, ?, ?)`,
-                        args: [newCustomId, username, username, email, password, JSON.stringify([])]
-                    });
-
-                    const ipNew = await getVisitorIp();
-                    if (ipNew) {
-                        try { await db.execute({ sql: "UPDATE users SET lastIp = ? WHERE username = ?", args: [ipNew, username] }); } catch (e) { /* column is created by the main site */ }
-                    }
-
-                    try {
-                        localStorage.setItem('ut_last_signup', String(Date.now()));
-                        localStorage.setItem('ut_age_ok', '1');
-                    } catch (e) {}
-                    if (ipNew) {
-                        try { await db.execute({ sql: "INSERT INTO signup_log (ip, createdAt) VALUES (?, ?)", args: [ipNew, Date.now()] }); } catch (e) { console.error(e); }
-                    }
-
-                    localStorage.setItem('currentUser', username);
-                    window.location.href = 'uniquetrading.html';
-                } catch (err) {
-                    console.error(err);
-                    showError('Database error during registration. Try again.');
-                }
-
+                if (!$('age-checkbox').checked) { showError('You must confirm that you are at least 13 years old.'); return; }
+                result = await api('/api/signup', { username, email, password, ageConfirmed: true });
             } else {
-                const loginIdentifier = mainInput.value.trim();
-                const password = passwordInput.value;
-
-                if (!loginIdentifier || !password) {
-                    showError('Please fill in all fields.');
-                    return;
-                }
-
-                try {
-                    const rs = await db.execute({
-                        sql: "SELECT * FROM users WHERE username = ? OR lower(email) = lower(?)",
-                        args: [loginIdentifier, loginIdentifier]
-                    });
-
-                    if (rs.rows.length === 0) {
-                        showError('Account with this username or email does not exist.');
-                        return;
-                    }
-
-                    const user = rs.rows[0];
-
-                    if (user.password !== password) {
-                        showError('Incorrect password. Please try again.');
-                        return;
-                    }
-
-                    const loginBan = String(user.customId || '') === 'knqw' ? null : await getActiveIpBan();
-                    if (loginBan) {
-                        showError(ipBanText(loginBan));
-                        return;
-                    }
-
-                    const ipNow = await getVisitorIp();
-                    if (ipNow) {
-                        try { await db.execute({ sql: "UPDATE users SET lastIp = ? WHERE username = ?", args: [ipNow, user.username] }); } catch (e) { /* column is created by the main site */ }
-                    }
-
-                    localStorage.setItem('currentUser', user.username);
-                    window.location.href = 'uniquetrading.html';
-                } catch (err) {
-                    console.error(err);
-                    showError('Database connection error. Try again later.');
-                }
+                const id = mainInput.value.trim();
+                if (!id || !password) { showError('Please fill in all fields.'); return; }
+                result = await api('/api/login', { id, password });
             }
-        });
-    </script>
+
+            if (!result.ok) {
+                showError(result.data.error || 'Something went wrong. Try again.');
+                return;
+            }
+            rememberAccount(result.data.username);
+            window.location.href = 'uniquetrading.html';
+        } finally {
+            busy = false;
+            submitBtn.disabled = false;
+        }
+    });
+})();
+</script>
 </body>
 </html>
