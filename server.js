@@ -282,6 +282,299 @@ app.post('/api/logout', async (req, res) => {
   res.json({ ok: true });
 });
 
+// ======================================================================
+// Stage 2: password change, wallet, deals, admin money tools
+// Every route below needs a logged-in session; money logic runs ONLY here.
+// ======================================================================
+const SELLER_SHARE = 0.9;
+const MIN_DEAL = 0.01, MAX_DEAL = 1000000;
+const MIN_TOPUP = 1, MAX_TOPUP = 10000;
+const round2 = (n) => Math.round(Number(n) * 100) / 100;
+const parseMoney = (v) => { const n = typeof v === 'number' ? v : parseFloat(String(v)); return Number.isFinite(n) ? round2(n) : NaN; };
+
+async function requireAdmin(req, res, next) {
+  try {
+    const r = await db.execute({ sql: 'SELECT customId FROM users WHERE username = ?', args: [req.user] });
+    if (!r.rows.length || String(r.rows[0].customId || '') !== 'knqw') return res.status(403).json({ error: 'Only the admin can do this.' });
+    next();
+  } catch (e) { res.status(500).json({ error: 'Server error' }); }
+}
+class Abort extends Error { constructor(msg, code = 409) { super(msg); this.code = code; } }
+// run fn(tx) in a write transaction; throw Abort(...) to roll back and answer with that message
+async function inTx(res, fn) {
+  const tx = await db.transaction('write');
+  try {
+    const out = await fn(tx);
+    await tx.commit();
+    return out;
+  } catch (e) {
+    try { await tx.rollback(); } catch (_) {}
+    if (e instanceof Abort) { res.status(e.code).json({ error: e.message }); return undefined; }
+    console.error('tx error:', e);
+    res.status(500).json({ error: 'Server error. Nothing was changed.' });
+    return undefined;
+  } finally { tx.close(); }
+}
+const moneyLimit = (req, res, key, max, ms) => {
+  if (limited(key + ':' + req.user, max, ms)) { res.status(429).json({ error: 'Too many requests. Slow down.' }); return true; }
+  return false;
+};
+
+// ---------- password ----------
+app.post('/api/change-password', requireUser, async (req, res) => {
+  try {
+    if (moneyLimit(req, res, 'pw', 8, 15 * 60 * 1000)) return;
+    const cur = String(req.body.currentPassword || '');
+    const next = String(req.body.newPassword || '');
+    if (!cur || !next) return res.status(400).json({ error: 'Please fill in all fields.' });
+    const rs = await db.execute({ sql: 'SELECT username, email, password, passwordHash FROM users WHERE username = ?', args: [req.user] });
+    if (!rs.rows.length) return res.status(401).json({ error: 'Please log in.' });
+    const u = rs.rows[0];
+    let ok = false;
+    if (u.passwordHash) ok = await bcrypt.compare(cur, String(u.passwordHash));
+    if (!ok && u.password && safeEqual(u.password, cur)) ok = true;
+    if (!ok) return res.status(403).json({ error: 'Current password is incorrect.' });
+    const bad = passwordProblems(next, String(u.username), String(u.email || ''));
+    if (bad.length) return res.status(400).json({ error: 'Your new password is too weak. It needs: ' + bad.join(', ') + '.' });
+    const hash = await bcrypt.hash(next, 12);
+    // the legacy plaintext column is wiped; every other device is logged out
+    await db.execute({ sql: "UPDATE users SET passwordHash = ?, password = '' WHERE username = ?", args: [hash, req.user] });
+    await db.execute({ sql: 'DELETE FROM sessions WHERE username = ? AND id != ?', args: [req.user, String(req.cookies.sid || '')] });
+    res.json({ ok: true });
+  } catch (e) { console.error('change-password error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
+});
+
+// ---------- wallet ----------
+app.get('/api/wallet', requireUser, async (req, res) => {
+  const r = await db.execute({ sql: 'SELECT balance, heldBalance FROM users WHERE username = ?', args: [req.user] });
+  if (!r.rows.length) return res.status(401).json({ error: 'Please log in.' });
+  res.json({ balance: Number(r.rows[0].balance) || 0, held: Number(r.rows[0].heldBalance) || 0 });
+});
+
+// Top-up is a DEMO (free money). It only works while PAYMENT_DEMO_MODE=1 is set in Render. Remove that variable before real launch.
+app.post('/api/wallet/topup', requireUser, async (req, res) => {
+  try {
+    if (process.env.PAYMENT_DEMO_MODE !== '1') return res.status(403).json({ error: 'Payment provider is not connected.' });
+    if (moneyLimit(req, res, 'topup', 20, 60 * 60 * 1000)) return;
+    const amount = parseMoney(req.body.amount);
+    if (!(amount >= MIN_TOPUP)) return res.status(400).json({ error: `Minimum purchase is $${MIN_TOPUP}.` });
+    if (amount > MAX_TOPUP) return res.status(400).json({ error: `Maximum purchase is $${MAX_TOPUP}.` });
+    const me = await db.execute({ sql: 'SELECT card FROM users WHERE username = ?', args: [req.user] });
+    if (!me.rows.length) return res.status(401).json({ error: 'Please log in.' });
+    if (!me.rows[0].card) return res.status(400).json({ error: 'Link a bank card in Settings first.' });
+    await db.execute({ sql: 'UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE username = ?', args: [amount, req.user] });
+    const r = await db.execute({ sql: 'SELECT balance FROM users WHERE username = ?', args: [req.user] });
+    res.json({ balance: Number(r.rows[0].balance) || 0 });
+  } catch (e) { console.error('topup error:', e); res.status(500).json({ error: 'Purchase failed. Try again.' }); }
+});
+
+// admin only: add or subtract balance for any user (never goes below $0)
+app.post('/api/admin/adjust', requireUser, requireAdmin, async (req, res) => {
+  try {
+    const target = String(req.body.username || '');
+    const delta = parseMoney(req.body.delta);
+    if (!target) return res.status(400).json({ error: 'Select a user first.' });
+    if (!Number.isFinite(delta) || delta === 0 || Math.abs(delta) > 1000000) return res.status(400).json({ error: 'Enter a valid amount.' });
+    const rs = await db.execute({ sql: 'UPDATE users SET balance = MAX(0, COALESCE(balance, 0) + ?) WHERE username = ?', args: [delta, target] });
+    if (!rs.rowsAffected) return res.status(404).json({ error: 'User not found.' });
+    const r = await db.execute({ sql: 'SELECT balance FROM users WHERE username = ?', args: [target] });
+    console.log(`ADMIN ${req.user} adjusted ${target} by ${delta}`);
+    res.json({ balance: Number(r.rows[0].balance) || 0 });
+  } catch (e) { console.error('adjust error:', e); res.status(500).json({ error: 'Failed to update balance.' }); }
+});
+
+app.get('/api/admin/users', requireUser, requireAdmin, async (req, res) => {
+  const rs = await db.execute('SELECT customId, username, displayName, balance, heldBalance, bannedUntil FROM users ORDER BY username');
+  res.json({ users: rs.rows.map(r => ({
+    customId: r.customId, username: r.username, displayName: r.displayName,
+    balance: Number(r.balance) || 0, held: Number(r.heldBalance) || 0, bannedUntil: Number(r.bannedUntil) || 0
+  })) });
+});
+
+// ---------- deals ----------
+const mapDeal = (r) => ({
+  id: Number(r.id), buyer: r.buyer, seller: r.seller, itemName: r.itemName || '',
+  amount: Number(r.amount) || 0, sellerAmount: Number(r.sellerAmount) || 0, status: r.status,
+  createdAt: Number(r.createdAt) || 0, updatedAt: Number(r.updatedAt) || 0,
+  reportedAt: Number(r.reportedAt) || 0, chatSnapshot: r.chatSnapshot || null, reportedBy: r.reportedBy || '',
+  itemId: r.itemId ? String(r.itemId) : ''
+});
+const dealId = (req) => { const n = Number(req.params.id); return Number.isInteger(n) && n > 0 ? n : 0; };
+async function loadDeal(q, id) {
+  const rs = await q.execute({ sql: 'SELECT * FROM deals WHERE id = ?', args: [id] });
+  return rs.rows.length ? mapDeal(rs.rows[0]) : null;
+}
+
+// deals between me and one other user (chat view). Reported-deal chat snapshots are not sent here.
+app.get('/api/deals', requireUser, async (req, res) => {
+  const other = String(req.query.with || '');
+  if (!other) return res.status(400).json({ error: 'Missing user.' });
+  const rs = await db.execute({
+    sql: 'SELECT * FROM deals WHERE (buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?) ORDER BY createdAt ASC',
+    args: [req.user, other, other, req.user]
+  });
+  res.json({ deals: rs.rows.map(r => { const d = mapDeal(r); d.chatSnapshot = null; return d; }) });
+});
+
+// cheap change signal for polling
+app.get('/api/deals/sig', requireUser, async (req, res) => {
+  const rs = await db.execute({ sql: 'SELECT COUNT(*) AS c, COALESCE(SUM(updatedAt), 0) AS s FROM deals WHERE buyer = ? OR seller = ?', args: [req.user, req.user] });
+  res.json({ sig: `${Number(rs.rows[0].c)}:${Number(rs.rows[0].s)}` });
+});
+
+// one deal (participants or admin). Only the admin receives the chat snapshot.
+app.get('/api/deals/:id', requireUser, async (req, res) => {
+  const id = dealId(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  const d = await loadDeal(db, id);
+  if (!d) return res.status(404).json({ error: 'Deal not found.' });
+  const a = await db.execute({ sql: 'SELECT customId FROM users WHERE username = ?', args: [req.user] });
+  const isAdmin = a.rows.length && String(a.rows[0].customId || '') === 'knqw';
+  if (!isAdmin && d.buyer !== req.user && d.seller !== req.user) return res.status(404).json({ error: 'Deal not found.' });
+  if (!isAdmin) d.chatSnapshot = null;
+  res.json({ deal: d });
+});
+
+// seller asks the buyer for payment
+app.post('/api/deals', requireUser, async (req, res) => {
+  try {
+    if (moneyLimit(req, res, 'deal-new', 30, 60 * 60 * 1000)) return;
+    const buyer = String(req.body.buyer || '');
+    const amount = parseMoney(req.body.amount);
+    const itemName = String(req.body.itemName || '').slice(0, 200);
+    const itemId = req.body.itemId ? String(req.body.itemId).slice(0, 64) : '';
+    if (!buyer || buyer === req.user) return res.status(400).json({ error: 'Choose another user.' });
+    if (!(amount >= MIN_DEAL) || amount > MAX_DEAL) return res.status(400).json({ error: 'Enter a valid amount.' });
+    if (!(await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [buyer] })).rows.length) return res.status(404).json({ error: 'User not found.' });
+    const dup = await db.execute({
+      sql: "SELECT id FROM deals WHERE seller = ? AND buyer = ? AND COALESCE(itemId, '') = ? AND status = 'requested'",
+      args: [req.user, buyer, itemId]
+    });
+    if (dup.rows.length) return res.status(409).json({ error: 'You already have a pending payment request in this chat.' });
+    const now = Date.now();
+    await db.execute({
+      sql: "INSERT INTO deals (buyer, seller, itemName, amount, sellerAmount, status, createdAt, updatedAt, itemId) VALUES (?, ?, ?, ?, ?, 'requested', ?, ?, ?)",
+      args: [buyer, req.user, itemName, amount, round2(amount * SELLER_SHARE), now, now, itemId || null]
+    });
+    res.json({ ok: true });
+  } catch (e) { console.error('deal create error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
+});
+
+// buyer pays: money leaves the buyer and sits on hold for the seller
+app.post('/api/deals/:id/pay', requireUser, async (req, res) => {
+  const id = dealId(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  if (moneyLimit(req, res, 'deal-act', 60, 60 * 1000)) return;
+  const out = await inTx(res, async (tx) => {
+    const d = await loadDeal(tx, id);
+    if (!d || d.buyer !== req.user) throw new Abort('This request is no longer available.');
+    const claim = await tx.execute({ sql: "UPDATE deals SET status = 'paid', updatedAt = ? WHERE id = ? AND status = 'requested'", args: [Date.now(), id] });
+    if (!claim.rowsAffected) throw new Abort('This request is no longer available.');
+    const debit = await tx.execute({ sql: 'UPDATE users SET balance = balance - ? WHERE username = ? AND COALESCE(balance, 0) >= ?', args: [d.amount, req.user, d.amount] });
+    if (!debit.rowsAffected) throw new Abort('Not enough balance.');
+    const credit = await tx.execute({ sql: 'UPDATE users SET heldBalance = COALESCE(heldBalance, 0) + ? WHERE username = ?', args: [d.sellerAmount, d.seller] });
+    if (!credit.rowsAffected) throw new Abort('Seller account not found. You were not charged.');
+    const r = await tx.execute({ sql: 'SELECT balance FROM users WHERE username = ?', args: [req.user] });
+    return Number(r.rows[0].balance) || 0;
+  });
+  if (out !== undefined) res.json({ balance: out });
+});
+
+// buyer confirms delivery: held money goes to the seller's balance
+app.post('/api/deals/:id/complete', requireUser, async (req, res) => {
+  const id = dealId(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  if (moneyLimit(req, res, 'deal-act', 60, 60 * 1000)) return;
+  const out = await inTx(res, async (tx) => {
+    const d = await loadDeal(tx, id);
+    if (!d || d.buyer !== req.user) throw new Abort('This deal can no longer be confirmed.');
+    const claim = await tx.execute({ sql: "UPDATE deals SET status = 'completed', updatedAt = ? WHERE id = ? AND status IN ('paid', 'not_received')", args: [Date.now(), id] });
+    if (!claim.rowsAffected) throw new Abort('This deal can no longer be confirmed.');
+    await tx.execute({
+      sql: 'UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?), balance = COALESCE(balance, 0) + ? WHERE username = ?',
+      args: [d.sellerAmount, d.sellerAmount, d.seller]
+    });
+    return true;
+  });
+  if (out) res.json({ ok: true });
+});
+
+// simple state changes without money movement
+async function simpleStatus(req, res, from, to, who) {
+  const id = dealId(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  if (moneyLimit(req, res, 'deal-act', 60, 60 * 1000)) return;
+  const col = who === 'buyer' ? 'buyer = ?' : who === 'seller' ? 'seller = ?' : '(buyer = ? OR seller = ?)';
+  const args = [to, Date.now(), id, from, req.user];
+  if (who === 'either') args.push(req.user);
+  const rs = await db.execute({ sql: `UPDATE deals SET status = ?, updatedAt = ? WHERE id = ? AND status = ? AND ${col}`, args });
+  if (!rs.rowsAffected) return res.status(409).json({ error: 'This deal was already updated.' });
+  res.json({ ok: true });
+}
+app.post('/api/deals/:id/not-received', requireUser, (req, res) => simpleStatus(req, res, 'paid', 'not_received', 'buyer'));
+app.post('/api/deals/:id/cancel', requireUser, (req, res) => simpleStatus(req, res, 'requested', 'cancelled', 'either'));
+
+// either side reports a deal marked "not received"; the chat snapshot is shown to the admin only
+app.post('/api/deals/:id/report', requireUser, async (req, res) => {
+  try {
+    const id = dealId(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+    if (moneyLimit(req, res, 'deal-act', 60, 60 * 1000)) return;
+    let snap = Array.isArray(req.body.snapshot) ? req.body.snapshot.slice(-500) : [];
+    snap = snap.map(m => ({
+      sender: String(m && m.sender || '').slice(0, 64), receiver: String(m && m.receiver || '').slice(0, 64),
+      text: String(m && m.text || '').slice(0, 2000), timestamp: Number(m && m.timestamp) || 0
+    }));
+    const now = Date.now();
+    const rs = await db.execute({
+      sql: "UPDATE deals SET status = 'reported', reportedAt = ?, updatedAt = ?, chatSnapshot = ?, reportedBy = ? WHERE id = ? AND status = 'not_received' AND (buyer = ? OR seller = ?)",
+      args: [now, now, JSON.stringify(snap), req.user, id, req.user, req.user]
+    });
+    if (!rs.rowsAffected) return res.status(409).json({ error: 'This deal was already updated.' });
+    res.json({ ok: true });
+  } catch (e) { console.error('report error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
+});
+
+// ---------- admin: money overview + resolving held deals ----------
+app.get('/api/admin/deals', requireUser, requireAdmin, async (req, res) => {
+  const status = String(req.query.status || '');
+  const rs = status === 'reported'
+    ? await db.execute("SELECT * FROM deals WHERE status = 'reported' ORDER BY reportedAt DESC")
+    : status === 'held'
+      ? await db.execute("SELECT * FROM deals WHERE status IN ('paid','not_received','reported') ORDER BY updatedAt DESC")
+      : await db.execute("SELECT * FROM deals ORDER BY createdAt DESC LIMIT 500");
+  res.json({ deals: rs.rows.map(mapDeal) });
+});
+
+app.get('/api/admin/deals/:id', requireUser, requireAdmin, async (req, res) => {
+  const id = dealId(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  const d = await loadDeal(db, id);
+  if (!d) return res.status(404).json({ error: 'Deal not found.' });
+  res.json({ deal: d });
+});
+
+app.post('/api/admin/deals/:id/resolve', requireUser, requireAdmin, async (req, res) => {
+  const id = dealId(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  const mode = String(req.body.mode || '');
+  if (mode !== 'refund' && mode !== 'pay') return res.status(400).json({ error: 'Bad request.' });
+  const out = await inTx(res, async (tx) => {
+    const d = await loadDeal(tx, id);
+    if (!d || !['paid', 'not_received', 'reported'].includes(d.status)) throw new Abort('This transaction was already handled.');
+    const finalStatus = mode === 'refund' ? 'refunded' : 'released';
+    const claim = await tx.execute({ sql: 'UPDATE deals SET status = ?, updatedAt = ? WHERE id = ? AND status = ?', args: [finalStatus, Date.now(), id, d.status] });
+    if (!claim.rowsAffected) throw new Abort('This transaction was already handled.');
+    if (mode === 'refund') {
+      const credit = await tx.execute({ sql: 'UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE username = ?', args: [d.amount, d.buyer] });
+      if (!credit.rowsAffected) throw new Abort('The buyer account no longer exists.');
+      await tx.execute({ sql: 'UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?) WHERE username = ?', args: [d.sellerAmount, d.seller] });
+    } else {
+      const rel = await tx.execute({
+        sql: 'UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?), balance = COALESCE(balance, 0) + ? WHERE username = ?',
+        args: [d.sellerAmount, d.sellerAmount, d.seller]
+      });
+      if (!rel.rowsAffected) throw new Abort('The seller account no longer exists.');
+    }
+    console.log(`ADMIN ${req.user} resolved deal ${id} as ${finalStatus}`);
+    return { status: finalStatus, amount: d.amount, sellerAmount: d.sellerAmount, buyer: d.buyer, seller: d.seller };
+  });
+  if (out) res.json(out);
+});
+
 // ---------- the site itself ----------
 app.get('/', (req, res) => res.redirect('/uniquetrading.html'));
 app.use(express.static(path.join(__dirname, 'public')));
