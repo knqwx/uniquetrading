@@ -2673,6 +2673,25 @@
         .report-item-sub { color: #bbb; font-size: 13px; line-height: 1.5; }
         .report-item-sub b { color: #fff; }
         .report-item-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+
+        /* ===== v3: badges, footer, age gate, user reports, timeouts ===== */
+        .new-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; margin-left: 8px; vertical-align: middle; background: rgba(46,204,113,0.15); color: #2ecc71; white-space: nowrap; }
+        .site-footer { margin: 50px auto 24px; max-width: 900px; padding: 0 20px; text-align: center; color: #777; font-size: 12px; line-height: 1.7; }
+        .site-footer a { color: #8c9eff; text-decoration: none; }
+        .age-gate-box { background: #1a1a1a; border: 1px solid #2f2f2f; border-radius: 16px; padding: 30px; width: 440px; max-width: 92vw; text-align: center; }
+        .age-gate-box h2 { color: #fff; margin: 0 0 12px; font-size: 22px; }
+        .age-gate-box p { color: #bbb; font-size: 14px; line-height: 1.6; margin: 0 0 18px; }
+        .age-gate-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .age-gate-actions button { border: 1px solid #444; background: #2a2a2a; color: #fff; border-radius: 10px; padding: 12px 18px; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; }
+        .age-gate-actions button.primary { background: #ff7300; border-color: #ff7300; }
+        .report-user-btn { color: #ff6b6b !important; border-color: #5a2a2a !important; background: transparent !important; }
+        .report-user-btn:hover { background: rgba(255,77,77,0.12) !important; }
+        .mm-report-btn { background: transparent; color: #ff6b6b; border: 1px solid #5a2a2a; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; margin-left: 8px; }
+        .mm-report-btn:hover { background: rgba(255,77,77,0.12); }
+        .to-row-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+        .to-row-actions input { width: 90px; background: #262626; color: #fff; border: 1px solid #3a3a3a; border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; }
+        .to-status-active { color: #ff7a7a; font-weight: 600; }
+        .to-status-expired { color: #888; }
     </style>
 </head>
 <body>
@@ -2786,30 +2805,94 @@
         <div class="modal-content info-modal">
             <button class="close-modal" data-close-info="help-modal">&times;</button>
             <div class="info-modal-title">Help</div>
-            <div class="info-modal-text" id="help-text">
-<!-- ====== PUT YOUR HELP TEXT HERE ====== -->
-Your Help text goes here.
-            </div>
+            <div class="info-modal-text" id="help-text"><b>Getting started</b>
+Create an account, then browse Marketplace and Trading listings. Open a listing and press Contact Seller (or Make an Offer for trades) to chat with the seller.
+
+<b>Buying safely</b>
+Pay only through the platform. The money is held until you confirm that you received your items. If you did not receive them, press No and then Report so staff can review the chat.
+
+<b>Selling</b>
+Open your profile and list an item. You can list one item every 10 minutes. Pictures must be 500 KB or smaller. You receive 90% of the sale price after the buyer confirms delivery.
+
+<b>Middlemen</b>
+For bigger or cross-game trades, create a ticket on the Middlemen page. A middleman claims your ticket and helps both sides trade safely. You can leave a vouch or rating on their profile afterwards.
+
+<b>Reporting</b>
+Use Report item on a listing, Report user on a profile, or Report on a middleman card. Describe what happened and staff will review it. Please only send honest reports.
+
+<b>Timeouts</b>
+Sending many messages very quickly gives you a timeout: 15 seconds, then 3 minutes, then 1 hour, then 1 day. Slow down and wait for it to end.
+
+<b>Rules and limits</b>
+You must be 13 or older. One account per person, and one new account per day. Read the Terms of Service for the full rules.
+
+<b>Need more help?</b>
+Join our Discord: <a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a></div>
         </div>
     </div>
     <div class="modal-overlay" id="copyright-modal" style="z-index: 270;">
         <div class="modal-content info-modal">
             <button class="close-modal" data-close-info="copyright-modal">&times;</button>
             <div class="info-modal-title">Copyright</div>
-            <div class="info-modal-text" id="copyright-text">
-<!-- ====== PUT YOUR COPYRIGHT TEXT HERE ====== -->
-Your Copyright text goes here.
-            </div>
+            <div class="info-modal-text" id="copyright-text"><b>&copy; 2026 Unique Trading. All rights reserved.</b>
+
+<b>Our content</b>
+The Unique Trading name, logo, design and code belong to Unique Trading. Please do not copy or reuse them without permission.
+
+<b>Games, items and trademarks</b>
+Unique Trading is not affiliated with, endorsed by or sponsored by Roblox Corporation or any other game developer or publisher. Game names, item names, logos and images belong to their respective owners and are shown only to identify items. We claim no ownership over them.
+
+<b>Content you post</b>
+You keep ownership of what you post (listings, messages, pictures). By posting it, you allow Unique Trading to store and display it on the platform. Only post pictures and text that you have the right to share.
+
+<b>Reporting copyright problems</b>
+If you believe something on Unique Trading infringes your copyright or trademark, contact us on Discord (<a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a>) and include: what the content is, where it appears (listing or profile name), proof that you own the rights, and how we can reach you. We review reports quickly and remove content that infringes. Accounts that repeatedly infringe may be banned.</div>
         </div>
     </div>
     <div class="modal-overlay" id="terms-modal" style="z-index: 270;">
         <div class="modal-content info-modal">
             <button class="close-modal" data-close-info="terms-modal">&times;</button>
             <div class="info-modal-title">Terms of Service</div>
-            <div class="info-modal-text" id="terms-text">
-<!-- ====== PUT YOUR TERMS OF SERVICE TEXT HERE ====== -->
-Your Terms of Service text goes here.
-            </div>
+            <div class="info-modal-text" id="terms-text"><b>Last updated: October 4, 2026</b>
+
+<b>1. Acceptance</b>
+By using Unique Trading you agree to these Terms of Service. If you do not agree, do not use the platform.
+
+<b>2. Minimum age</b>
+You must be at least 13 years old to use Unique Trading. If you are under the age of majority where you live, you must have permission from a parent or guardian. We may remove any account that belongs to someone under 13.
+
+<b>3. Not affiliated with Roblox or any game developer</b>
+Unique Trading is an independent community marketplace. It is not affiliated with, endorsed by or sponsored by Roblox Corporation or any other game developer or publisher. All game names, item names, logos and images belong to their respective owners and are used only to identify items.
+
+<b>4. Accounts</b>
+Give accurate information and keep your password safe. You are responsible for everything that happens on your account. One person may have one account. Only one account can be created per day. Do not use extra accounts to avoid a ban, a timeout or a rate limit.
+
+<b>5. Listings</b>
+Only list items you really own and describe them honestly. Items are listed at most once every 10 minutes. Pictures must be 500 KB or smaller and must not contain inappropriate, hateful or illegal content. Fake, misleading or duplicate listings may be removed.
+
+<b>6. Payments and deals</b>
+When a buyer pays, the money is held by the platform until the buyer confirms that the items were received. The seller receives 90% of the price, and 10% is kept as a platform fee. If the items were not received, the deal can be reported and our staff reviews the whole chat while the money stays on hold. Staff decisions on reported deals are final.
+
+<b>7. Middlemen</b>
+Middlemen are trusted members who help complete trades. Their vouches and ratings are shown on their profiles. A middleman is required when a trade involves different games or more than 4 Murder Mystery 2 items. Middlemen can be reported like any other user. Always keep trades inside the platform chat and ticket system. We cannot help with losses from trades made outside the platform.
+
+<b>8. Rules</b>
+You must not: scam or try to scam other users, harass or threaten others, spam, impersonate other people or staff, share illegal content, abuse bugs, or try to break or bypass the platform.
+
+<b>9. Spam and rate limits</b>
+Sending messages too quickly causes an automatic timeout. The first timeout lasts 15 seconds, the next 3 minutes, then 1 hour, then 1 day. Staff can remove or extend timeouts. Other limits (such as listing items and creating accounts) may also apply.
+
+<b>10. Reports and moderation</b>
+You can report items, users, middlemen and deals. Staff may remove listings, hold money, time out or ban accounts (temporarily or permanently) to protect the community. Banned users can send an appeal. Permanently banned accounts are deleted after 30 days.
+
+<b>11. No guarantees</b>
+The platform is provided as is. Trading virtual items carries risk and virtual items have no guaranteed real-world value. Unique Trading is not responsible for losses caused by other users, game updates, game bans or changes made by the game developers.
+
+<b>12. Changes</b>
+We may update these Terms at any time. Using the platform after a change means you accept the new Terms.
+
+<b>13. Contact</b>
+Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a></div>
         </div>
     </div>
 
@@ -2817,6 +2900,7 @@ Your Terms of Service text goes here.
     <div class="side-admin-nav" id="side-admin-nav">
         <button class="side-admin-btn" id="reports-nav-btn" style="display: none;">Reports</button>
         <button class="side-admin-btn" id="appeals-nav-btn" style="display: none;">Appeals</button>
+        <button class="side-admin-btn" id="timeouts-nav-btn" style="display: none;">Timeouts</button>
         <button class="side-admin-btn" id="money-nav-btn" style="display: none;">Money</button>
         <button class="side-admin-btn" id="open-db-btn" style="display: none;">Database</button>
     </div>
@@ -3056,6 +3140,7 @@ Your Terms of Service text goes here.
                 <div class="modal-username" id="modal-username-text">Username</div>
                 <div class="modal-status-row">
                     <span class="mm-badge" id="modal-mm-badge" style="display: none;">Middleman</span>
+                    <span class="new-badge" id="modal-new-badge" style="display: none;">New account</span>
                     <span class="presence-text" id="modal-presence-text"></span>
                 </div>
                 <div class="modal-userid" id="modal-userid-text">ID: 1</div>
@@ -3064,6 +3149,7 @@ Your Terms of Service text goes here.
                 
                 <div class="profile-left-buttons">
                     <button class="settings-btn" id="open-settings-btn">Edit Profile</button>
+                    <button class="settings-btn report-user-btn" id="report-user-btn" type="button" style="display:none;">Report user</button>
                 </div>
             </div>
 
@@ -3596,6 +3682,14 @@ Your Terms of Service text goes here.
                 <div class="mm-panel-title">Reported items <span id="item-reports-count"></span></div>
                 <div class="mm-ticket-list" id="item-reports-list" style="max-height: none;"></div>
             </div>
+            <div class="mm-panel" style="margin-top: 20px;">
+                <div class="mm-panel-title">Reported users <span id="user-reports-count"></span></div>
+                <div class="mm-ticket-list" id="user-reports-list" style="max-height: none;"></div>
+            </div>
+            <div class="mm-panel" style="margin-top: 20px;">
+                <div class="mm-panel-title">Reported middlemen <span id="mm-reports-count"></span></div>
+                <div class="mm-ticket-list" id="mm-reports-list" style="max-height: none;"></div>
+            </div>
         </div>
     </div>
 
@@ -3647,6 +3741,73 @@ Your Terms of Service text goes here.
     </div>
 
     <!-- Подключаем Turso Client через стабильный ESM-модуль -->
+
+    <!-- Age gate (13+) -->
+    <div class="modal-overlay" id="age-gate" style="z-index: 900;">
+        <div class="age-gate-box">
+            <h2>Are you 13 or older?</h2>
+            <p id="age-gate-text">You must be at least 13 years old to use Unique Trading. Unique Trading is not affiliated with Roblox or any game developer.</p>
+            <div class="age-gate-actions" id="age-gate-actions">
+                <button type="button" class="primary" id="age-yes">I am 13 or older</button>
+                <button type="button" id="age-no">I am under 13</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var gate = document.getElementById('age-gate');
+            function block() {
+                document.getElementById('age-gate-text').textContent = 'Sorry, you must be at least 13 years old to use Unique Trading.';
+                document.getElementById('age-gate-actions').style.display = 'none';
+                gate.classList.add('active');
+            }
+            try {
+                if (localStorage.getItem('ut_age_blocked') === '1') { block(); }
+                else if (localStorage.getItem('ut_age_ok') !== '1') { gate.classList.add('active'); }
+            } catch (e) {}
+            document.getElementById('age-yes').addEventListener('click', function () {
+                try { localStorage.setItem('ut_age_ok', '1'); } catch (e) {}
+                gate.classList.remove('active');
+            });
+            document.getElementById('age-no').addEventListener('click', function () {
+                try { localStorage.setItem('ut_age_blocked', '1'); localStorage.removeItem('ut_age_ok'); } catch (e) {}
+                block();
+            });
+        })();
+    </script>
+
+    <!-- Report user / middleman -->
+    <div class="modal-overlay" id="report-user-modal" style="z-index: 280;">
+        <div class="modal-content report-item-modal">
+            <button class="close-modal" id="report-user-close">&times;</button>
+            <div class="info-modal-title" id="report-user-title">Report user</div>
+            <div class="report-item-sub" id="report-user-sub"></div>
+            <label for="report-user-reason">Reason</label>
+            <select id="report-user-reason"></select>
+            <label for="report-user-details">Details</label>
+            <textarea id="report-user-details" maxlength="1000" placeholder="Tell us what happened..."></textarea>
+            <div class="report-item-actions">
+                <button class="deal-btn" id="report-user-cancel" type="button">Cancel</button>
+                <button class="deal-btn danger" id="report-user-submit" type="button">Send report</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeouts (only knqw) -->
+    <div class="middlemen-page" id="timeouts-page">
+        <div class="middlemen-container">
+            <div class="mm-panel">
+                <div class="mm-panel-title">Spam timeouts <span id="timeouts-count"></span> <button class="mm-ticket-btn" id="timeouts-refresh" type="button" style="margin-left:10px;">Refresh</button></div>
+                <div class="mm-ticket-list" id="timeouts-list" style="max-height: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="site-footer" id="site-footer">
+        Unique Trading is an independent community marketplace. It is not affiliated with, endorsed by or sponsored by Roblox Corporation or any game developer or publisher. All game names, items and images belong to their respective owners.<br>
+        You must be at least 13 years old to use this platform. <a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer">Discord</a>
+    </footer>
+
     <script type="module">
         import { createClient } from "https://esm.sh/@libsql/client@0.6.0/web";
 
@@ -3741,6 +3902,25 @@ Your Terms of Service text goes here.
                 `);
                 try { await db.execute("ALTER TABLE deals ADD COLUMN reportedBy TEXT"); } catch (e) { /* уже есть */ }
                 try { await db.execute("ALTER TABLE deals ADD COLUMN itemId TEXT"); } catch (e) { /* уже есть */ }
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS user_reports (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        kind TEXT,
+                        target TEXT,
+                        reporter TEXT,
+                        reason TEXT,
+                        details TEXT,
+                        createdAt INTEGER
+                    )
+                `);
+                await db.execute(`
+                    CREATE TABLE IF NOT EXISTS spam_timeouts (
+                        username TEXT PRIMARY KEY,
+                        level INTEGER DEFAULT 0,
+                        until INTEGER DEFAULT 0,
+                        lastOffense INTEGER DEFAULT 0
+                    )
+                `);
                 await db.execute(`
                     CREATE TABLE IF NOT EXISTS item_reports (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -4599,6 +4779,8 @@ Your Terms of Service text goes here.
                         if (ab) ab.style.display = '';
                         const mb = document.getElementById('money-nav-btn');
                         if (mb) mb.style.display = '';
+                        const tb = document.getElementById('timeouts-nav-btn');
+                        if (tb) tb.style.display = '';
                         openDbBtn.style.display = '';
                         appealsAdmin = true;
                         updateAppealsBadge();
@@ -4662,6 +4844,7 @@ Your Terms of Service text goes here.
                             ...item,
                             sellerUsername: u.username,
                             sellerDisplayName: u.displayName || u.username,
+                            sellerJoinedAt: u.joinedAt || 0,
                             sellerAvatar: u.avatar
                         });
                     });
@@ -5062,6 +5245,7 @@ Your Terms of Service text goes here.
                 detailSellerAvatar.style.backgroundColor = avatarColor;
             }
             detailSellerName.textContent = item.sellerDisplayName;
+            if (isNewAccount({ joinedAt: item.sellerJoinedAt })) detailSellerName.insertAdjacentHTML('beforeend', '<span class="new-badge">New account</span>');
 
             document.getElementById('report-item-btn').style.display = (currentUser && currentUser !== item.sellerUsername) ? '' : 'none';
             itemDetailPage.classList.add('active');
@@ -5426,7 +5610,7 @@ Your Terms of Service text goes here.
                     avatarHtml = `<img class="chat-item-avatar" src="${otherUser.avatar}" alt="Avatar">`;
                 }
 
-                item.innerHTML = `<span class="av-wrap">${avatarHtml}${presenceDot(username)}</span><div class="chat-item-info"><div class="chat-item-name">${escapeHtml(otherUser.displayName || username)}${otherUser.isMiddleman ? '<span class="mm-badge sm">MM</span>' : ''}</div>${itemLabel ? `<div class="chat-item-sub">&#127991; ${escapeHtml(itemLabel)}</div>` : ''}<div class="chat-item-last">${escapeHtml(lastMsg)}</div></div>${unreadBadge(dUn)}`;
+                item.innerHTML = `<span class="av-wrap">${avatarHtml}${presenceDot(username)}</span><div class="chat-item-info"><div class="chat-item-name">${escapeHtml(otherUser.displayName || username)}${otherUser.isMiddleman ? '<span class="mm-badge sm">MM</span>' : ''}${isNewAccount(otherUser) ? '<span class="new-badge">New</span>' : ''}</div>${itemLabel ? `<div class="chat-item-sub">&#127991; ${escapeHtml(itemLabel)}</div>` : ''}<div class="chat-item-last">${escapeHtml(lastMsg)}</div></div>${unreadBadge(dUn)}`;
 
                 item.addEventListener('click', () => {
                     activeChatUsername = threadKeyI;
@@ -5561,7 +5745,7 @@ Your Terms of Service text goes here.
         async function stageChatImageFile(file, threadKey) {
             if (!file) return;
             if (!/^image\/(png|jpe?g|webp|gif|bmp)$/i.test(file.type)) { showToast('You can only send pictures (PNG, JPG, WEBP, GIF).'); return; }
-            if (file.size > 12 * 1024 * 1024) { showToast('Picture is too large (max 12 MB).'); return; }
+            if (file.size > 500 * 1024) { showToast('Images must be 500 KB or smaller.'); return; }
             try {
                 stagedChatImage = { threadKey: threadKey, dataUrl: await compressChatImage(file) };
             } catch (e) { showToast('Could not read this picture.'); return; }
@@ -5748,6 +5932,7 @@ Your Terms of Service text goes here.
                 hint: w ? 'They want: ' + fmtItemList(w.items) : '',
                 confirmLabel: 'Send offer',
                 onDone: async (game, items) => {
+                    if (!(await chatSpamGuard())) return;
                     const mm = offerNeedsMiddleman(c.game || '', game, items.length);
                     await pushChatMessage({
                         sender: currentUser, receiver: ctx.targetUsername,
@@ -5968,7 +6153,7 @@ Your Terms of Service text goes here.
                 <div class="chat-header-row">
                     <span class="av-wrap">${headerAvatarHtml}${presenceDot(targetUsername)}</span>
                     <div class="chat-header-meta">
-                        <div class="chat-header-name">${escapeHtml(otherUser.displayName || targetUsername)}${otherUser.isMiddleman ? '<span class="mm-badge">Middleman</span>' : ''}</div>
+                        <div class="chat-header-name">${escapeHtml(otherUser.displayName || targetUsername)}${otherUser.isMiddleman ? '<span class="mm-badge">Middleman</span>' : ''}${isNewAccount(otherUser) ? '<span class="new-badge">New account</span>' : ''}</div>
                         ${presenceLabel(targetUsername)}
                         ${ctxItem ? `<div class="chat-header-item">${miniItemIconHtml(ctxItem.game, ctxItem.name, ctxItem.items)}${escapeHtml(ctxItem.name)}</div>` : ''}
                     </div>
@@ -6026,11 +6211,13 @@ Your Terms of Service text goes here.
             const handleSend = async () => {
                 const text = inputField.value.trim();
                 if (stagedChatImage && stagedChatImage.threadKey === threadKey && !editingMessageTimestamp) {
+                    if (!(await chatSpamGuard())) return;
                     inputField.value = '';
                     await sendStagedChatImage(text, targetUsername, threadKey, itemId, ctxItem);
                     return;
                 }
                 if (!text && !(itemId && chatMsgs.length === 0)) return;
+                if (!(await chatSpamGuard())) return;
 
                 const messageText = text || 'Inquiring about this item';
 
@@ -6653,7 +6840,7 @@ Your Terms of Service text goes here.
 
         async function openReportsPage() {
             if (!(await isKnqw())) { showToast('Only knqw can view reports.'); return; }
-            closeAppealsPage(); closeMoneyPage();
+            closeAppealsPage(); closeMoneyPage(); closeTimeoutsPage();
             currentViewMode = 'reports';
             [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
             reportsNavBtn.classList.add('active');
@@ -6674,6 +6861,7 @@ Your Terms of Service text goes here.
             const list = document.getElementById('reports-list');
             if (!(await isKnqw())) { list.innerHTML = ''; return; }
             renderItemReports();
+            renderUserReports();
             const deals = await getReportedDeals();
             document.getElementById('reports-count').textContent = deals.length ? `(${deals.length})` : '';
             if (!deals.length) { list.innerHTML = '<div class="reports-empty">No reported deals.</div>'; return; }
@@ -6772,7 +6960,7 @@ Your Terms of Service text goes here.
         reportChatModal.addEventListener('click', e => { if (e.target === reportChatModal) reportChatModal.classList.remove('active'); });
         // Any other main navigation closes the reports page
         document.querySelector('header').addEventListener('click', e => {
-            if (e.target.closest('#home-link, .nav-left button:not(#reports-nav-btn):not(#appeals-nav-btn):not(#money-nav-btn), #header-balance-box, #header-messages-btn')) { closeReportsPage(); closeAppealsPage(); closeMoneyPage(); }
+            if (e.target.closest('#home-link, .nav-left button:not(#reports-nav-btn):not(#appeals-nav-btn):not(#money-nav-btn):not(#timeouts-nav-btn), #header-balance-box, #header-messages-btn')) { closeReportsPage(); closeAppealsPage(); closeMoneyPage(); closeTimeoutsPage(); }
         }, true);
         setInterval(() => {
             if (reportsPage.classList.contains('active') && !document.hidden) renderReports();
@@ -6837,7 +7025,7 @@ Your Terms of Service text goes here.
                         <div class="mm-card-name">${escapeHtml(u.displayName || u.username)}<span class="mm-badge">Middleman</span></div>
                         ${presenceLabel(u.username)}
                     </div>
-                    ${isMe ? '' : `<button class="mm-msg-btn" data-username="${escapeHtml(u.username)}">Message</button>`}
+                    ${isMe ? '' : `<button class="mm-msg-btn" data-username="${escapeHtml(u.username)}">Message</button><button class="mm-report-btn" data-report-mm="${escapeHtml(u.username)}" type="button">Report</button>`}
                 `;
 
                 const mmMeta = ratingMeta[u.username] || { avg: 0, count: 0, vouches: 0 };
@@ -6851,6 +7039,8 @@ Your Terms of Service text goes here.
                 infoEl.addEventListener('click', () => openProfileByUsername(u.username));
                 card.querySelector('.av-wrap').addEventListener('click', () => openProfileByUsername(u.username));
 
+                const repBtn = card.querySelector('[data-report-mm]');
+                if (repBtn) repBtn.addEventListener('click', (e) => { e.stopPropagation(); openUserReport(u.username, 'middleman'); });
                 const msgBtn = card.querySelector('.mm-msg-btn');
                 if (msgBtn) {
                     msgBtn.addEventListener('click', () => {
@@ -7185,6 +7375,13 @@ Your Terms of Service text goes here.
             document.getElementById('modal-presence-dot').setAttribute('data-presence-user', userObj.username);
             document.getElementById('modal-presence-text').setAttribute('data-presence-text', userObj.username);
             document.getElementById('modal-mm-badge').style.display = userObj.isMiddleman ? 'inline-block' : 'none';
+            document.getElementById('modal-new-badge').style.display = isNewAccount(userObj) ? 'inline-block' : 'none';
+            {
+                const rb = document.getElementById('report-user-btn');
+                const canRep = !!currentUser && userObj.username !== currentUser;
+                rb.style.display = canRep ? '' : 'none';
+                rb.textContent = userObj.isMiddleman ? 'Report middleman' : 'Report user';
+            }
             applyPresenceToDom();
             yourItemsTitleText.textContent = (!!currentUser && userObj.username === currentUser) ? 'Your Items' : `${userObj.displayName || userObj.username}'s Items`;
 
@@ -7237,6 +7434,7 @@ Your Terms of Service text goes here.
                         ...item,
                         sellerUsername: userObj.username,
                         sellerDisplayName: userObj.displayName || userObj.username,
+                        sellerJoinedAt: userObj.joinedAt || 0,
                         sellerAvatar: userObj.avatar
                     });
                 });
@@ -7568,6 +7766,15 @@ Your Terms of Service text goes here.
 
             userObj.items = userObj.items || [];
 
+            if (!editingItemId && userObj.customId !== 'knqw') {
+                const LISTING_COOLDOWN = 10 * 60 * 1000;
+                const waitMs = (Number(userObj.lastItemTime) || 0) + LISTING_COOLDOWN - Date.now();
+                if (waitMs > 0) {
+                    showToast(`You can list another item in ${fmtLeft(waitMs)}.`);
+                    return;
+                }
+            }
+
             if (editingItemId) {
                 let idx = userObj.items.findIndex(i => i.id === editingItemId);
                 if (idx !== -1) {
@@ -7601,6 +7808,7 @@ Your Terms of Service text goes here.
                     stock: stock
                 };
                 userObj.items.push(newItem);
+                userObj.lastItemTime = Date.now();
                 showToast('Item listed successfully!');
             }
 
@@ -8135,7 +8343,7 @@ Your Terms of Service text goes here.
 
         async function openAppealsPage() {
             if (!(await isKnqw())) { showToast('Only knqw can view appeals.'); return; }
-            closeReportsPage(); closeMoneyPage();
+            closeReportsPage(); closeMoneyPage(); closeTimeoutsPage();
             currentViewMode = 'appeals';
             [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
             appealsNavBtn.classList.add('active');
@@ -8217,7 +8425,7 @@ Your Terms of Service text goes here.
 
         async function openMoneyPage() {
             if (!(await isKnqw())) { showToast('Only knqw can view this page.'); return; }
-            closeReportsPage(); closeAppealsPage();
+            closeReportsPage(); closeAppealsPage(); closeTimeoutsPage();
             currentViewMode = 'money';
             [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
             moneyNavBtn.classList.add('active');
@@ -8902,6 +9110,7 @@ Your Terms of Service text goes here.
             const send = async () => {
                 const text = input.value.trim();
                 if (!text) return;
+                if (!(await chatSpamGuard())) return;
                 const fresh = await getGroup(g.id);
                 if (!fresh || !fresh.members.includes(currentUser)) { showToast('You are no longer in this group.'); renderChatsList(); return; }
                 input.value = '';
@@ -8945,7 +9154,7 @@ Your Terms of Service text goes here.
             gamesNavBtn.classList.remove('active'); scamsNavBtn.classList.remove('active');
         }
         function openInfoPage(page, btn, mode) {
-            closeReportsPage(); closeAppealsPage(); closeMoneyPage(); closeInfoPages();
+            closeReportsPage(); closeAppealsPage(); closeMoneyPage(); closeTimeoutsPage(); closeInfoPages();
             currentViewMode = mode;
             [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
             btn.classList.add('active');
@@ -9117,6 +9326,219 @@ Your Terms of Service text goes here.
                 showToast('Report dismissed');
                 renderItemReports();
             }));
+        }
+
+
+        // ===== New account badge =====
+        function isNewAccount(u) {
+            const j = Number(u && u.joinedAt) || 0;
+            return j > 0 && (Date.now() - j) < 30 * 86400000;
+        }
+
+        // ===== Image size limit: 500 KB for every picture =====
+        document.addEventListener('change', (e) => {
+            const t = e.target;
+            if (!t || t.type !== 'file' || !t.files) return;
+            for (const f of Array.from(t.files)) {
+                if (/^image\//i.test(f.type) && f.size > 500 * 1024) {
+                    e.stopImmediatePropagation();
+                    t.value = '';
+                    showToast('Images must be 500 KB or smaller.');
+                    return;
+                }
+            }
+        }, true);
+
+        // ===== Chat spam timeouts: 15s -> 3min -> 1h -> 1 day =====
+        const SPAM_STEPS = [15 * 1000, 3 * 60 * 1000, 60 * 60 * 1000, 24 * 60 * 60 * 1000];
+        const SPAM_MAX_MSGS = 5;          // this many messages ...
+        const SPAM_WINDOW_MS = 5000;      // ... within this time = spam
+        const SPAM_RESET_MS = 24 * 60 * 60 * 1000; // steps reset after 24h without a new offence
+        let spamStamps = [];
+        async function chatSpamGuard() {
+            if (!currentUser) return true;
+            const now = Date.now();
+            try {
+                const me = await getUserByUsername(currentUser);
+                if (me && me.customId === 'knqw') return true;
+                const r = await db.execute({ sql: "SELECT * FROM spam_timeouts WHERE username = ?", args: [currentUser] });
+                const row = r.rows[0];
+                if (row && Number(row.until) > now) {
+                    showToast(`You are timed out for spamming. Try again in ${fmtLeft(Number(row.until) - now)}.`);
+                    return false;
+                }
+                spamStamps = spamStamps.filter(t => now - t < SPAM_WINDOW_MS);
+                spamStamps.push(now);
+                if (spamStamps.length >= SPAM_MAX_MSGS) {
+                    spamStamps = [];
+                    let level = row ? (Number(row.level) || 0) : 0;
+                    if (row && now - Number(row.until) > SPAM_RESET_MS) level = 0;
+                    const dur = SPAM_STEPS[Math.min(level, SPAM_STEPS.length - 1)];
+                    await db.execute({
+                        sql: "INSERT INTO spam_timeouts (username, level, until, lastOffense) VALUES (?, ?, ?, ?) ON CONFLICT(username) DO UPDATE SET level = excluded.level, until = excluded.until, lastOffense = excluded.lastOffense",
+                        args: [currentUser, level + 1, now + dur, now]
+                    });
+                    showToast(`You are sending messages too fast. Timed out for ${fmtLeft(dur)}.`);
+                    return false;
+                }
+            } catch (e) { console.error('spam guard error:', e); }
+            return true;
+        }
+
+        // ===== Timeouts page (knqw only) =====
+        const timeoutsPage = document.getElementById('timeouts-page');
+        const timeoutsNavBtn = document.getElementById('timeouts-nav-btn');
+        async function openTimeoutsPage() {
+            if (!(await isKnqw())) { showToast('Only knqw can view timeouts.'); return; }
+            closeReportsPage(); closeAppealsPage(); closeMoneyPage();
+            currentViewMode = 'timeouts';
+            [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
+            timeoutsNavBtn.classList.add('active');
+            mainContentArea.style.display = 'none';
+            [middlemenPage, itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
+             selectGameModal, createItemModal, switchModal, dbModal, confirmModal, linkCardModal, ticketModal
+            ].forEach(el => el.classList.remove('active'));
+            timeoutsPage.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            await renderTimeouts();
+        }
+        function closeTimeoutsPage() {
+            timeoutsPage.classList.remove('active');
+            timeoutsNavBtn.classList.remove('active');
+        }
+        async function renderTimeouts() {
+            const list = document.getElementById('timeouts-list');
+            if (!(await isKnqw())) { list.innerHTML = ''; return; }
+            let rows = [];
+            try { rows = (await db.execute("SELECT * FROM spam_timeouts ORDER BY until DESC")).rows; } catch (e) { console.error(e); }
+            const now = Date.now();
+            const active = rows.filter(r => Number(r.until) > now).length;
+            document.getElementById('timeouts-count').textContent = active ? `(${active} active)` : '';
+            if (!rows.length) { list.innerHTML = '<div class="reports-empty">Nobody has been timed out for spamming.</div>'; return; }
+            list.innerHTML = rows.map(r => {
+                const until = Number(r.until) || 0;
+                const isActive = until > now;
+                return `
+                <div class="mm-ticket">
+                    <div class="mm-ticket-top">
+                        <div class="mm-ticket-users">${userLinkHtml(r.username)}</div>
+                        <div class="mm-ticket-time">Last offence ${escapeHtml(getTimeAgo(Number(r.lastOffense) || 0))}</div>
+                    </div>
+                    <div class="mm-ticket-desc">Offences: ${Number(r.level) || 0}\nStatus: ${isActive ? `<span class="to-status-active" data-until="${until}">Timed out - ${escapeHtml(fmtLeft(until - now))} left</span>` : '<span class="to-status-expired">Expired</span>'}</div>
+                    <div class="to-row-actions">
+                        <input type="number" min="1" step="1" placeholder="Minutes" data-add-input="${escapeHtml(r.username)}">
+                        <button class="mm-ticket-btn primary" data-add-time="${escapeHtml(r.username)}" type="button">Add time</button>
+                        <button class="mm-ticket-btn danger" data-remove-timeout="${escapeHtml(r.username)}" type="button">Remove timeout</button>
+                    </div>
+                </div>`;
+            }).join('');
+            bindUserLinks(list);
+            list.querySelectorAll('[data-remove-timeout]').forEach(b => b.addEventListener('click', async () => {
+                if (!(await isKnqw())) return;
+                await db.execute({ sql: "DELETE FROM spam_timeouts WHERE username = ?", args: [b.dataset.removeTimeout] });
+                showToast('Timeout removed');
+                renderTimeouts();
+            }));
+            list.querySelectorAll('[data-add-time]').forEach(b => b.addEventListener('click', async () => {
+                if (!(await isKnqw())) return;
+                const name = b.dataset.addTime;
+                const inp = list.querySelector(`[data-add-input="${CSS.escape(name)}"]`);
+                const mins = Math.floor(Number(inp && inp.value));
+                if (!(mins > 0) || mins > 525600) { showToast('Enter the minutes to add.'); return; }
+                const cur = (await db.execute({ sql: "SELECT until FROM spam_timeouts WHERE username = ?", args: [name] })).rows[0];
+                const base = Math.max(Date.now(), cur ? Number(cur.until) || 0 : 0);
+                await db.execute({ sql: "UPDATE spam_timeouts SET until = ?, lastOffense = ? WHERE username = ?", args: [base + mins * 60000, Date.now(), name] });
+                showToast(`Added ${mins} min`);
+                renderTimeouts();
+            }));
+        }
+        timeoutsNavBtn.addEventListener('click', openTimeoutsPage);
+        document.getElementById('timeouts-refresh').addEventListener('click', renderTimeouts);
+        setInterval(() => {
+            if (!timeoutsPage.classList.contains('active')) return;
+            const now = Date.now();
+            timeoutsPage.querySelectorAll('[data-until]').forEach(el => {
+                const left = Number(el.dataset.until) - now;
+                el.textContent = left > 0 ? `Timed out - ${fmtLeft(left)} left` : 'Expired';
+                if (left <= 0) { el.className = 'to-status-expired'; el.removeAttribute('data-until'); }
+            });
+        }, 1000);
+
+        // ===== Report user / middleman =====
+        const USER_REPORT_REASONS = {
+            user: ['Scam or attempted scam', 'Harassment or abusive messages', 'Spam', 'Impersonation', 'Inappropriate profile', 'Other'],
+            middleman: ['Scammed me or kept my items', 'Asked me to trade outside the ticket', 'Unfair or biased behavior', 'Abusive or unprofessional', 'Pretending to be a middleman', 'Other']
+        };
+        let userReportTarget = null, userReportKind = 'user';
+        const reportUserModal = document.getElementById('report-user-modal');
+        function openUserReport(username, kind) {
+            if (!currentUser) { showToast('Please log in to send a report.'); return; }
+            if (username === currentUser) return;
+            userReportTarget = username; userReportKind = kind === 'middleman' ? 'middleman' : 'user';
+            document.getElementById('report-user-title').textContent = userReportKind === 'middleman' ? 'Report middleman' : 'Report user';
+            document.getElementById('report-user-sub').innerHTML = `${userReportKind === 'middleman' ? 'Middleman' : 'User'}: <b>${escapeHtml(username)}</b>`;
+            document.getElementById('report-user-reason').innerHTML = USER_REPORT_REASONS[userReportKind].map(r => `<option>${escapeHtml(r)}</option>`).join('');
+            document.getElementById('report-user-details').value = '';
+            reportUserModal.classList.add('active');
+        }
+        function closeUserReport() { reportUserModal.classList.remove('active'); }
+        document.getElementById('report-user-btn').addEventListener('click', () => {
+            if (profileViewUser) openUserReport(profileViewUser.username, profileViewUser.isMiddleman ? 'middleman' : 'user');
+        });
+        document.getElementById('report-user-close').addEventListener('click', closeUserReport);
+        document.getElementById('report-user-cancel').addEventListener('click', closeUserReport);
+        reportUserModal.addEventListener('click', e => { if (e.target === reportUserModal) closeUserReport(); });
+        document.getElementById('report-user-submit').addEventListener('click', async () => {
+            if (!userReportTarget || !currentUser) return;
+            const reason = document.getElementById('report-user-reason').value;
+            const details = document.getElementById('report-user-details').value.trim();
+            if (reason === 'Other' && !details) { showToast('Please describe the problem.'); return; }
+            const btn = document.getElementById('report-user-submit');
+            btn.disabled = true;
+            try {
+                const dup = await db.execute({ sql: "SELECT id FROM user_reports WHERE kind = ? AND target = ? AND reporter = ? LIMIT 1", args: [userReportKind, userReportTarget, currentUser] });
+                if (dup.rows.length) { showToast('You already reported this account. Our team will review it.'); closeUserReport(); return; }
+                await db.execute({
+                    sql: "INSERT INTO user_reports (kind, target, reporter, reason, details, createdAt) VALUES (?, ?, ?, ?, ?, ?)",
+                    args: [userReportKind, userReportTarget, currentUser, reason, details.slice(0, 1000), Date.now()]
+                });
+                showToast('Report sent. Thank you!');
+                closeUserReport();
+            } catch (e) {
+                console.error('report user error:', e);
+                showToast('Could not send the report. Try again.');
+            } finally { btn.disabled = false; }
+        });
+        async function renderUserReports() {
+            const uList = document.getElementById('user-reports-list');
+            const mList = document.getElementById('mm-reports-list');
+            if (!uList || !mList) return;
+            if (!(await isKnqw())) { uList.innerHTML = ''; mList.innerHTML = ''; return; }
+            let rows = [];
+            try { rows = (await db.execute("SELECT * FROM user_reports ORDER BY createdAt DESC")).rows; } catch (e) { console.error(e); }
+            const fill = (listEl, countEl, kind, emptyText) => {
+                const rs = rows.filter(r => (r.kind || 'user') === kind);
+                document.getElementById(countEl).textContent = rs.length ? `(${rs.length})` : '';
+                if (!rs.length) { listEl.innerHTML = `<div class="reports-empty">${emptyText}</div>`; return; }
+                listEl.innerHTML = rs.map(r => `
+                    <div class="mm-ticket">
+                        <div class="mm-ticket-top">
+                            <div class="mm-ticket-users">${userLinkHtml(r.reporter)}<i>&rarr;</i>${userLinkHtml(r.target)}</div>
+                            <div class="mm-ticket-time" title="${escapeHtml(getExactDate(Number(r.createdAt)))}">Reported ${escapeHtml(getTimeAgo(Number(r.createdAt)))}</div>
+                        </div>
+                        <div class="mm-ticket-desc">Reason: ${escapeHtml(r.reason || '-')}\n${escapeHtml(r.details || 'No details.')}</div>
+                        <div class="mm-ticket-actions"><button class="mm-ticket-btn danger" data-dismiss-user-report="${Number(r.id)}" type="button">Dismiss</button></div>
+                    </div>`).join('');
+                bindUserLinks(listEl);
+                listEl.querySelectorAll('[data-dismiss-user-report]').forEach(b => b.addEventListener('click', async () => {
+                    if (!(await isKnqw())) return;
+                    await db.execute({ sql: "DELETE FROM user_reports WHERE id = ?", args: [Number(b.dataset.dismissUserReport)] });
+                    showToast('Report dismissed');
+                    renderUserReports();
+                }));
+            };
+            fill(uList, 'user-reports-count', 'user', 'No reported users.');
+            fill(mList, 'mm-reports-count', 'middleman', 'No reported middlemen.');
         }
 
         // ===== Help / Copyright / Terms =====
