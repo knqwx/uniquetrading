@@ -1,14 +1,15 @@
 {
-  "name": "my-turso-app",
+  "name": "unique-trading-backend",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
-  "scripts": {
-    "start": "node server.js"
-  },
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
   "dependencies": {
     "@libsql/client": "^0.14.0",
     "bcryptjs": "^2.4.3",
-    "cookie-parser": "^1.4.6",
-    "express": "^4.19.2"
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.0"
   }
 }
