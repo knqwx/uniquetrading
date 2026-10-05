@@ -220,20 +220,22 @@ app.get('/api/me', requireUser, async (req, res) => {
 });
 
 app.get('/api/check-username', async (req, res) => {
+
   if (limited('chk:' + ipOf(req), 120, 60 * 1000)) return res.status(429).json({ error: 'Too many requests' });
+
   const name = String(req.query.name || '').trim();
+
   const err = checkUsername(name);
+
   if (err) return res.json({ ok: false, message: err });
-  
-  try {
-    const r = await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ? LIMIT 1', args: [name] });
-    res.json(r.rows.length ? { ok: false, message: 'This username is already taken.' } : { ok: true, message: 'Username is available.' });
-  } catch (e) {
-    console.error('Database error on check-username:', e.message);
-    // Возвращаем мягкую ошибку, чтобы страница логина/регламента не падала
-    res.status(500).json({ ok: false, message: 'Database connection error. Please try again later.' });
-  }
+
+  const r = await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ? LIMIT 1', args: [name] });
+
+  res.json(r.rows.length ? { ok: false, message: 'This username is already taken.' } : { ok: true, message: 'Username is available.' });
+
 });
+
+
 
 app.get('/api/check-email', async (req, res) => {
   if (limited('chk:' + ipOf(req), 120, 60 * 1000)) return res.status(429).json({ error: 'Too many requests' });
