@@ -3808,172 +3808,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     </footer>
 
     <script type="module">
-        import { createClient } from "https://esm.sh/@libsql/client@0.6.0/web";
-
-        const db = createClient({
-            url: "libsql://unique-knqw.aws-eu-west-1.turso.io",
-            authToken: "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA2MDU2NDIsImlkIjoiMDFhMGU1NjctNjYwMS03NmMyLWE2YzUtODQyNTEzYTk4MjgzIiwia2lkIjoiakdIakdfX1A3bTFmRGxXRHNhbFR1dGg0OHB6VTF5MFVMZGQ1TzhIUm94ZyIsInJpZCI6ImNjODc2N2NkLTMwYmYtNDJiNy04NDQ1LTIxNjRjY2E0OTNlMSJ9.0hZK9eeqN3Md2Dh7ZgWKDOJlk-3GHN8OZxGvKb_aGVjCQllclb1A3Z0EAstpv18ejSRHHGOB0yoOkm1se5A0Bg"
-        });
-
-        async function initDB() {
-            try {
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS users (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        customId TEXT,
-                        username TEXT UNIQUE,
-                        displayName TEXT,
-                        email TEXT,
-                        password TEXT,
-                        avatar TEXT,
-                        balance REAL DEFAULT 0.00,
-                        lastUsernameChange INTEGER,
-                        lastDisplayNameChange INTEGER,
-                        items TEXT,
-                        lastItemTime INTEGER,
-                        messages TEXT,
-                        card TEXT
-                    )
-                `);
-                
-                const columnsToVerify = [
-                    "ALTER TABLE users ADD COLUMN balance REAL DEFAULT 0.00;",
-                    "ALTER TABLE users ADD COLUMN lastItemTime INTEGER;",
-                    "ALTER TABLE users ADD COLUMN messages TEXT;",
-                    "ALTER TABLE users ADD COLUMN card TEXT;",
-                    "ALTER TABLE users ADD COLUMN isMiddleman INTEGER DEFAULT 0;",
-                    "ALTER TABLE users ADD COLUMN lastSeen INTEGER;",
-                    "ALTER TABLE users ADD COLUMN heldBalance REAL DEFAULT 0;",
-                    "ALTER TABLE users ADD COLUMN bannedUntil INTEGER DEFAULT 0;",
-                    "ALTER TABLE users ADD COLUMN bannedAt INTEGER DEFAULT 0;",
-                    "ALTER TABLE users ADD COLUMN banReason TEXT;",
-                    "ALTER TABLE users ADD COLUMN appeal TEXT;",
-                    "ALTER TABLE users ADD COLUMN appealAt INTEGER DEFAULT 0;",
-                    "ALTER TABLE users ADD COLUMN appealStatus TEXT;",
-                    "ALTER TABLE users ADD COLUMN roblox TEXT;",
-                    "ALTER TABLE users ADD COLUMN lastIp TEXT;",
-                    "ALTER TABLE users ADD COLUMN joinedAt INTEGER;"
-                ];
-
-                for (const sqlQuery of columnsToVerify) {
-                    try {
-                        await db.execute(sqlQuery);
-                    } catch (err) {
-                        // Колонка уже существует
-                    }
-                }
-
-                // join date: new rows get it automatically (also rows created by login.html);
-                // accounts that existed before join dates were tracked have joinedAt = 0 and show "Joined: 0".
-                // An account row with no joinedAt at all is brand new (made by login.html) and is stamped with the real time.
-                try { await db.execute("UPDATE users SET joinedAt = 0 WHERE joinedAt = 1"); } catch (e) {} // old placeholder value
-                try { await db.execute("DROP TRIGGER IF EXISTS users_set_joined"); } catch (e) {}
-                try {
-                    await db.execute(`CREATE TRIGGER IF NOT EXISTS users_set_joined AFTER INSERT ON users WHEN NEW.joinedAt IS NULL BEGIN UPDATE users SET joinedAt = CAST(strftime('%s','now') AS INTEGER) * 1000 WHERE id = NEW.id; END`);
-                } catch (e) { console.error('joinedAt trigger error:', e); }
-                try { await db.execute({ sql: "UPDATE users SET joinedAt = ? WHERE joinedAt IS NULL", args: [Date.now()] }); } catch (e) {}
-
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS tickets (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        creator TEXT,
-                        partner TEXT,
-                        description TEXT,
-                        status TEXT DEFAULT 'open',
-                        claimedBy TEXT,
-                        createdAt INTEGER
-                    )
-                `);
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS deals (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        buyer TEXT,
-                        seller TEXT,
-                        itemName TEXT,
-                        amount REAL,
-                        sellerAmount REAL,
-                        status TEXT,
-                        createdAt INTEGER,
-                        updatedAt INTEGER,
-                        reportedAt INTEGER,
-                        chatSnapshot TEXT
-                    )
-                `);
-                try { await db.execute("ALTER TABLE deals ADD COLUMN reportedBy TEXT"); } catch (e) { /* уже есть */ }
-                try { await db.execute("ALTER TABLE deals ADD COLUMN itemId TEXT"); } catch (e) { /* уже есть */ }
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS user_reports (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        kind TEXT,
-                        target TEXT,
-                        reporter TEXT,
-                        reason TEXT,
-                        details TEXT,
-                        createdAt INTEGER
-                    )
-                `);
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS spam_timeouts (
-                        username TEXT PRIMARY KEY,
-                        level INTEGER DEFAULT 0,
-                        until INTEGER DEFAULT 0,
-                        lastOffense INTEGER DEFAULT 0
-                    )
-                `);
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS item_reports (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        itemId TEXT,
-                        itemName TEXT,
-                        itemGame TEXT,
-                        seller TEXT,
-                        reporter TEXT,
-                        reason TEXT,
-                        details TEXT,
-                        createdAt INTEGER
-                    )
-                `);
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS ip_bans (
-                        ip TEXT PRIMARY KEY,
-                        bannedUntil INTEGER,
-                        bannedAt INTEGER,
-                        reason TEXT,
-                        username TEXT
-                    )
-                `);
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS chat_clears (
-                        user TEXT,
-                        other TEXT,
-                        clearedAt INTEGER,
-                        PRIMARY KEY (user, other)
-                    )
-                `);
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS typing (
-                        user TEXT,
-                        other TEXT,
-                        ts INTEGER,
-                        PRIMARY KEY (user, other)
-                    )
-                `);
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS chat_images (
-                        id TEXT PRIMARY KEY,
-                        sender TEXT,
-                        receiver TEXT,
-                        data TEXT,
-                        createdAt INTEGER
-                    )
-                `);
-                await purgeExpiredBans();
-                await purgeOldChats();
-                try { await db.execute({ sql: "DELETE FROM tickets WHERE createdAt < ?", args: [Date.now() - 24 * 60 * 60 * 1000] }); } catch (e) {}
-            } catch (e) {
-                console.error("DB init error:", e);
-            }
-        }
+        // Tables are created and migrated by the server now (server.js). The page has no direct database access.
+        async function initDB() { /* nothing to do in the browser */ }
 
         // ===== Server API helper (session cookie; all private data and all writes go through the server) =====
         async function srv(path, method, body) {
@@ -4170,10 +4006,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         // ===== Роль Middleman =====
         async function setMiddlemanRole(username, value) {
-            await db.execute({
-                sql: "UPDATE users SET isMiddleman = ? WHERE username = ?",
-                args: [value ? 1 : 0, username]
-            });
+            const r = await srv('/api/admin/middleman', 'POST', { username, value: !!value });
+            if (!r.ok) srvFail(r);
         }
 
         // ===== Баны и апелляции =====
@@ -4201,44 +4035,29 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             return `${m}m ${s}s`;
         }
 
-        async function banUser(username, until, reason) {
-            await db.execute({
-                sql: "UPDATE users SET bannedUntil = ?, bannedAt = ?, banReason = ?, appeal = NULL, appealAt = 0, appealStatus = NULL WHERE username = ? AND COALESCE(customId, '') != 'knqw'",
-                args: [until, Date.now(), reason || '', username]
-            });
+        async function banUser(username, until, reason, alsoIp) {
+            const r = await srv('/api/admin/ban', 'POST', { username, until, reason: reason || '', banIp: !!alsoIp });
+            if (!r.ok) srvFail(r);
         }
         async function unbanUser(username) {
-            await db.execute({
-                sql: "UPDATE users SET bannedUntil = 0, bannedAt = 0, banReason = NULL, appeal = NULL, appealAt = 0, appealStatus = NULL WHERE username = ?",
-                args: [username]
-            });
+            const r = await srv('/api/admin/unban', 'POST', { username });
+            if (!r.ok) srvFail(r);
         }
         async function submitAppeal(username, text) {
-            const rs = await db.execute({
-                sql: "UPDATE users SET appeal = ?, appealAt = ?, appealStatus = 'pending' WHERE username = ? AND (bannedUntil = -1 OR bannedUntil > ?) AND (appealStatus IS NULL OR appealStatus = '')",
-                args: [text, Date.now(), username, Date.now()]
-            });
-            return rs.rowsAffected > 0;
+            const r = await srv('/api/appeal', 'POST', { text });
+            if (!r.ok) srvFail(r);
+            return r.ok;
         }
         async function setAppealStatus(username, status) {
-            await db.execute({
-                sql: "UPDATE users SET appealStatus = ? WHERE username = ?",
-                args: [status, username]
-            });
+            const r = await srv('/api/admin/appeal-status', 'POST', { username, status });
+            if (!r.ok) srvFail(r);
         }
         // Permanent bans: the account is removed 30 days after the ban
         // ===== Chats auto-delete after 2 weeks =====
         const CHAT_TTL_MS = 14 * 24 * 60 * 60 * 1000;
         async function purgeOldChats(force) { /* the server cleans old chats every 10 minutes now */ }
 
-        async function purgeExpiredBans() {
-            try {
-                await db.execute({
-                    sql: "DELETE FROM users WHERE bannedUntil = -1 AND bannedAt > 0 AND bannedAt <= ? AND COALESCE(customId, '') != 'knqw'",
-                    args: [Date.now() - PERM_DELETE_MS]
-                });
-            } catch (e) { /* не критично */ }
-        }
+        async function purgeExpiredBans() { /* the server removes expired permanent bans */ }
 
         // ===== Session comes from the server (httpOnly cookie) =====
         let currentUser = null;
@@ -5304,9 +5123,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
                 const groups = {}, gMax = {};
                 try {
-                    const gr = await srv('/api/groups/activity?since=' + Number(st.base));
-                    if (gr.ok) {
-                        (gr.data.items || []).forEach(r => {
+                    const myGroups = await getMyGroups();
+                    if (myGroups.length) {
+                        const gu = await srv('/api/groups/unread?since=' + encodeURIComponent(st.base));
+                        (gu.ok ? gu.data.rows : []).forEach(r => {
                             const id = Number(r.groupId), t = Number(r.timestamp) || 0;
                             if (t > (gMax[id] || 0)) gMax[id] = t;
                             if (t > (st.r['g:' + id] !== undefined ? st.r['g:' + id] : st.base)) groups[id] = (groups[id] || 0) + 1;
@@ -6153,14 +5973,16 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         let chatRateDealId = 0;
         async function getChatClearedAt(user, other) {
             try {
-                const rs = await db.execute({ sql: "SELECT clearedAt FROM chat_clears WHERE user = ? AND other = ?", args: [user, other] });
-                return rs.rows.length ? Number(rs.rows[0].clearedAt) || 0 : 0;
+                const r = await srv('/api/chat/clears');
+                return r.ok ? Number((r.data.clears || {})[other]) || 0 : 0;
             } catch (e) { return 0; }
         }
         async function getMyRating(target) {
             if (!currentUser) return 0;
-            const r = await srv('/api/ratings/' + encodeURIComponent(target));
-            return r.ok ? Number(r.data.mine) || 0 : 0;
+            try {
+                const r = await srv('/api/ratings/' + encodeURIComponent(target));
+                return r.ok ? Number(r.data.mine) || 0 : 0;
+            } catch (e) { return 0; }
         }
         async function deleteChatForMe(key) {
             const { user: other, itemId } = tParse(key);
@@ -6495,16 +6317,15 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     b.addEventListener('click', async () => {
                         const n = Number(b.dataset.dealRate);
                         const rr = await srv('/api/ratings', 'POST', { target: targetUsername, stars: n });
-                        if (rr.ok) showToast(`You rated ${targetUsername} ${n} star${n === 1 ? '' : 's'}`);
-                        else srvFail(rr);
+                        if (rr.ok) showToast(`You rated ${targetUsername} ${n} star${n === 1 ? '' : 's'}`); else srvFail(rr);
                         await renderChatsList(threadKey);
                     });
                 });
                 rateBox.addEventListener('mouseleave', () => stars.forEach(x => x.classList.toggle('on', Number(x.dataset.dealRate) <= chatMyRating)));
             }
             root.querySelectorAll('[data-deal-rate-remove]').forEach(b => b.addEventListener('click', async () => {
-                const rr = await srv('/api/ratings/remove', 'POST', { target: targetUsername });
-                if (rr.ok) showToast('Rating removed'); else srvFail(rr);
+                const rm = await srv('/api/ratings/remove', 'POST', { target: targetUsername });
+                if (rm.ok) showToast('Rating removed'); else srvFail(rm);
                 await renderChatsList(threadKey);
             }));
 
@@ -6581,11 +6402,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     'The report will be dismissed and removed from this list. The deal goes back to "items not received" (money stays on hold) so the buyer and seller can continue or report again.',
                     'Cancel report', true);
                 if (!ok) return;
-                const rs = await db.execute({
-                    sql: "UPDATE deals SET status = 'not_received', reportedAt = 0, reportedBy = NULL, chatSnapshot = NULL, updatedAt = ? WHERE id = ? AND status = 'reported'",
-                    args: [Date.now(), Number(b.dataset.cancelReport)]
-                });
-                showToast(rs.rowsAffected ? 'Report cancelled' : 'This report was already handled.');
+                const cr = await srv('/api/admin/deals/' + Number(b.dataset.cancelReport) + '/cancel-report', 'POST', {});
+                showToast(cr.ok ? 'Report cancelled' : (cr.data.error || 'This report was already handled.'));
                 renderReports();
             }));
             list.querySelectorAll('[data-report-id]').forEach(b => {
@@ -6786,10 +6604,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             submitTicketBtn.disabled = true;
             try {
-                await db.execute({
-                    sql: "INSERT INTO tickets (creator, partner, description, status, createdAt) VALUES (?, ?, ?, 'open', ?)",
-                    args: [currentUser, '', desc.slice(0, 1000) || 'No description', Date.now()]
-                });
+                const tr = await srv('/api/tickets', 'POST', { description: desc });
+                if (!tr.ok) { srvFail(tr); return; }
                 ticketModal.classList.remove('active');
                 showToast('Ticket created! A middleman will pick it up.');
                 await renderTickets();
@@ -6831,21 +6647,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             ticketsPanel.style.display = 'block';
             document.getElementById('mm-tickets-title').textContent = isMM ? 'Tickets' : 'Your tickets';
 
-            const cutoff = Date.now() - TICKET_TTL_MS;
-            try { await db.execute({ sql: "DELETE FROM tickets WHERE createdAt < ?", args: [cutoff] }); } catch (e) { /* not critical */ }
-
             let rows = [];
             try {
-                const rs = isMM
-                    ? await db.execute({
-                        sql: "SELECT id, creator, partner, description, status, claimedBy, createdAt FROM tickets WHERE createdAt > ? AND (status = 'open' OR (status = 'claimed' AND (claimedBy = ? OR creator = ? OR partner = ?))) ORDER BY createdAt DESC LIMIT 100",
-                        args: [cutoff, currentUser, currentUser, currentUser]
-                    })
-                    : await db.execute({
-                        sql: "SELECT id, creator, partner, description, status, claimedBy, createdAt FROM tickets WHERE createdAt > ? AND status IN ('open', 'claimed') AND (creator = ? OR partner = ?) ORDER BY createdAt DESC LIMIT 100",
-                        args: [cutoff, currentUser, currentUser]
-                    });
-                rows = rs.rows;
+                const tk = await srv('/api/tickets');
+                if (tk.ok) rows = tk.data.tickets || [];
             } catch (e) {
                 console.error(e);
             }
@@ -6910,15 +6715,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const me = await getUserByUsername(currentUser);
             if (!me || !me.isMiddleman) { showToast('Only middlemen can claim tickets.'); return; }
             try {
-                const rs = await db.execute({
-                    sql: "UPDATE tickets SET status = 'claimed', claimedBy = ? WHERE id = ? AND status = 'open' AND creator != ? AND COALESCE(partner, '') != ?",
-                    args: [currentUser, id, currentUser, currentUser]
-                });
-                if (!rs.rowsAffected) {
-                    showToast('This ticket is no longer available.');
-                } else {
-                    showToast('Ticket claimed.');
-                }
+                const cl = await srv('/api/tickets/' + id + '/claim', 'POST', {});
+                showToast(cl.ok ? 'Ticket claimed.' : (cl.data.error || 'This ticket is no longer available.'));
             } catch (e) {
                 console.error(e);
                 showToast('Failed to claim ticket.');
@@ -6930,8 +6728,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const ok = await askDealConfirm('Cancel ticket?', 'Your ticket will be deleted. Middlemen will no longer see it.', 'Cancel ticket', true);
             if (!ok) return;
             try {
-                const rs = await db.execute({ sql: "DELETE FROM tickets WHERE id = ? AND creator = ? AND status IN ('open', 'claimed')", args: [id, currentUser] });
-                showToast(rs.rowsAffected ? 'Ticket cancelled.' : 'This ticket is already gone.');
+                const cn = await srv('/api/tickets/' + id + '/cancel', 'POST', {});
+                showToast(cn.ok ? 'Ticket cancelled.' : 'This ticket is already gone.');
             } catch (e) {
                 console.error(e);
                 showToast('Failed to cancel the ticket.');
@@ -6941,10 +6739,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         async function closeTicket(id) {
             try {
-                await db.execute({
-                    sql: "UPDATE tickets SET status = 'closed' WHERE id = ? AND claimedBy = ?",
-                    args: [id, currentUser]
-                });
+                const cs = await srv('/api/tickets/' + id + '/close', 'POST', {});
+                if (!cs.ok) { srvFail(cs); return; }
                 showToast('Ticket closed.');
             } catch (e) {
                 console.error(e);
@@ -7530,7 +7326,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             dbTbody.innerHTML = '';
             const ipBannedSet = new Set();
-            try { (await db.execute("SELECT username FROM ip_bans WHERE bannedUntil = -1 OR bannedUntil > " + Date.now())).rows.forEach(r => ipBannedSet.add(r.username)); } catch (e) {}
+            try { const ib = await srv('/api/admin/ip-banned'); if (ib.ok) (ib.data.names || []).forEach(n => ipBannedSet.add(n)); } catch (e) {}
             allUsers.forEach(u => {
                 const isProtected = u.customId === 'knqw';
                 const tr = document.createElement('tr');
@@ -7602,7 +7398,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     const uname = e.currentTarget.getAttribute('data-username');
                     if (!(await isKnqw())) { showToast('Only knqw can unban accounts.'); return; }
                     await unbanUser(uname);
-                    try { await db.execute({ sql: "DELETE FROM ip_bans WHERE username = ?", args: [uname] }); } catch (e) {}
                     showToast(`${uname} has been unbanned`);
                     updateAppealsBadge();
                     openDbBtn.click();
@@ -7848,11 +7643,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             try {
                 let me = null;
                 if (currentUser) {
-                    let rs;
-                    try { rs = await db.execute({ sql: "SELECT username, customId, bannedUntil, bannedAt, banReason, appeal, appealAt, appealStatus FROM users WHERE username = ?", args: [currentUser] }); }
-                    catch (e) { return; } // network hiccup: never log anyone out because of it
-                    if (!rs.rows.length) { showDeletedScreen(); return; }
-                    const row = rs.rows[0];
+                    const br = await srv('/api/me/ban');
+                    if (!br.ok) return; // network hiccup: never log anyone out because of it
+                    if (br.data.deleted) { showDeletedScreen(); return; }
+                    const row = br.data.user;
                     me = { username: row.username, customId: row.customId, ...banFields(row) };
                     if (isBanned(me)) {
                         document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
@@ -7945,12 +7739,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             banConfirmBtn.disabled = true;
             try {
-                await banUser(banTarget, until, banReasonInput.value.trim());
+                const wantIp = document.getElementById('ban-ip-check').checked && target.lastIp;
+                await banUser(banTarget, until, banReasonInput.value.trim(), wantIp);
                 let ipNote = '';
-                if (document.getElementById('ban-ip-check').checked && target.lastIp) {
-                    await banIp(target.lastIp, until, banReasonInput.value.trim(), banTarget);
-                    ipNote = ' (IP banned too)';
-                }
+                if (wantIp) ipNote = ' (IP banned too)';
                 showToast((until === -1 ? `${banTarget} was permanently banned` : `${banTarget} was banned`) + ipNote);
             } catch (e) {
                 showToast('Could not ban this account.');
@@ -7965,12 +7757,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         let appealsAdmin = false;
 
         async function getAppeals() {
-            const rs = await db.execute("SELECT username, displayName, bannedUntil, bannedAt, banReason, appeal, appealAt, appealStatus FROM users WHERE appealStatus IN ('pending','denied') AND appeal IS NOT NULL ORDER BY appealAt DESC");
-            return rs.rows.map(r => ({
-                username: r.username,
-                displayName: r.displayName,
-                ...banFields(r)
-            })).filter(isBanned);
+            const r = await srv('/api/admin/appeals');
+            if (!r.ok) return [];
+            return (r.data.rows || []).map(x => ({ username: x.username, displayName: x.displayName, ...banFields(x) })).filter(isBanned);
         }
 
         async function updateAppealsBadge() {
@@ -8251,14 +8040,16 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
 
         async function getRatingMeta() {
-            const r = await srv('/api/ratings/meta');
-            return r.ok ? (r.data.meta || {}) : {};
+            try { const r = await srv('/api/ratings/meta'); return r.ok ? (r.data.meta || {}) : {}; }
+            catch (e) { console.error(e); return {}; }
         }
 
         async function getRatingSummary(username) {
             const out = { avg: 0, count: 0, mine: 0 };
-            const r = await srv('/api/ratings/' + encodeURIComponent(username));
-            if (r.ok) { out.avg = Number(r.data.avg) || 0; out.count = Number(r.data.count) || 0; out.mine = Number(r.data.mine) || 0; }
+            try {
+                const r = await srv('/api/ratings/' + encodeURIComponent(username));
+                if (r.ok) { out.avg = Number(r.data.avg) || 0; out.count = Number(r.data.count) || 0; out.mine = Number(r.data.mine) || 0; }
+            } catch (e) { console.error(e); }
             return out;
         }
 
@@ -8309,8 +8100,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             const refresh = async () => {
                 const list = document.getElementById('rating-mgr-list');
-                const lr = await srv('/api/admin/ratings/' + encodeURIComponent(target));
-                const rows = lr.ok ? (lr.data.ratings || []) : [];
+                let rows = [];
+                try {
+                    const rs = await srv('/api/admin/ratings/' + encodeURIComponent(target));
+                    rows = rs.ok ? rs.data.rows : [];
+                } catch (e) { console.error(e); }
                 list.innerHTML = rows.length ? rows.map(r => `
                     <div class="rating-mgr-row">
                         <span class="rm-who">${String(r.rater).startsWith('admin:') ? 'knqw (added)' : escapeHtml(r.rater)}</span>
@@ -8319,16 +8113,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         <button class="rm-del" type="button" data-rater="${escapeHtml(r.rater)}">Remove</button>
                     </div>`).join('') : '<div class="group-pick-empty">No ratings yet.</div>';
                 list.querySelectorAll('.rm-del').forEach(b => b.addEventListener('click', async () => {
-                    const rr = await srv('/api/admin/ratings/remove', 'POST', { target, rater: b.dataset.rater });
-                    if (!rr.ok) { srvFail(rr); return; }
+                    await srv('/api/admin/ratings/remove', 'POST', { rater: b.dataset.rater, target });
                     showToast('Rating removed');
                     await refresh();
                     renderProfileRating(userObj);
                 }));
             };
             document.getElementById('rating-mgr-add-btn').onclick = async () => {
-                const rr = await srv('/api/admin/ratings', 'POST', { target, stars: pick });
-                if (!rr.ok) { srvFail(rr); return; }
+                await srv('/api/admin/ratings/add', 'POST', { target, stars: pick });
                 showToast('Rating added');
                 await refresh();
                 renderProfileRating(userObj);
@@ -8336,8 +8128,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             document.getElementById('rating-mgr-clear-btn').onclick = async () => {
                 const ok = await askDealConfirm('Remove all ratings?', `Every rating of ${userObj.displayName || target} will be deleted.`, 'Remove all', true);
                 if (!ok) return;
-                const rr = await srv('/api/admin/ratings/clear', 'POST', { target });
-                if (!rr.ok) { srvFail(rr); return; }
+                await srv('/api/admin/ratings/clear', 'POST', { target });
                 showToast('All ratings removed');
                 await refresh();
                 renderProfileRating(userObj);
@@ -8359,8 +8150,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         document.getElementById('profile-tab-vouches').addEventListener('click', () => setProfileTab('vouches'));
 
         async function refreshVouchCount(username) {
-            const r = await srv('/api/vouches/' + encodeURIComponent(username));
-            if (r.ok) document.getElementById('profile-vouch-count').textContent = `(${(r.data.vouches || []).length})`;
+            try {
+                const r = await srv('/api/vouches/' + encodeURIComponent(username));
+                const c = r.ok ? (r.data.vouches || []).length : 0;
+                document.getElementById('profile-vouch-count').textContent = `(${c})`;
+            } catch (e) { /* не критично */ }
         }
 
         async function renderVouches(userObj) {
@@ -8368,8 +8162,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const form = document.getElementById('vouch-form');
             const canVouch = !!currentUser && userObj.username !== currentUser;
             form.style.display = canVouch ? '' : 'none';
-            const vr = await srv('/api/vouches/' + encodeURIComponent(userObj.username));
-            const rows = vr.ok ? (vr.data.vouches || []) : [];
+            let rows = [];
+            try {
+                const vr = await srv('/api/vouches/' + encodeURIComponent(userObj.username));
+                rows = vr.ok ? vr.data.vouches : [];
+            } catch (e) { console.error(e); }
             const admin = await isKnqw();
             document.getElementById('profile-vouch-count').textContent = `(${rows.length})`;
             if (canVouch) {
@@ -8388,8 +8185,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 </div>`).join('');
             list.querySelectorAll('.vouch-author').forEach(el => el.addEventListener('click', () => openProfileByUsername(el.dataset.author)));
             list.querySelectorAll('.vouch-del').forEach(b => b.addEventListener('click', async () => {
-                const dr = await srv('/api/vouches/' + Number(b.dataset.vid) + '/delete', 'POST', {});
-                if (!dr.ok) srvFail(dr);
+                await srv('/api/vouches/delete', 'POST', { id: Number(b.dataset.vid) });
                 renderVouches(userObj);
             }));
         }
@@ -8400,33 +8196,56 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (!mm || !mm.isMiddleman || mm.username === currentUser) return;
             const text = document.getElementById('vouch-input').value.trim();
             if (text.length < 3) { showToast('Write at least 3 characters.'); return; }
-            const vr = await srv('/api/vouches', 'POST', { middleman: mm.username, text: text.slice(0, 300) });
-            if (vr.ok) showToast('Vouch saved'); else srvFail(vr);
+            try {
+                const vs = await srv('/api/vouches', 'POST', { middleman: mm.username, text });
+                if (!vs.ok) { srvFail(vs); return; }
+                showToast('Vouch saved');
+            } catch (e) { showToast('Could not save your vouch.'); }
             renderVouches(mm);
         });
 
         // ===== Groups =====
-        // Groups live on the server now: it decides who can be added, who can read and who can write.
+        // Who can I add? People I have chats with + the middleman who accepted one of my tickets.
         async function getGroupCandidates() {
-            const r = await srv('/api/groups/candidates');
-            return r.ok ? (r.data.users || []) : [];
+            const me = await getUserByUsername(currentUser);
+            if (!me) return [];
+            const tags = {};
+            (me.messages || []).forEach(m => {
+                const other = m.sender === currentUser ? m.receiver : m.sender;
+                if (other && other !== currentUser) tags[other] = 'chat';
+            });
+            try {
+                const mr = await srv('/api/tickets/middlemen');
+                (mr.ok ? mr.data.names : []).forEach(n => { tags[n] = 'middleman'; });
+            } catch (e) { console.error(e); }
+            const users = await getAllUsersFromDB();
+            return Object.keys(tags)
+                .map(name => ({ user: users.find(u => u.username === name), tag: tags[name] }))
+                .filter(x => x.user && !isBanned(x.user))
+                .map(x => ({ ...x.user, groupTag: x.tag }))
+                .sort((a, b) => (a.displayName || a.username).localeCompare(b.displayName || b.username));
+        }
+
+        function mapGroup(r) {
+            let members = [];
+            try { members = JSON.parse(r.members || '[]'); } catch (e) {}
+            return { id: Number(r.id), name: r.name || 'Group', owner: r.owner, members, createdAt: Number(r.createdAt) || 0 };
         }
         async function getGroup(id) {
-            const r = await srv('/api/groups/' + Number(id));
+            const r = await srv('/api/groups/' + encodeURIComponent(id));
             return r.ok ? r.data.group : null;
         }
         async function getMyGroups() {
             if (!currentUser) return [];
-            const r = await srv('/api/groups');
-            return r.ok ? (r.data.groups || []) : [];
+            try { const r = await srv('/api/groups'); return r.ok ? (r.data.groups || []) : []; }
+            catch (e) { console.error(e); return []; }
         }
         async function getGroupSig() {
-            if (!currentUser) return '';
-            const r = await srv('/api/groups/sig');
-            return r.ok ? (r.data.sig || '') : '';
+            try { const r = await srv('/api/groups/sig'); return r.ok ? String(r.data.sig || '') : ''; }
+            catch (e) { return ''; }
         }
         async function getGroupMessages(id) {
-            const r = await srv('/api/groups/' + Number(id) + '/messages');
+            const r = await srv('/api/groups/' + encodeURIComponent(id) + '/messages');
             return r.ok ? (r.data.messages || []) : [];
         }
 
@@ -8481,12 +8300,21 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const picked = [...document.querySelectorAll('#group-pick-list input:checked')].map(i => i.value);
                 if (!name) { showToast('Enter a group name.'); return; }
                 if (!picked.length) { showToast('Pick at least one person.'); return; }
+                const fresh = await getGroupCandidates();
+                const allowed = new Set(fresh.map(u => u.username));
+                if (picked.some(p => !allowed.has(p))) { showToast('You can only add people you have chats with.'); return; }
                 createBtn.disabled = true;
-                const r = await srv('/api/groups', 'POST', { name, members: picked });
-                if (!r.ok) { srvFail(r); createBtn.disabled = false; return; }
-                groupModalEl.classList.remove('active');
-                showToast('Group created');
-                await renderChatsList('g:' + Number(r.data.id));
+                try {
+                    const gr = await srv('/api/groups', 'POST', { name, members: picked });
+                    if (!gr.ok) { srvFail(gr); createBtn.disabled = false; return; }
+                    groupModalEl.classList.remove('active');
+                    showToast('Group created');
+                    await renderChatsList('g:' + Number(gr.data.id));
+                } catch (err) {
+                    console.error(err);
+                    showToast('Could not create the group.');
+                    createBtn.disabled = false;
+                }
             };
             groupModalEl.classList.add('active');
         }
@@ -8533,13 +8361,25 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 groupModalEl.classList.remove('active');
                 openProfileByUsername(el.dataset.user);
             }));
+            const writeMembers = async (members) => {          // works out what changed and asks the server for each change
+                const cur = await getGroup(g.id);
+                if (!cur) return;
+                const added = members.filter(m => !cur.members.includes(m));
+                const removed = cur.members.filter(m => !members.includes(m));
+                if (added.length) { const r = await srv('/api/groups/' + g.id + '/members', 'POST', { action: 'add', usernames: added }); if (!r.ok) srvFail(r); }
+                for (const who of removed) {
+                    const r = await srv('/api/groups/' + g.id + '/members', 'POST', who === currentUser ? { action: 'leave' } : { action: 'remove', username: who });
+                    if (!r.ok) srvFail(r);
+                }
+            };
             body.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', async () => {
                 const who = b.dataset.remove;
                 const okRemove = await askDealConfirm('Remove member?', `${who} will be removed from "${g.name}" and will no longer see the group chat.`, 'Remove', true);
                 if (!okRemove) return;
-                const r = await srv('/api/groups/' + g.id + '/remove', 'POST', { username: who });
-                if (!r.ok) { srvFail(r); return; }
-                showToast(`${who} was removed`);
+                const fresh = await getGroup(g.id);
+                if (!fresh || fresh.owner !== currentUser) return;
+                await writeMembers(fresh.members.filter(m => m !== who));
+                showToast(`${b.dataset.remove} was removed`);
                 openGroupMembersModal(g.id);
                 renderChatsList('g:' + g.id);
             }));
@@ -8547,16 +8387,19 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (addBtn) addBtn.onclick = async () => {
                 const picked = [...document.querySelectorAll('#group-pick-list input:checked')].map(i => i.value);
                 if (!picked.length) { showToast('Pick at least one person.'); return; }
-                const r = await srv('/api/groups/' + g.id + '/members', 'POST', { members: picked });
-                if (!r.ok) { srvFail(r); return; }
+                const allowed = new Set((await getGroupCandidates()).map(u => u.username));
+                if (picked.some(p => !allowed.has(p))) { showToast('You can only add people you have chats with.'); return; }
+                const fresh = await getGroup(g.id);
+                if (!fresh || fresh.owner !== currentUser) return;
+                await writeMembers([...new Set([...fresh.members, ...picked])]);
                 showToast('Members added');
                 openGroupMembersModal(g.id);
                 renderChatsList('g:' + g.id);
             };
             const leaveBtn = document.getElementById('group-leave-btn');
             if (leaveBtn) leaveBtn.onclick = async () => {
-                const r = await srv('/api/groups/' + g.id + '/leave', 'POST', {});
-                if (!r.ok) { srvFail(r); return; }
+                const fresh = await getGroup(g.id);
+                if (fresh) await writeMembers(fresh.members.filter(m => m !== currentUser));
                 groupModalEl.classList.remove('active');
                 activeChatUsername = null; renderedChatUser = null;
                 showToast('You left the group');
@@ -8566,8 +8409,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (delBtn) delBtn.onclick = async () => {
                 const ok = await askDealConfirm('Delete group?', `"${g.name}" and all of its messages will be deleted for everyone.`, 'Delete group', true);
                 if (!ok) return;
-                const r = await srv('/api/groups/' + g.id, 'DELETE');
-                if (!r.ok) { srvFail(r); return; }
+                const dg = await srv('/api/groups/' + g.id + '/delete', 'POST', {});
+                if (!dg.ok) { srvFail(dg); return; }
                 groupModalEl.classList.remove('active');
                 activeChatUsername = null; renderedChatUser = null;
                 showToast('Group deleted');
@@ -8633,9 +8476,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const text = input.value.trim();
                 if (!text) return;
                 if (!(await chatSpamGuard())) return;
-                const r = await srv('/api/groups/' + g.id + '/messages', 'POST', { text });
-                if (!r.ok) { srvFail(r); if (r.status === 403 || r.status === 404) renderChatsList(); return; }
+                const fresh = await getGroup(g.id);
+                if (!fresh || !fresh.members.includes(currentUser)) { showToast('You are no longer in this group.'); renderChatsList(); return; }
                 input.value = '';
+                const sg = await srv('/api/groups/' + g.id + '/send', 'POST', { text });
+                if (!sg.ok) { srvFail(sg); input.value = text; return; }
                 await renderChatsList(key);
             };
             document.getElementById('chat-send-btn').addEventListener('click', send);
@@ -8647,8 +8492,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         // ===== Live listings: refresh for everyone when anybody lists / removes an item =====
         let listingsSigLast = null;
         async function getListingsSig() {
-            const rs = await db.execute("SELECT username, COALESCE(length(items), 0) AS l, COALESCE(lastItemTime, 0) AS t, COALESCE(bannedUntil, 0) AS b FROM users");
-            return rs.rows.map(r => `${r.username}:${r.l}:${r.t}:${r.b}`).join('|');
+            const r = await srv('/api/listings/sig');
+            if (!r.ok) throw new Error('sig');
+            return String(r.data.sig || '');
         }
         setInterval(async () => {
             if (document.hidden || currentViewMode !== 'home' || mainContentArea.style.display === 'none') return;
@@ -8735,26 +8581,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             myIp = '';
             return myIp;
         }
-        async function getActiveIpBan(ip) {
-            if (!ip) return null;
-            try {
-                const rs = await db.execute({ sql: "SELECT * FROM ip_bans WHERE ip = ?", args: [ip] });
-                if (!rs.rows.length) return null;
-                const r = rs.rows[0];
-                const until = Number(r.bannedUntil);
-                if (until !== -1 && until <= Date.now()) {
-                    await db.execute({ sql: "DELETE FROM ip_bans WHERE ip = ?", args: [ip] });
-                    return null;
-                }
-                return { ip: r.ip, until, at: Number(r.bannedAt) || 0, reason: r.reason || '' };
-            } catch (e) { console.error(e); return null; }
-        }
-        async function banIp(ip, until, reason, username) {
-            await db.execute({
-                sql: "INSERT INTO ip_bans (ip, bannedUntil, bannedAt, reason, username) VALUES (?, ?, ?, ?, ?) ON CONFLICT(ip) DO UPDATE SET bannedUntil = excluded.bannedUntil, bannedAt = excluded.bannedAt, reason = excluded.reason, username = excluded.username",
-                args: [ip, until, Date.now(), reason || '', username || '']
-            });
-        }
         function showIpBanScreen(ban) {
             document.body.style.overflow = 'hidden';
             document.getElementById('ban-screen').classList.add('active');
@@ -8771,7 +8597,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (!perm) {
                 const tick = async () => {
                     const left = ban.until - Date.now();
-                    if (left <= 0) { await getActiveIpBan(ban.ip); location.reload(); return; }
+                    if (left <= 0) { location.reload(); return; }
                     const el = document.getElementById('ban-left');
                     if (el) el.textContent = fmtLeft(left);
                 };
@@ -8806,12 +8632,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const btn = document.getElementById('report-item-submit');
             btn.disabled = true;
             try {
-                const dup = await db.execute({ sql: "SELECT id FROM item_reports WHERE itemId = ? AND reporter = ? LIMIT 1", args: [String(it.id), currentUser] });
-                if (dup.rows.length) { showToast('You already reported this item.'); closeReportItemModal(); return; }
-                await db.execute({
-                    sql: "INSERT INTO item_reports (itemId, itemName, itemGame, seller, reporter, reason, details, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    args: [String(it.id), it.name || '', it.game || 'Murder Mystery 2', it.sellerUsername, currentUser, reason, details.slice(0, 1000), Date.now()]
-                });
+                const ir = await srv('/api/reports/item', 'POST', { itemId: String(it.id), itemName: it.name || '', itemGame: it.game || 'Murder Mystery 2', seller: it.sellerUsername, reason, details: details.slice(0, 1000) });
+                if (!ir.ok) { srvFail(ir); return; }
+                if (ir.data.duplicate) { showToast('You already reported this item.'); closeReportItemModal(); return; }
                 showToast('Item reported. Thank you!');
                 closeReportItemModal();
             } catch (e) {
@@ -8825,7 +8648,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (!list) return;
             if (!(await isKnqw())) { list.innerHTML = ''; return; }
             let rows = [];
-            try { rows = (await db.execute("SELECT * FROM item_reports ORDER BY createdAt DESC")).rows; } catch (e) { console.error(e); }
+            try { const rr = await srv('/api/admin/reports/items'); rows = rr.ok ? rr.data.rows : []; } catch (e) { console.error(e); }
             document.getElementById('item-reports-count').textContent = rows.length ? `(${rows.length})` : '';
             if (!rows.length) { list.innerHTML = '<div class="reports-empty">No reported items.</div>'; return; }
             list.innerHTML = rows.map(r => `
@@ -8840,7 +8663,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             bindUserLinks(list);
             list.querySelectorAll('[data-dismiss-item-report]').forEach(b => b.addEventListener('click', async () => {
                 if (!(await isKnqw())) return;
-                await db.execute({ sql: "DELETE FROM item_reports WHERE id = ?", args: [Number(b.dataset.dismissItemReport)] });
+                await srv('/api/admin/reports/item/dismiss', 'POST', { id: Number(b.dataset.dismissItemReport) });
                 showToast('Report dismissed');
                 renderItemReports();
             }));
@@ -8873,35 +8696,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const SPAM_WINDOW_MS = 5000;      // ... within this time = spam
         const SPAM_RESET_MS = 24 * 60 * 60 * 1000; // steps reset after 24h without a new offence
         let spamStamps = [];
-        async function chatSpamGuard() {
-            if (!currentUser) return true;
-            const now = Date.now();
-            try {
-                const me = await getUserByUsername(currentUser);
-                if (me && me.customId === 'knqw') return true;
-                const r = await db.execute({ sql: "SELECT * FROM spam_timeouts WHERE username = ?", args: [currentUser] });
-                const row = r.rows[0];
-                if (row && Number(row.until) > now) {
-                    showToast(`You are timed out for spamming. Try again in ${fmtLeft(Number(row.until) - now)}.`);
-                    return false;
-                }
-                spamStamps = spamStamps.filter(t => now - t < SPAM_WINDOW_MS);
-                spamStamps.push(now);
-                if (spamStamps.length >= SPAM_MAX_MSGS) {
-                    spamStamps = [];
-                    let level = row ? (Number(row.level) || 0) : 0;
-                    if (row && now - Number(row.until) > SPAM_RESET_MS) level = 0;
-                    const dur = SPAM_STEPS[Math.min(level, SPAM_STEPS.length - 1)];
-                    await db.execute({
-                        sql: "INSERT INTO spam_timeouts (username, level, until, lastOffense) VALUES (?, ?, ?, ?) ON CONFLICT(username) DO UPDATE SET level = excluded.level, until = excluded.until, lastOffense = excluded.lastOffense",
-                        args: [currentUser, level + 1, now + dur, now]
-                    });
-                    showToast(`You are sending messages too fast. Timed out for ${fmtLeft(dur)}.`);
-                    return false;
-                }
-            } catch (e) { console.error('spam guard error:', e); }
-            return true;
-        }
+        async function chatSpamGuard() { return true; }   // spam limits and timeouts are enforced by the server
 
         // ===== Timeouts page (knqw only) =====
         const timeoutsPage = document.getElementById('timeouts-page');
@@ -8920,6 +8715,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             window.scrollTo({ top: 0, behavior: 'smooth' });
             await renderTimeouts();
         }
+
         function closeTimeoutsPage() {
             timeoutsPage.classList.remove('active');
             timeoutsNavBtn.classList.remove('active');
@@ -8928,7 +8724,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const list = document.getElementById('timeouts-list');
             if (!(await isKnqw())) { list.innerHTML = ''; return; }
             let rows = [];
-            try { rows = (await db.execute("SELECT * FROM spam_timeouts ORDER BY until DESC")).rows; } catch (e) { console.error(e); }
+            try { const tr = await srv('/api/admin/timeouts'); rows = tr.ok ? tr.data.rows : []; } catch (e) { console.error(e); }
             const now = Date.now();
             const active = rows.filter(r => Number(r.until) > now).length;
             document.getElementById('timeouts-count').textContent = active ? `(${active} active)` : '';
@@ -8953,7 +8749,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             bindUserLinks(list);
             list.querySelectorAll('[data-remove-timeout]').forEach(b => b.addEventListener('click', async () => {
                 if (!(await isKnqw())) return;
-                await db.execute({ sql: "DELETE FROM spam_timeouts WHERE username = ?", args: [b.dataset.removeTimeout] });
+                await srv('/api/admin/timeouts/remove', 'POST', { username: b.dataset.removeTimeout });
                 showToast('Timeout removed');
                 renderTimeouts();
             }));
@@ -8963,9 +8759,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const inp = list.querySelector(`[data-add-input="${CSS.escape(name)}"]`);
                 const mins = Math.floor(Number(inp && inp.value));
                 if (!(mins > 0) || mins > 525600) { showToast('Enter the minutes to add.'); return; }
-                const cur = (await db.execute({ sql: "SELECT until FROM spam_timeouts WHERE username = ?", args: [name] })).rows[0];
-                const base = Math.max(Date.now(), cur ? Number(cur.until) || 0 : 0);
-                await db.execute({ sql: "UPDATE spam_timeouts SET until = ?, lastOffense = ? WHERE username = ?", args: [base + mins * 60000, Date.now(), name] });
+                await srv('/api/admin/timeouts/add', 'POST', { username: name, minutes: mins });
                 showToast(`Added ${mins} min`);
                 renderTimeouts();
             }));
@@ -9014,12 +8808,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const btn = document.getElementById('report-user-submit');
             btn.disabled = true;
             try {
-                const dup = await db.execute({ sql: "SELECT id FROM user_reports WHERE kind = ? AND target = ? AND reporter = ? LIMIT 1", args: [userReportKind, userReportTarget, currentUser] });
-                if (dup.rows.length) { showToast('You already reported this account. Our team will review it.'); closeUserReport(); return; }
-                await db.execute({
-                    sql: "INSERT INTO user_reports (kind, target, reporter, reason, details, createdAt) VALUES (?, ?, ?, ?, ?, ?)",
-                    args: [userReportKind, userReportTarget, currentUser, reason, details.slice(0, 1000), Date.now()]
-                });
+                const ur = await srv('/api/reports/user', 'POST', { kind: userReportKind, target: userReportTarget, reason, details: details.slice(0, 1000) });
+                if (!ur.ok) { srvFail(ur); return; }
+                if (ur.data.duplicate) { showToast('You already reported this account. Our team will review it.'); closeUserReport(); return; }
                 showToast('Report sent. Thank you!');
                 closeUserReport();
             } catch (e) {
@@ -9033,7 +8824,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (!uList || !mList) return;
             if (!(await isKnqw())) { uList.innerHTML = ''; mList.innerHTML = ''; return; }
             let rows = [];
-            try { rows = (await db.execute("SELECT * FROM user_reports ORDER BY createdAt DESC")).rows; } catch (e) { console.error(e); }
+            try { const rr = await srv('/api/admin/reports/users'); rows = rr.ok ? rr.data.rows : []; } catch (e) { console.error(e); }
             const fill = (listEl, countEl, kind, emptyText) => {
                 const rs = rows.filter(r => (r.kind || 'user') === kind);
                 document.getElementById(countEl).textContent = rs.length ? `(${rs.length})` : '';
@@ -9050,7 +8841,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 bindUserLinks(listEl);
                 listEl.querySelectorAll('[data-dismiss-user-report]').forEach(b => b.addEventListener('click', async () => {
                     if (!(await isKnqw())) return;
-                    await db.execute({ sql: "DELETE FROM user_reports WHERE id = ?", args: [Number(b.dataset.dismissUserReport)] });
+                    await srv('/api/admin/reports/user/dismiss', 'POST', { id: Number(b.dataset.dismissUserReport) });
                     showToast('Report dismissed');
                     renderUserReports();
                 }));
