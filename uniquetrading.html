@@ -3811,11 +3811,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         // Tables are created and migrated by the server now (server.js). The page has no direct database access.
         async function initDB() { /* nothing to do in the browser */ }
 
+        // Empty when this page is served by the same server as the API; otherwise (e.g. GitHub Pages) it calls the Render server directly.
+        const SERVER_URL = 'https://unique-pdee.onrender.com';
+        const API_BASE = (location.hostname.endsWith('.onrender.com') || location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : SERVER_URL;
         // ===== Server API helper (session cookie; all private data and all writes go through the server) =====
         async function srv(path, method, body) {
             try {
-                const r = await fetch(path, {
-                    method: method || 'GET', credentials: 'same-origin', cache: 'no-store',
+                const r = await fetch(API_BASE + path, {
+                    method: method || 'GET', credentials: 'include', cache: 'no-store',
                     headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
                     body: body !== undefined ? JSON.stringify(body) : undefined
                 });
@@ -4062,7 +4065,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         // ===== Session comes from the server (httpOnly cookie) =====
         let currentUser = null;
         try {
-            const meRes = await fetch('/api/me', { credentials: 'same-origin', cache: 'no-store' });
+            const meRes = await fetch(API_BASE + '/api/me', { credentials: 'include', cache: 'no-store' });
             if (meRes.ok) {
                 currentUser = String((await meRes.json()).username || '') || null;
                 if (currentUser) localStorage.setItem('currentUser', currentUser);
@@ -4076,14 +4079,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             currentUser = localStorage.getItem('currentUser');       // offline / server unreachable
         }
         async function logoutAndReload() {
-            try { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
+            try { await fetch(API_BASE + '/api/logout', { method: 'POST', credentials: 'include' }); } catch (e) {}
             try { localStorage.removeItem('currentUser'); } catch (e) {}
             location.reload();
         }
         // The server sees the real visitor IP, so IP-ban checks go through the API
         async function getServerIpBan() {
             try {
-                const r = await fetch('/api/ip-status', { credentials: 'same-origin', cache: 'no-store' });
+                const r = await fetch(API_BASE + '/api/ip-status', { credentials: 'include', cache: 'no-store' });
                 if (!r.ok) return null;
                 const j = await r.json();
                 return j && j.banned ? { message: j.message || 'Your IP address is banned.' } : null;
@@ -7619,7 +7622,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         // ===== Live session watch: bans / IP bans / deleted accounts show up without a reload =====
         let sessionWatchStarted = false, sessionWatchBusy = false;
         function showDeletedScreen() {
-            fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+            fetch(API_BASE + '/api/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
             localStorage.removeItem('currentUser');
             try {
                 let saved = JSON.parse(localStorage.getItem('savedAccounts')) || [];
