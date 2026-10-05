@@ -13,7 +13,12 @@ import { createClient } from '@libsql/client';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 if (!process.env.TURSO_URL) { console.error('TURSO_URL is not set'); process.exit(1); }
-const db = createClient({ url: process.env.TURSO_URL, authToken: process.env.TURSO_TOKEN });
+// Render values pasted with quotes, spaces or a trailing newline silently break the connection, so clean them first
+const cleanEnv = (v) => String(v || '').trim().replace(/^["']+|["']+$/g, '').trim();
+const TURSO_URL = cleanEnv(process.env.TURSO_URL), TURSO_TOKEN = cleanEnv(process.env.TURSO_TOKEN);
+console.log(`Turso config: url host = ${TURSO_URL.replace(/^[a-z+]+:\/\//i, '').split(/[/?]/)[0] || '(empty)'}, token ${TURSO_TOKEN ? 'present (' + TURSO_TOKEN.length + ' chars)' : 'MISSING'}`);
+if (!TURSO_URL.startsWith('file:') && !TURSO_TOKEN) console.error('TURSO_TOKEN is missing - every database call will fail');
+const db = createClient({ url: TURSO_URL, authToken: TURSO_TOKEN || undefined });
 
 const app = express();
 // Express 4 does not catch errors thrown inside async routes: one failed database call used to crash the whole server
