@@ -368,10 +368,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     let correctAnswer = 0;
     let busy = false;
 
-    // ===== API helper (the session cookie is set by the server; JS never sees it) =====
-    // Empty = this page is served by the same server as the API (recommended). Otherwise it calls your Render server directly.
+// ===== API helper (the session cookie is set by the server; JS never sees it) =====
     const SERVER_URL = 'https://unique-pdee.onrender.com';
-    const API_BASE = (location.hostname.endsWith('.onrender.com') || location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : SERVER_URL;
+    // Добавили проверку вашего github.io домена в условие:
+    const API_BASE = (location.hostname.endsWith('.onrender.com') || location.hostname.endsWith('github.io') || location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : SERVER_URL;
+    
     async function api(path, body) {
         const opts = { credentials: 'include', cache: 'no-store' };
         if (body !== undefined) {
@@ -388,7 +389,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             return { ok: false, status: 0, data: { error: 'Cannot reach the server. Check your connection and try again.' } };
         }
     }
-
     // ===== Captcha (UI-only speed bump; the server enforces the real limits) =====
     function generateCaptcha() {
         const a = Math.floor(Math.random() * 10) + 1;
