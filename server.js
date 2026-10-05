@@ -36,6 +36,16 @@ async function init() {
   const run = async (sql) => { try { await db.execute(sql); } catch (e) { /* already exists */ } };
   await run(`CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, username TEXT, createdAt INTEGER, expiresAt INTEGER)`);
   await run(`CREATE TABLE IF NOT EXISTS signup_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ip TEXT, createdAt INTEGER)`);
+  await run(`CREATE TABLE IF NOT EXISTS deals (id INTEGER PRIMARY KEY AUTOINCREMENT, buyer TEXT, seller TEXT, itemName TEXT, amount REAL, sellerAmount REAL, status TEXT, createdAt INTEGER, updatedAt INTEGER, reportedAt INTEGER, chatSnapshot TEXT, reportedBy TEXT, itemId TEXT)`);
+  await run(`CREATE TABLE IF NOT EXISTS chat_clears (user TEXT, other TEXT, clearedAt INTEGER, PRIMARY KEY (user, other))`);
+  await run(`CREATE TABLE IF NOT EXISTS typing (user TEXT, other TEXT, ts INTEGER, PRIMARY KEY (user, other))`);
+  await run(`CREATE TABLE IF NOT EXISTS chat_images (id TEXT PRIMARY KEY, sender TEXT, receiver TEXT, data TEXT, createdAt INTEGER)`);
+  await run(`CREATE TABLE IF NOT EXISTS chat_groups (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, owner TEXT, members TEXT, createdAt INTEGER)`);
+  await run(`CREATE TABLE IF NOT EXISTS group_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, groupId INTEGER, sender TEXT, text TEXT, timestamp INTEGER)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_group_messages_group ON group_messages (groupId, timestamp)`);
+  await run(`CREATE TABLE IF NOT EXISTS ratings (rater TEXT, target TEXT, stars INTEGER, createdAt INTEGER, PRIMARY KEY (rater, target))`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_ratings_target ON ratings (target)`);
+  await run(`CREATE TABLE IF NOT EXISTS vouches (id INTEGER PRIMARY KEY AUTOINCREMENT, middleman TEXT, author TEXT, text TEXT, createdAt INTEGER, UNIQUE (middleman, author))`);
   await run(`ALTER TABLE users ADD COLUMN passwordHash TEXT`);
   await run(`ALTER TABLE users ADD COLUMN lastIp TEXT`);
   await run(`ALTER TABLE users ADD COLUMN joinedAt INTEGER`);
@@ -574,6 +584,774 @@ app.post('/api/admin/deals/:id/resolve', requireUser, requireAdmin, async (req, 
   });
   if (out) res.json(out);
 });
+
+// ======================================================================
+// Stage 3: users directory, profile, items, chat
+// The browser never reads other people's private data or rewrites whole user rows any more.
+// ======================================================================
+const THREAD_SEP = '~i~';
+const isAdminName = async (name) => {
+  const r = await db.execute({ sql: 'SELECT customId FROM users WHERE username = ?', args: [name] });
+  return !!r.rows.length && String(r.rows[0].customId || '') === 'knqw';
+};
+const parseJson = (s, fallback) => { try { const v = JSON.parse(s); return v == null ? fallback : v; } catch (e) { return fallback; } };
+const banPart = (r) => ({
+  bannedUntil: Number(r.bannedUntil) || 0, bannedAt: Number(r.bannedAt) || 0, banReason: r.banReason || '',
+  appeal: r.appeal || '', appealAt: Number(r.appealAt) || 0, appealStatus: r.appealStatus || ''
+});
+// what everybody may see about everybody
+const publicUser = (r) => ({
+  customId: r.customId, username: r.username, displayName: r.displayName || r.username, avatar: r.avatar || null,
+  items: parseJson(r.items, []), roblox: r.roblox || '', isMiddleman: Number(r.isMiddleman) === 1,
+  lastSeen: Number(r.lastSeen) || 0, joinedAt: Number(r.joinedAt) || 0, ...banPart(r)
+});
+// what only the owner sees (never the password or its hash)
+const privateUser = (r) => ({
+  ...publicUser(r), email: r.email || '', card: r.card || null, balance: Number(r.balance) || 0,
+  heldBalance: Number(r.heldBalance) || 0, lastUsernameChange: r.lastUsernameChange || null,
+  lastDisplayNameChange: r.lastDisplayNameChange || null, lastItemTime: Number(r.lastItemTime) || 0,
+  messages: parseJson(r.messages, [])
+});
+// extra columns for the admin panel (no password, no hash)
+const adminUser = (r) => ({
+  ...publicUser(r), email: r.email || '', balance: Number(r.balance) || 0, heldBalance: Number(r.heldBalance) || 0,
+  lastIp: r.lastIp || '', lastItemTime: Number(r.lastItemTime) || 0
+});
+
+app.get('/api/users', requireUser, async (req, res) => {
+  const admin = await isAdminName(req.user);
+  const rs = await db.execute('SELECT * FROM users');
+  res.json({ users: rs.rows.map(admin ? adminUser : publicUser) });
+});
+
+app.get('/api/users/presence', requireUser, async (req, res) => {
+  const rs = await db.execute('SELECT username, lastSeen FROM users');
+  res.json({ users: rs.rows.map(r => ({ username: r.username, lastSeen: Number(r.lastSeen) || 0 })) });
+});
+
+app.get('/api/user/:name', requireUser, async (req, res) => {
+  const rs = await db.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [String(req.params.name)] });
+  if (!rs.rows.length) return res.status(404).json({ error: 'Account not found.' });
+  res.json({ user: (await isAdminName(req.user)) ? adminUser(rs.rows[0]) : publicUser(rs.rows[0]) });
+});
+
+app.get('/api/profile', requireUser, async (req, res) => {
+  const rs = await db.execute({ sql: 'SELECT * FROM users WHERE username = ?', args: [req.user] });
+  if (!rs.rows.length) return res.status(401).json({ error: 'Please log in.' });
+  res.json({ user: privateUser(rs.rows[0]) });
+});
+
+app.post('/api/heartbeat', requireUser, async (req, res) => {
+  await db.execute({ sql: 'UPDATE users SET lastSeen = ? WHERE username = ?', args: [Date.now(), req.user] });
+  res.json({ ok: true });
+});
+
+// partial update of my own profile: only the fields that are sent are touched
+app.post('/api/profile', requireUser, async (req, res) => {
+  try {
+    if (limited('prof:' + req.user, 30, 60 * 1000)) return res.status(429).json({ error: 'Too many requests.' });
+    const b = req.body || {};
+    const sets = [], args = [];
+    if ('displayName' in b) {
+      const v = String(b.displayName || '').trim().slice(0, 40);
+      sets.push('displayName = ?'); args.push(v || req.user);
+      sets.push('lastDisplayNameChange = ?'); args.push(Date.now());
+    }
+    if ('avatar' in b) {
+      const v = b.avatar == null ? null : String(b.avatar);
+      if (v !== null && (!/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(v) || v.length > 700000)) return res.status(400).json({ error: 'Invalid picture.' });
+      sets.push('avatar = ?'); args.push(v);
+    }
+    if ('email' in b) {
+      const v = String(b.email || '').trim().toLowerCase();
+      const cur = await db.execute({ sql: 'SELECT email FROM users WHERE username = ?', args: [req.user] });
+      if (v !== String(cur.rows[0].email || '').toLowerCase()) {
+        const err = await checkEmail(v); if (err) return res.status(400).json({ error: err });
+        if ((await db.execute({ sql: 'SELECT 1 FROM users WHERE lower(email) = ? AND username != ?', args: [v, req.user] })).rows.length) return res.status(400).json({ error: 'This email is already registered.' });
+      }
+      sets.push('email = ?'); args.push(v);
+    }
+    if ('card' in b) {
+      const v = b.card == null ? null : String(b.card).slice(0, 40);
+      if (v !== null && !/^[•*\d\s-]+$/.test(v)) return res.status(400).json({ error: 'Invalid card label.' });   // only the masked label is kept, never real card data
+      sets.push('card = ?'); args.push(v);
+    }
+    if ('roblox' in b) {
+      const v = b.roblox == null || b.roblox === '' ? null : String(b.roblox).trim().slice(0, 40);
+      sets.push('roblox = ?'); args.push(v);
+    }
+    if (!sets.length) return res.json({ ok: true });
+    args.push(req.user);
+    await db.execute({ sql: `UPDATE users SET ${sets.join(', ')} WHERE username = ?`, args });
+    res.json({ ok: true });
+  } catch (e) { console.error('profile error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
+});
+
+// change my username; the row (balance, hash, items, messages...) stays, everything pointing at the name follows
+app.post('/api/profile/rename', requireUser, async (req, res) => {
+  try {
+    if (limited('rename:' + req.user, 5, 60 * 60 * 1000)) return res.status(429).json({ error: 'Too many requests.' });
+    const nu = String(req.body.username || '').trim();
+    const err = checkUsername(nu); if (err) return res.status(400).json({ error: err });
+    if (nu === req.user) return res.json({ username: nu });
+    const out = await inTx(res, async (tx) => {
+      if ((await tx.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [nu] })).rows.length) throw new Abort('Username is already taken');
+      await tx.execute({ sql: 'UPDATE users SET username = ?, lastUsernameChange = ? WHERE username = ?', args: [nu, Date.now(), req.user] });
+      await tx.execute({ sql: 'UPDATE sessions SET username = ? WHERE username = ?', args: [nu, req.user] });
+      await tx.execute({ sql: 'UPDATE deals SET buyer = ? WHERE buyer = ?', args: [nu, req.user] });
+      await tx.execute({ sql: 'UPDATE deals SET seller = ? WHERE seller = ?', args: [nu, req.user] });
+      // messages of other people that mention me, and my own item/message copies
+      const rows = await tx.execute({ sql: 'SELECT username, messages, items FROM users WHERE (messages IS NOT NULL AND messages LIKE ?) OR username = ?', args: [`%${req.user}%`, nu] });
+      for (const r of rows.rows) {
+        let changed = false;
+        const msgs = parseJson(r.messages, []);
+        msgs.forEach(m => { if (m.sender === req.user) { m.sender = nu; changed = true; } if (m.receiver === req.user) { m.receiver = nu; changed = true; } });
+        let items = parseJson(r.items, []);
+        if (r.username === nu) items.forEach(i => { if (i.sellerUsername) { i.sellerUsername = nu; changed = true; } if (i.owner) { i.owner = nu; changed = true; } });
+        if (changed) await tx.execute({ sql: 'UPDATE users SET messages = ?, items = ? WHERE username = ?', args: [JSON.stringify(msgs), JSON.stringify(items), r.username] });
+      }
+      for (const [t, cols] of [['chat_clears', ['user']], ['ratings', ['rater', 'target']], ['vouches', ['author', 'middleman']], ['tickets', ['creator', 'partner']], ['chat_images', ['sender', 'receiver']]]) {
+        for (const c of cols) { try { await tx.execute({ sql: `UPDATE ${t} SET ${c} = ? WHERE ${c} = ?`, args: [nu, req.user] }); } catch (e) { /* table may not exist yet */ } }
+      }
+      // groups: owner, member lists and the sender of group messages follow the new name
+      try {
+        await tx.execute({ sql: 'UPDATE chat_groups SET owner = ? WHERE owner = ?', args: [nu, req.user] });
+        await tx.execute({ sql: 'UPDATE group_messages SET sender = ? WHERE sender = ?', args: [nu, req.user] });
+        const gr = await tx.execute({ sql: 'SELECT id, members FROM chat_groups WHERE members LIKE ?', args: [`%${req.user}%`] });
+        for (const g of gr.rows) {
+          const mem = parseJson(g.members, []);
+          if (mem.includes(req.user)) await tx.execute({ sql: 'UPDATE chat_groups SET members = ? WHERE id = ?', args: [JSON.stringify(mem.map(m => (m === req.user ? nu : m))), g.id] });
+        }
+      } catch (e) { /* tables may not exist yet */ }
+      return nu;
+    });
+    if (out) res.json({ username: out });
+  } catch (e) { console.error('rename error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
+});
+
+// ---------- items (stored on the owner's row) ----------
+const LISTING_COOLDOWN = 10 * 60 * 1000;
+function cleanItem(b) {
+  const tag = ['selling', 'specific', 'any'].includes(String(b.tag)) ? String(b.tag) : null;
+  const stock = Number(b.stock);
+  const photo = b.photo == null || b.photo === '' ? null : String(b.photo);
+  if (photo && (!/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(photo) || photo.length > 900000)) throw new Abort('Invalid picture.', 400);
+  const price = b.price == null ? '' : String(b.price).slice(0, 20);
+  const list = (arr) => (Array.isArray(arr) ? arr.slice(0, 60).map(x => String(x).slice(0, 80)) : []);
+  const wanted = b.wanted && typeof b.wanted === 'object' ? { game: String(b.wanted.game || '').slice(0, 60), items: list(b.wanted.items) } : null;
+  const name = String(b.name || '').trim().slice(0, 80);
+  if (!name) throw new Abort('Please enter a name.', 400);
+  if (!tag) throw new Abort('Invalid listing type.', 400);
+  if (tag === 'selling' && !(parseFloat(price) > 0)) throw new Abort('Please enter a price.', 400);
+  if (!Number.isInteger(stock) || stock < 0 || stock > 99999) throw new Abort('Stock must be a whole number from 0 to 99999.', 400);
+  return {
+    name, description: String(b.description || '').slice(0, 2000), tag, price, photo,
+    game: String(b.game || '').slice(0, 60), category: String(b.category || '').slice(0, 60),
+    items: list(b.items), wanted, stock
+  };
+}
+app.post('/api/items', requireUser, async (req, res) => {
+  const out = await inTx(res, async (tx) => {
+    const rs = await tx.execute({ sql: 'SELECT customId, items, lastItemTime, bannedUntil FROM users WHERE username = ?', args: [req.user] });
+    if (!rs.rows.length) throw new Abort('Please log in.', 401);
+    const u = rs.rows[0];
+    const until = Number(u.bannedUntil) || 0;
+    if (until === -1 || until > Date.now()) throw new Abort('Your account is banned.', 403);
+    const data = cleanItem(req.body || {});
+    const items = parseJson(u.items, []);
+    const editId = req.body.id != null ? Number(req.body.id) : null;
+    if (editId) {
+      const i = items.findIndex(x => Number(x.id) === editId);
+      if (i < 0) throw new Abort('Item not found.', 404);
+      items[i] = { ...items[i], ...data };
+      await tx.execute({ sql: 'UPDATE users SET items = ? WHERE username = ?', args: [JSON.stringify(items), req.user] });
+      return { id: editId };
+    }
+    if (String(u.customId || '') !== 'knqw') {
+      const wait = (Number(u.lastItemTime) || 0) + LISTING_COOLDOWN - Date.now();
+      if (wait > 0) throw new Abort(`You can list another item in ${Math.ceil(wait / 60000)} min.`, 429);
+      if (items.length >= 200) throw new Abort('You have too many listings.', 400);
+    }
+    let id = Date.now(); while (items.some(x => Number(x.id) === id)) id++;
+    items.push({ id, ...data });
+    await tx.execute({ sql: 'UPDATE users SET items = ?, lastItemTime = ? WHERE username = ?', args: [JSON.stringify(items), Date.now(), req.user] });
+    return { id };
+  });
+  if (out) res.json(out);
+});
+app.delete('/api/items/:id', requireUser, async (req, res) => {
+  const out = await inTx(res, async (tx) => {
+    const rs = await tx.execute({ sql: 'SELECT items FROM users WHERE username = ?', args: [req.user] });
+    const items = parseJson(rs.rows[0] && rs.rows[0].items, []);
+    const left = items.filter(x => Number(x.id) !== Number(req.params.id));
+    if (left.length === items.length) throw new Abort('Item not found.', 404);
+    await tx.execute({ sql: 'UPDATE users SET items = ? WHERE username = ?', args: [JSON.stringify(left), req.user] });
+    return true;
+  });
+  if (out) res.json({ ok: true });
+});
+
+// ---------- chat ----------
+// messages live on both people's rows; every change runs in one transaction on the server
+const threadKeyOf = (m, me) => { const other = m.sender === me ? m.receiver : m.sender; return other + (m.itemId ? THREAD_SEP + String(m.itemId) : ''); };
+async function withBothRows(tx, a, b, fn) {          // fn(msgsA, msgsB) mutates the arrays; both rows are saved
+  const names = a === b ? [a] : [a, b];
+  const rows = {};
+  for (const n of names) {
+    const r = await tx.execute({ sql: 'SELECT messages FROM users WHERE username = ?', args: [n] });
+    rows[n] = r.rows.length ? parseJson(r.rows[0].messages, []) : null;
+  }
+  if (rows[a] === null) throw new Abort('Account not found.', 404);
+  fn(rows);
+  for (const n of names) if (rows[n] !== null) await tx.execute({ sql: 'UPDATE users SET messages = ? WHERE username = ?', args: [JSON.stringify(rows[n]), n] });
+}
+function cleanItemRef(r) {
+  if (!r || typeof r !== 'object') return null;
+  return { name: String(r.name || '').slice(0, 80), price: String(r.price || '').slice(0, 30), game: String(r.game || '').slice(0, 60), seller: String(r.seller || '').slice(0, 40) };
+}
+function cleanOffer(o) {
+  if (!o || typeof o !== 'object') return null;
+  const items = Array.isArray(o.items) ? o.items.slice(0, 60).map(x => String(x).slice(0, 80)) : [];
+  if (!items.length) return null;
+  return { game: String(o.game || '').slice(0, 60), items, mm: !!o.mm, listingGame: String(o.listingGame || '').slice(0, 60), status: 'pending' };
+}
+app.post('/api/chat/send', requireUser, async (req, res) => {
+  if (limited('chat:' + req.user, 20, 10 * 1000)) return res.status(429).json({ error: 'You are sending messages too fast.' });
+  const to = String(req.body.receiver || '');
+  const text = String(req.body.text || '').slice(0, 2000);
+  if (!to) return res.status(400).json({ error: 'Choose who to message.' });
+  if (!text.trim()) return res.status(400).json({ error: 'Message is empty.' });
+  const out = await inTx(res, async (tx) => {
+    const ex = await tx.execute({ sql: 'SELECT bannedUntil FROM users WHERE username = ?', args: [req.user] });
+    const until = Number(ex.rows[0] && ex.rows[0].bannedUntil) || 0;
+    if (until === -1 || until > Date.now()) throw new Abort('Your account is banned.', 403);
+    if (!(await tx.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [to] })).rows.length) throw new Abort('Account not found.', 404);
+    let imageId = null;
+    if (req.body.imageId) {
+      imageId = String(req.body.imageId).slice(0, 64);
+      const im = await tx.execute({ sql: 'SELECT 1 FROM chat_images WHERE id = ? AND sender = ?', args: [imageId, req.user] });
+      if (!im.rows.length) throw new Abort('Picture not found.', 400);
+    }
+    const msg = { sender: req.user, receiver: to, text, timestamp: Date.now(), itemRef: cleanItemRef(req.body.itemRef), itemId: req.body.itemId ? String(req.body.itemId).slice(0, 64) : null };
+    if (imageId) { msg.imageId = imageId; msg.caption = String(req.body.caption || '').slice(0, 500); }
+    const offer = cleanOffer(req.body.offer); if (offer) msg.offer = offer;
+    await withBothRows(tx, req.user, to, (rows) => {
+      while (rows[req.user].some(m => m.sender === req.user && m.timestamp === msg.timestamp)) msg.timestamp++;   // timestamp is the id
+      rows[req.user].push(msg);
+      if (to !== req.user && rows[to] !== null) rows[to].push(msg);
+    });
+    return msg;
+  });
+  if (out) res.json({ message: out });
+});
+app.post('/api/chat/edit', requireUser, async (req, res) => {
+  const to = String(req.body.receiver || ''), ts = Number(req.body.timestamp);
+  const text = String(req.body.text || '').slice(0, 2000);
+  if (!to || !ts || !text.trim()) return res.status(400).json({ error: 'Bad request.' });
+  const out = await inTx(res, async (tx) => {
+    await withBothRows(tx, req.user, to, (rows) => {
+      for (const n of Object.keys(rows)) if (rows[n]) rows[n].forEach(m => { if (m.sender === req.user && m.timestamp === ts && !m.offer) m.text = text; });
+    });
+    return true;
+  });
+  if (out) res.json({ ok: true });
+});
+app.post('/api/chat/delete', requireUser, async (req, res) => {
+  const to = String(req.body.receiver || ''), ts = Number(req.body.timestamp);
+  if (!to || !ts) return res.status(400).json({ error: 'Bad request.' });
+  const out = await inTx(res, async (tx) => {
+    await withBothRows(tx, req.user, to, (rows) => {
+      for (const n of Object.keys(rows)) if (rows[n]) rows[n] = rows[n].filter(m => !(m.sender === req.user && m.timestamp === ts));
+    });
+    return true;
+  });
+  if (out) res.json({ ok: true });
+});
+// offers: the receiver accepts / declines / asks for more items; the sender updates the items after being asked
+app.post('/api/chat/offer', requireUser, async (req, res) => {
+  const sender = String(req.body.sender || ''), receiver = String(req.body.receiver || ''), ts = Number(req.body.timestamp);
+  const action = String(req.body.action || '');
+  if (![sender, receiver].includes(req.user) || !ts) return res.status(400).json({ error: 'Bad request.' });
+  const out = await inTx(res, async (tx) => {
+    let found = false;
+    await withBothRows(tx, sender, receiver, (rows) => {
+      for (const n of Object.keys(rows)) if (rows[n]) rows[n].forEach(m => {
+        if (m.sender !== sender || m.timestamp !== ts || !m.offer) return;
+        found = true;
+        if (action === 'accept' || action === 'decline' || action === 'add') {
+          if (req.user !== receiver) throw new Abort('Only the other person can respond to this offer.', 403);
+          if (m.offer.status !== 'pending') throw new Abort('This offer was already answered.');
+          m.offer.status = action === 'accept' ? 'accepted' : action === 'decline' ? 'declined' : 'add';
+          m.offer.by = req.user;
+        } else if (action === 'update') {
+          if (req.user !== sender) throw new Abort('Only the sender can change the offer.', 403);
+          const o = cleanOffer({ ...m.offer, items: req.body.items, mm: req.body.mm });
+          if (!o) throw new Abort('Pick at least one item.', 400);
+          m.offer = o;
+          m.text = String(req.body.text || m.text).slice(0, 2000);
+        } else throw new Abort('Bad request.', 400);
+      });
+    });
+    if (!found) throw new Abort('Offer not found.', 404);
+    return true;
+  });
+  if (out) res.json({ ok: true });
+});
+
+// delete a chat only for me; also forgets it forever when the other side already deleted theirs
+app.post('/api/chat/clear', requireUser, async (req, res) => {
+  const other = String(req.body.other || ''), itemId = req.body.itemId ? String(req.body.itemId) : '';
+  if (!other) return res.status(400).json({ error: 'Bad request.' });
+  const key = other + (itemId ? THREAD_SEP + itemId : '');
+  const theirKey = req.user + (itemId ? THREAD_SEP + itemId : '');
+  const out = await inTx(res, async (tx) => {
+    const open = await tx.execute({
+      sql: "SELECT id FROM deals WHERE ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?)) AND COALESCE(itemId, '') = ? AND status IN ('requested','paid','not_received','reported') LIMIT 1",
+      args: [req.user, other, other, req.user, itemId]
+    });
+    if (open.rows.length) throw new Abort('Finish or resolve the deal in this chat before deleting it.');
+    const me = await tx.execute({ sql: 'SELECT messages FROM users WHERE username = ?', args: [req.user] });
+    const mine = parseJson(me.rows[0] && me.rows[0].messages, []).filter(m => threadKeyOf(m, req.user) !== key);
+    await tx.execute({ sql: 'UPDATE users SET messages = ? WHERE username = ?', args: [JSON.stringify(mine), req.user] });
+    await tx.execute({ sql: 'INSERT INTO chat_clears (user, other, clearedAt) VALUES (?, ?, ?) ON CONFLICT(user, other) DO UPDATE SET clearedAt = excluded.clearedAt', args: [req.user, key, Date.now()] });
+    const th = await tx.execute({ sql: 'SELECT clearedAt FROM chat_clears WHERE user = ? AND other = ?', args: [other, theirKey] });
+    const ot = await tx.execute({ sql: 'SELECT messages FROM users WHERE username = ?', args: [other] });
+    const theirLeft = ot.rows.length ? parseJson(ot.rows[0].messages, []).some(m => threadKeyOf(m, other) === theirKey) : false;
+    if (th.rows.length && Number(th.rows[0].clearedAt) && !theirLeft) {
+      await tx.execute({
+        sql: "DELETE FROM deals WHERE status IN ('completed','cancelled','refunded','released') AND COALESCE(itemId, '') = ? AND ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?))",
+        args: [itemId, req.user, other, other, req.user]
+      });
+      await tx.execute({ sql: 'DELETE FROM chat_clears WHERE (user = ? AND other = ?) OR (user = ? AND other = ?)', args: [req.user, key, other, theirKey] });
+    }
+    return true;
+  });
+  if (out) res.json({ ok: true });
+});
+app.get('/api/chat/clears', requireUser, async (req, res) => {
+  const rs = await db.execute({ sql: 'SELECT other, clearedAt FROM chat_clears WHERE user = ?', args: [req.user] });
+  const clears = {}; rs.rows.forEach(r => { clears[r.other] = Number(r.clearedAt) || 0; });
+  res.json({ clears });
+});
+
+// pictures
+app.post('/api/chat/image', requireUser, async (req, res) => {
+  if (limited('img:' + req.user, 10, 60 * 1000)) return res.status(429).json({ error: 'Too many pictures. Slow down.' });
+  const to = String(req.body.receiver || ''), data = String(req.body.data || '');
+  if (!to || !/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(data) || data.length > 700000) return res.status(400).json({ error: 'Invalid picture.' });
+  if (!(await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [to] })).rows.length) return res.status(404).json({ error: 'Account not found.' });
+  const ts = Date.now(), id = ts + '-' + crypto.randomBytes(4).toString('hex');
+  await db.execute({ sql: 'INSERT INTO chat_images (id, sender, receiver, data, createdAt) VALUES (?, ?, ?, ?, ?)', args: [id, req.user, to, data, ts] });
+  res.json({ id });
+});
+app.get('/api/chat/image/:id', requireUser, async (req, res) => {
+  const rs = await db.execute({ sql: 'SELECT sender, receiver, data FROM chat_images WHERE id = ?', args: [String(req.params.id)] });
+  if (!rs.rows.length) return res.status(404).json({ error: 'Not found' });
+  const r = rs.rows[0];
+  if (r.sender !== req.user && r.receiver !== req.user && !(await isAdminName(req.user))) return res.status(404).json({ error: 'Not found' });
+  res.json({ data: r.data });
+});
+
+// typing dots
+app.post('/api/chat/typing', requireUser, async (req, res) => {
+  const other = String(req.body.other || '');
+  if (!other) return res.status(400).json({ error: 'Bad request.' });
+  if (req.body.stop) await db.execute({ sql: 'DELETE FROM typing WHERE user = ? AND other = ?', args: [req.user, other] });
+  else await db.execute({ sql: 'INSERT INTO typing (user, other, ts) VALUES (?, ?, ?) ON CONFLICT(user, other) DO UPDATE SET ts = excluded.ts', args: [req.user, other, Date.now()] });
+  res.json({ ok: true });
+});
+app.get('/api/chat/typing', requireUser, async (req, res) => {
+  const rs = await db.execute({ sql: 'SELECT ts FROM typing WHERE user = ? AND other = ?', args: [String(req.query.other || ''), req.user] });
+  res.json({ ts: rs.rows.length ? Number(rs.rows[0].ts) || 0 : 0 });
+});
+
+// admin: read the chat between two people (used by the reports page)
+app.get('/api/admin/chat', requireUser, requireAdmin, async (req, res) => {
+  const a = String(req.query.a || ''), b = String(req.query.b || '');
+  const out = [];
+  for (const n of [a, b]) {
+    const r = await db.execute({ sql: 'SELECT messages FROM users WHERE username = ?', args: [n] });
+    if (r.rows.length) parseJson(r.rows[0].messages, []).forEach(m => { if ((m.sender === a && m.receiver === b) || (m.sender === b && m.receiver === a)) out.push(m); });
+  }
+  res.json({ messages: out });
+});
+
+// admin: delete an account (never the admin itself)
+app.post('/api/admin/delete-user', requireUser, requireAdmin, async (req, res) => {
+  const name = String(req.body.username || '');
+  if (!name) return res.status(400).json({ error: 'Bad request.' });
+  const r = await db.execute({ sql: "DELETE FROM users WHERE username = ? AND COALESCE(customId, '') != 'knqw'", args: [name] });
+  if (!r.rowsAffected) return res.status(404).json({ error: 'Account not found.' });
+  await db.execute({ sql: 'DELETE FROM sessions WHERE username = ?', args: [name] });
+  try { await db.execute({ sql: 'DELETE FROM tickets WHERE creator = ? OR partner = ?', args: [name, name] }); } catch (e) {}
+  try { await db.execute({ sql: 'DELETE FROM ratings WHERE rater = ? OR target = ?', args: [name, name] }); } catch (e) {}
+  try { await db.execute({ sql: 'DELETE FROM vouches WHERE author = ? OR middleman = ?', args: [name, name] }); } catch (e) {}
+  try {                                                 // groups: delete the ones they owned, remove them from the others
+    const owned = await db.execute({ sql: 'SELECT id FROM chat_groups WHERE owner = ?', args: [name] });
+    for (const g of owned.rows) await db.execute({ sql: 'DELETE FROM group_messages WHERE groupId = ?', args: [g.id] });
+    await db.execute({ sql: 'DELETE FROM chat_groups WHERE owner = ?', args: [name] });
+    const gr = await db.execute({ sql: 'SELECT id, members FROM chat_groups WHERE members LIKE ?', args: [`%${name}%`] });
+    for (const g of gr.rows) {
+      const mem = parseJson(g.members, []);
+      if (mem.includes(name)) await db.execute({ sql: 'UPDATE chat_groups SET members = ? WHERE id = ?', args: [JSON.stringify(mem.filter(m => m !== name)), g.id] });
+    }
+  } catch (e) {}
+  console.log(`ADMIN ${req.user} deleted account ${name}`);
+  res.json({ ok: true });
+});
+
+// ======================================================================
+// Ratings & vouches
+// Stars can only be given by someone who completed a deal with the person; vouches only go to
+// middlemen; only the author or the admin can delete a vouch; only the admin can add/remove
+// other people's ratings. The browser no longer touches these tables.
+// ======================================================================
+const VOUCH_MIN = 3, VOUCH_MAX = 300;
+const nameParam = (v) => String(v || '').slice(0, 64);
+const validStars = (v) => { const n = Number(v); return Number.isInteger(n) && n >= 1 && n <= 5 ? n : 0; };
+
+// average + count + vouch count for everybody (cards on the Middlemen page)
+app.get('/api/ratings/meta', requireUser, async (req, res) => {
+  try {
+    const meta = {};
+    const r = await db.execute('SELECT target, AVG(stars) AS a, COUNT(*) AS c FROM ratings GROUP BY target');
+    r.rows.forEach(x => { meta[x.target] = { avg: Number(x.a) || 0, count: Number(x.c) || 0, vouches: 0 }; });
+    const v = await db.execute('SELECT middleman, COUNT(*) AS c FROM vouches GROUP BY middleman');
+    v.rows.forEach(x => {
+      if (!meta[x.middleman]) meta[x.middleman] = { avg: 0, count: 0, vouches: 0 };
+      meta[x.middleman].vouches = Number(x.c) || 0;
+    });
+    res.json({ meta });
+  } catch (e) { console.error('ratings meta error:', e); res.status(500).json({ error: 'Server error' }); }
+});
+
+// one profile: average, count, my own rating, vouch count
+app.get('/api/ratings/:name', requireUser, async (req, res) => {
+  try {
+    const name = nameParam(req.params.name);
+    const r = await db.execute({ sql: 'SELECT AVG(stars) AS a, COUNT(*) AS c FROM ratings WHERE target = ?', args: [name] });
+    const m = await db.execute({ sql: 'SELECT stars FROM ratings WHERE target = ? AND rater = ?', args: [name, req.user] });
+    const v = await db.execute({ sql: 'SELECT COUNT(*) AS c FROM vouches WHERE middleman = ?', args: [name] });
+    res.json({ avg: Number(r.rows[0].a) || 0, count: Number(r.rows[0].c) || 0, mine: m.rows.length ? Number(m.rows[0].stars) || 0 : 0, vouches: Number(v.rows[0].c) || 0 });
+  } catch (e) { console.error('rating summary error:', e); res.status(500).json({ error: 'Server error' }); }
+});
+
+// rate someone (or change my rating) - only after a completed deal with them
+app.post('/api/ratings', requireUser, async (req, res) => {
+  try {
+    if (moneyLimit(req, res, 'rating', 30, 60 * 60 * 1000)) return;
+    const target = nameParam(req.body.target);
+    const stars = validStars(req.body.stars);
+    if (!target || target === req.user) return res.status(400).json({ error: 'Choose another user.' });
+    if (!stars) return res.status(400).json({ error: 'Choose 1 to 5 stars.' });
+    const done = await db.execute({
+      sql: "SELECT 1 FROM deals WHERE status = 'completed' AND ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?)) LIMIT 1",
+      args: [req.user, target, target, req.user]
+    });
+    if (!done.rows.length) return res.status(403).json({ error: 'You can only rate someone after a completed deal with them.' });
+    await db.execute({
+      sql: 'INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(rater, target) DO UPDATE SET stars = excluded.stars, createdAt = excluded.createdAt',
+      args: [req.user, target, stars, Date.now()]
+    });
+    res.json({ ok: true });
+  } catch (e) { console.error('rating save error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
+});
+
+// remove my own rating
+app.post('/api/ratings/remove', requireUser, async (req, res) => {
+  try {
+    if (moneyLimit(req, res, 'rating', 30, 60 * 60 * 1000)) return;
+    await db.execute({ sql: 'DELETE FROM ratings WHERE rater = ? AND target = ?', args: [req.user, nameParam(req.body.target)] });
+    res.json({ ok: true });
+  } catch (e) { console.error('rating remove error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
+});
+
+// admin: list / add / remove / clear ratings of any user
+app.get('/api/admin/ratings/:name', requireUser, requireAdmin, async (req, res) => {
+  try {
+    const rs = await db.execute({ sql: 'SELECT rater, stars, createdAt FROM ratings WHERE target = ? ORDER BY createdAt DESC', args: [nameParam(req.params.name)] });
+    res.json({ ratings: rs.rows.map(r => ({ rater: r.rater, stars: Number(r.stars) || 0, createdAt: Number(r.createdAt) || 0 })) });
+  } catch (e) { console.error('admin ratings error:', e); res.status(500).json({ error: 'Server error' }); }
+});
+app.post('/api/admin/ratings', requireUser, requireAdmin, async (req, res) => {
+  try {
+    const target = nameParam(req.body.target);
+    const stars = validStars(req.body.stars);
+    if (!stars) return res.status(400).json({ error: 'Choose 1 to 5 stars.' });
+    if (!(await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [target] })).rows.length) return res.status(404).json({ error: 'User not found.' });
+    // 'admin:' can never be a real username (usernames only allow letters, digits . _ -), so these never collide with real raters
+    await db.execute({
+      sql: 'INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?)',
+      args: ['admin:' + Date.now() + Math.floor(Math.random() * 1000), target, stars, Date.now()]
+    });
+    console.log(`ADMIN ${req.user} added a ${stars}-star rating to ${target}`);
+    res.json({ ok: true });
+  } catch (e) { console.error('admin rating add error:', e); res.status(500).json({ error: 'Server error' }); }
+});
+app.post('/api/admin/ratings/remove', requireUser, requireAdmin, async (req, res) => {
+  try {
+    await db.execute({ sql: 'DELETE FROM ratings WHERE rater = ? AND target = ?', args: [String(req.body.rater || '').slice(0, 80), nameParam(req.body.target)] });
+    console.log(`ADMIN ${req.user} removed a rating of ${nameParam(req.body.target)}`);
+    res.json({ ok: true });
+  } catch (e) { console.error('admin rating remove error:', e); res.status(500).json({ error: 'Server error' }); }
+});
+app.post('/api/admin/ratings/clear', requireUser, requireAdmin, async (req, res) => {
+  try {
+    await db.execute({ sql: 'DELETE FROM ratings WHERE target = ?', args: [nameParam(req.body.target)] });
+    console.log(`ADMIN ${req.user} cleared all ratings of ${nameParam(req.body.target)}`);
+    res.json({ ok: true });
+  } catch (e) { console.error('admin rating clear error:', e); res.status(500).json({ error: 'Server error' }); }
+});
+
+// vouches of one middleman
+app.get('/api/vouches/:name', requireUser, async (req, res) => {
+  try {
+    const rs = await db.execute({ sql: 'SELECT id, author, text, createdAt FROM vouches WHERE middleman = ? ORDER BY createdAt DESC', args: [nameParam(req.params.name)] });
+    res.json({ vouches: rs.rows.map(r => ({ id: Number(r.id), author: r.author, text: r.text || '', createdAt: Number(r.createdAt) || 0 })) });
+  } catch (e) { console.error('vouch list error:', e); res.status(500).json({ error: 'Server error' }); }
+});
+
+// post or update my vouch for a middleman
+app.post('/api/vouches', requireUser, async (req, res) => {
+  try {
+    if (moneyLimit(req, res, 'vouch', 20, 60 * 60 * 1000)) return;
+    const middleman = nameParam(req.body.middleman);
+    const text = String(req.body.text || '').trim();
+    if (!middleman || middleman === req.user) return res.status(400).json({ error: 'You cannot vouch for yourself.' });
+    if (text.length < VOUCH_MIN) return res.status(400).json({ error: `Write at least ${VOUCH_MIN} characters.` });
+    const u = await db.execute({ sql: 'SELECT isMiddleman FROM users WHERE username = ?', args: [middleman] });
+    if (!u.rows.length) return res.status(404).json({ error: 'User not found.' });
+    if (Number(u.rows[0].isMiddleman) !== 1) return res.status(400).json({ error: 'You can only vouch for middlemen.' });
+    await db.execute({
+      sql: 'INSERT INTO vouches (middleman, author, text, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(middleman, author) DO UPDATE SET text = excluded.text, createdAt = excluded.createdAt',
+      args: [middleman, req.user, text.slice(0, VOUCH_MAX), Date.now()]
+    });
+    res.json({ ok: true });
+  } catch (e) { console.error('vouch save error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
+});
+
+// delete a vouch: its author or the admin
+app.post('/api/vouches/:id/delete', requireUser, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Bad request.' });
+    const admin = await isAdminName(req.user);
+    const r = await db.execute({ sql: 'DELETE FROM vouches WHERE id = ? AND (author = ? OR ?)', args: [id, req.user, admin ? 1 : 0] });
+    if (!r.rowsAffected) return res.status(404).json({ error: 'Vouch not found.' });
+    res.json({ ok: true });
+  } catch (e) { console.error('vouch delete error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
+});
+
+// ======================================================================
+// Stage 4: group chats
+// Who is in a group, who may be added and who may read / write is decided only here.
+// ======================================================================
+const GROUP_NAME_MAX = 40, GROUP_MAX_MEMBERS = 50, GROUP_MAX_OWNED = 20;
+const isBannedRow = (r) => { const u = Number(r.bannedUntil) || 0; return u === -1 || u > Date.now(); };
+const mapGroup = (r) => ({ id: Number(r.id), name: r.name || 'Group', owner: r.owner, members: parseJson(r.members, []), createdAt: Number(r.createdAt) || 0 });
+async function loadGroup(q, id) {
+  const rs = await q.execute({ sql: 'SELECT * FROM chat_groups WHERE id = ?', args: [id] });
+  return rs.rows.length ? mapGroup(rs.rows[0]) : null;
+}
+const groupIdOf = (req) => { const n = Number(req.params.id); return Number.isInteger(n) && n > 0 ? n : 0; };
+async function myGroupList(me) {
+  const rs = await db.execute({ sql: 'SELECT * FROM chat_groups WHERE members LIKE ?', args: [`%"${String(me).replace(/[%_"\\]/g, '')}"%`] });
+  const groups = rs.rows.map(mapGroup).filter(g => g.members.includes(me));
+  if (!groups.length) return [];
+  const marks = groups.map(() => '?').join(',');
+  const last = await db.execute({ sql: `SELECT groupId, MAX(timestamp) AS t FROM group_messages WHERE groupId IN (${marks}) GROUP BY groupId`, args: groups.map(g => g.id) });
+  const lt = {}; last.rows.forEach(r => { lt[Number(r.groupId)] = Number(r.t) || 0; });
+  groups.forEach(g => { g.lastTime = lt[g.id] || g.createdAt; });
+  return groups.sort((a, b) => b.lastTime - a.lastTime);
+}
+// people I may add: everybody I have a chat with + the middleman who accepted one of my tickets (never banned people)
+async function groupCandidates(me) {
+  const tags = {};
+  const mr = await db.execute({ sql: 'SELECT messages FROM users WHERE username = ?', args: [me] });
+  if (!mr.rows.length) return [];
+  parseJson(mr.rows[0].messages, []).forEach(m => {
+    const other = m.sender === me ? m.receiver : m.sender;
+    if (other && other !== me) tags[other] = 'chat';
+  });
+  try {
+    const rs = await db.execute({
+      sql: "SELECT DISTINCT claimedBy FROM tickets WHERE (creator = ? OR partner = ?) AND claimedBy IS NOT NULL AND claimedBy != '' AND status IN ('claimed', 'closed')",
+      args: [me, me]
+    });
+    rs.rows.forEach(r => { if (r.claimedBy && r.claimedBy !== me) tags[r.claimedBy] = 'middleman'; });
+  } catch (e) { /* tickets table may not exist yet */ }
+  const names = Object.keys(tags);
+  if (!names.length) return [];
+  const ur = await db.execute({ sql: `SELECT username, displayName, bannedUntil FROM users WHERE username IN (${names.map(() => '?').join(',')})`, args: names });
+  return ur.rows.filter(r => !isBannedRow(r))
+    .map(r => ({ username: r.username, displayName: r.displayName || r.username, groupTag: tags[r.username] }))
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+const cleanNames = (v) => [...new Set((Array.isArray(v) ? v : []).map(x => String(x)).filter(Boolean))].slice(0, GROUP_MAX_MEMBERS);
+
+app.get('/api/groups', requireUser, async (req, res) => {
+  try { res.json({ groups: await myGroupList(req.user) }); }
+  catch (e) { console.error('groups list error:', e); res.status(500).json({ error: 'Server error' }); }
+});
+app.get('/api/groups/candidates', requireUser, async (req, res) => {
+  try { res.json({ users: await groupCandidates(req.user) }); }
+  catch (e) { console.error('group candidates error:', e); res.status(500).json({ error: 'Server error' }); }
+});
+// cheap change signal for polling (same text the page used to build itself)
+app.get('/api/groups/sig', requireUser, async (req, res) => {
+  try {
+    const groups = await myGroupList(req.user);
+    if (!groups.length) return res.json({ sig: '' });
+    const rs = await db.execute({ sql: `SELECT COUNT(*) AS c, COALESCE(MAX(timestamp), 0) AS t FROM group_messages WHERE groupId IN (${groups.map(() => '?').join(',')})`, args: groups.map(g => g.id) });
+    res.json({ sig: groups.map(g => g.id + ':' + g.members.length + ':' + g.name).join(',') + '|' + Number(rs.rows[0].c) + ':' + Number(rs.rows[0].t) });
+  } catch (e) { res.status(500).json({ error: 'Server error' }); }
+});
+// timestamps of other people's messages in my groups since a moment (the page counts unread from this)
+app.get('/api/groups/activity', requireUser, async (req, res) => {
+  try {
+    const since = Number(req.query.since) || 0;
+    const groups = await myGroupList(req.user);
+    if (!groups.length) return res.json({ items: [] });
+    const rs = await db.execute({
+      sql: `SELECT groupId, timestamp FROM group_messages WHERE groupId IN (${groups.map(() => '?').join(',')}) AND sender != ? AND timestamp > ? ORDER BY timestamp DESC LIMIT 2000`,
+      args: [...groups.map(g => g.id), req.user, since]
+    });
+    res.json({ items: rs.rows.map(r => ({ groupId: Number(r.groupId), timestamp: Number(r.timestamp) || 0 })) });
+  } catch (e) { res.status(500).json({ error: 'Server error' }); }
+});
+
+app.post('/api/groups', requireUser, async (req, res) => {
+  if (limited('group-new:' + req.user, 10, 60 * 60 * 1000)) return res.status(429).json({ error: 'Too many requests. Slow down.' });
+  const name = String(req.body.name || '').trim().slice(0, GROUP_NAME_MAX);
+  const picked = cleanNames(req.body.members).filter(n => n !== req.user);
+  if (!name) return res.status(400).json({ error: 'Enter a group name.' });
+  if (!picked.length) return res.status(400).json({ error: 'Pick at least one person.' });
+  const out = await inTx(res, async (tx) => {
+    const me = await tx.execute({ sql: 'SELECT bannedUntil FROM users WHERE username = ?', args: [req.user] });
+    if (!me.rows.length) throw new Abort('Please log in.', 401);
+    if (isBannedRow(me.rows[0])) throw new Abort('Your account is banned.', 403);
+    const allowed = new Set((await groupCandidates(req.user)).map(u => u.username));
+    if (picked.some(n => !allowed.has(n))) throw new Abort('You can only add people you have chats with.', 400);
+    const owned = await tx.execute({ sql: 'SELECT COUNT(*) AS c FROM chat_groups WHERE owner = ?', args: [req.user] });
+    if (Number(owned.rows[0].c) >= GROUP_MAX_OWNED && !(await isAdminName(req.user))) throw new Abort('You have too many groups.', 400);
+    const rs = await tx.execute({ sql: 'INSERT INTO chat_groups (name, owner, members, createdAt) VALUES (?, ?, ?, ?)', args: [name, req.user, JSON.stringify([req.user, ...picked]), Date.now()] });
+    return { id: Number(rs.lastInsertRowid) };
+  });
+  if (out) res.json(out);
+});
+app.get('/api/groups/:id', requireUser, async (req, res) => {
+  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  const g = await loadGroup(db, id);
+  if (!g || !g.members.includes(req.user)) return res.status(404).json({ error: 'Group not found.' });
+  res.json({ group: g });
+});
+app.get('/api/groups/:id/messages', requireUser, async (req, res) => {
+  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  const g = await loadGroup(db, id);
+  if (!g || !g.members.includes(req.user)) return res.status(404).json({ error: 'Group not found.' });
+  const rs = await db.execute({
+    sql: 'SELECT sender, text, timestamp FROM (SELECT id, sender, text, timestamp FROM group_messages WHERE groupId = ? ORDER BY timestamp DESC, id DESC LIMIT 500) ORDER BY timestamp ASC, id ASC',
+    args: [id]
+  });
+  res.json({ messages: rs.rows.map(r => ({ sender: r.sender, text: r.text, timestamp: Number(r.timestamp) })) });
+});
+app.post('/api/groups/:id/messages', requireUser, async (req, res) => {
+  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  if (limited('chat:' + req.user, 20, 10 * 1000)) return res.status(429).json({ error: 'You are sending messages too fast.' });
+  const text = String(req.body.text || '').slice(0, 2000);
+  if (!text.trim()) return res.status(400).json({ error: 'Message is empty.' });
+  try {
+    const me = await db.execute({ sql: 'SELECT customId, bannedUntil FROM users WHERE username = ?', args: [req.user] });
+    if (!me.rows.length) return res.status(401).json({ error: 'Please log in.' });
+    if (isBannedRow(me.rows[0])) return res.status(403).json({ error: 'Your account is banned.' });
+    if (String(me.rows[0].customId || '') !== 'knqw') {            // spam timeouts are enforced here too (the page only sets them for now)
+      try {
+        const t = await db.execute({ sql: 'SELECT until FROM spam_timeouts WHERE username = ?', args: [req.user] });
+        if (t.rows.length && Number(t.rows[0].until) > Date.now()) return res.status(429).json({ error: 'You are timed out for spamming.' });
+      } catch (e) { /* table may not exist yet */ }
+    }
+    const g = await loadGroup(db, id);
+    if (!g || !g.members.includes(req.user)) return res.status(403).json({ error: 'You are no longer in this group.' });
+    const ts = Date.now();
+    await db.execute({ sql: 'INSERT INTO group_messages (groupId, sender, text, timestamp) VALUES (?, ?, ?, ?)', args: [id, req.user, text, ts] });
+    res.json({ message: { sender: req.user, text, timestamp: ts } });
+  } catch (e) { console.error('group send error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
+});
+// owner: add people
+app.post('/api/groups/:id/members', requireUser, async (req, res) => {
+  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  const picked = cleanNames(req.body.members);
+  if (!picked.length) return res.status(400).json({ error: 'Pick at least one person.' });
+  const out = await inTx(res, async (tx) => {
+    const g = await loadGroup(tx, id);
+    if (!g || g.owner !== req.user) throw new Abort('Only the group owner can do this.', 403);
+    const allowed = new Set((await groupCandidates(req.user)).map(u => u.username));
+    if (picked.some(n => !allowed.has(n))) throw new Abort('You can only add people you have chats with.', 400);
+    const members = [...new Set([...g.members, ...picked])];
+    if (members.length > GROUP_MAX_MEMBERS) throw new Abort(`A group can have at most ${GROUP_MAX_MEMBERS} members.`, 400);
+    await tx.execute({ sql: 'UPDATE chat_groups SET members = ? WHERE id = ?', args: [JSON.stringify(members), id] });
+    return true;
+  });
+  if (out) res.json({ ok: true });
+});
+// owner: remove somebody
+app.post('/api/groups/:id/remove', requireUser, async (req, res) => {
+  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  const who = String(req.body.username || '');
+  const out = await inTx(res, async (tx) => {
+    const g = await loadGroup(tx, id);
+    if (!g || g.owner !== req.user) throw new Abort('Only the group owner can do this.', 403);
+    if (who === g.owner) throw new Abort('The owner cannot be removed.', 400);
+    await tx.execute({ sql: 'UPDATE chat_groups SET members = ? WHERE id = ?', args: [JSON.stringify(g.members.filter(m => m !== who)), id] });
+    return true;
+  });
+  if (out) res.json({ ok: true });
+});
+// member: leave (the owner deletes the group instead)
+app.post('/api/groups/:id/leave', requireUser, async (req, res) => {
+  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  const out = await inTx(res, async (tx) => {
+    const g = await loadGroup(tx, id);
+    if (!g || !g.members.includes(req.user)) throw new Abort('Group not found.', 404);
+    if (g.owner === req.user) throw new Abort('The owner cannot leave. Delete the group instead.', 400);
+    await tx.execute({ sql: 'UPDATE chat_groups SET members = ? WHERE id = ?', args: [JSON.stringify(g.members.filter(m => m !== req.user)), id] });
+    return true;
+  });
+  if (out) res.json({ ok: true });
+});
+// owner: delete the group and all its messages for everyone
+app.delete('/api/groups/:id', requireUser, async (req, res) => {
+  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
+  const out = await inTx(res, async (tx) => {
+    const g = await loadGroup(tx, id);
+    if (!g || g.owner !== req.user) throw new Abort('Only the group owner can do this.', 403);
+    await tx.execute({ sql: 'DELETE FROM group_messages WHERE groupId = ?', args: [id] });
+    await tx.execute({ sql: 'DELETE FROM chat_groups WHERE id = ?', args: [id] });
+    return true;
+  });
+  if (out) res.json({ ok: true });
+});
+
+// old chats are cleaned up by the server now (every 10 minutes), not by whoever opens the page
+const CHAT_TTL_MS = 14 * DAY;
+async function purgeOldChats() {
+  try {
+    const cutoff = Date.now() - CHAT_TTL_MS;
+    const open = await db.execute("SELECT buyer, seller FROM deals WHERE status IN ('requested','paid','not_received','reported')");
+    const keep = new Set(); open.rows.forEach(r => { keep.add(r.buyer + '|' + r.seller); keep.add(r.seller + '|' + r.buyer); });
+    const rs = await db.execute("SELECT username, messages FROM users WHERE messages IS NOT NULL AND messages != '[]'");
+    for (const row of rs.rows) {
+      const msgs = parseJson(row.messages, []);
+      const kept = msgs.filter(m => !(Number(m.timestamp) < cutoff) || keep.has(row.username + '|' + (m.sender === row.username ? m.receiver : m.sender)));
+      if (kept.length !== msgs.length) await db.execute({ sql: 'UPDATE users SET messages = ? WHERE username = ?', args: [JSON.stringify(kept), row.username] });
+    }
+    for (const sql of ["DELETE FROM group_messages WHERE timestamp < ?", "DELETE FROM deals WHERE status IN ('completed','cancelled','refunded','released') AND updatedAt < ?", "DELETE FROM chat_clears WHERE clearedAt < ?", "DELETE FROM chat_images WHERE createdAt < ?"]) {
+      try { await db.execute({ sql, args: [cutoff] }); } catch (e) {}
+    }
+    try { await db.execute({ sql: 'DELETE FROM typing WHERE ts < ?', args: [Date.now() - 60000] }); } catch (e) {}
+  } catch (e) { console.error('purge error:', e); }
+}
+setInterval(purgeOldChats, 10 * 60 * 1000);
 
 // ---------- the site itself ----------
 app.get('/', (req, res) => res.redirect('/uniquetrading.html'));
