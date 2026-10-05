@@ -224,8 +224,15 @@ app.get('/api/check-username', async (req, res) => {
   const name = String(req.query.name || '').trim();
   const err = checkUsername(name);
   if (err) return res.json({ ok: false, message: err });
-  const r = await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ? LIMIT 1', args: [name] });
-  res.json(r.rows.length ? { ok: false, message: 'This username is already taken.' } : { ok: true, message: 'Username is available.' });
+  
+  try {
+    const r = await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ? LIMIT 1', args: [name] });
+    res.json(r.rows.length ? { ok: false, message: 'This username is already taken.' } : { ok: true, message: 'Username is available.' });
+  } catch (e) {
+    console.error('Database error on check-username:', e.message);
+    // Возвращаем мягкую ошибку, чтобы страница логина/регламента не падала
+    res.status(500).json({ ok: false, message: 'Database connection error. Please try again later.' });
+  }
 });
 
 app.get('/api/check-email', async (req, res) => {
