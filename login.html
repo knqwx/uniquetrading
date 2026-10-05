@@ -599,7 +599,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 return;
             }
             rememberAccount(result.data.username);
-            window.location.href = API_BASE + '/uniquetrading.html';   // the app (and its cookie) live on the server
+            window.location.href = 'uniquetrading.html';
         } finally {
             busy = false;
             submitBtn.disabled = false;
