@@ -3523,7 +3523,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 <button type="button" class="db-filter-chip active" data-field="username">Username</button>
                 <button type="button" class="db-filter-chip active" data-field="email">Email</button>
                 <button type="button" class="db-filter-chip active" data-field="displayname">Display Name</button>
-                <button type="button" class="db-filter-chip active" data-field="password">Password</button>
                 <button type="button" class="db-filter-chip active" data-field="id">ID</button>
                 <button type="button" class="db-filter-chip active" data-field="middleman">Middleman</button>
             </div>
@@ -3535,7 +3534,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                             <th>Username</th>
                             <th>Display Name</th>
                             <th>Email</th>
-                            <th>Password</th>
                             <th>Role</th>
                             <th>Status</th>
                             <th>Action</th>
@@ -3936,43 +3934,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     )
                 `);
                 await db.execute(`
-                    CREATE TABLE IF NOT EXISTS chat_groups (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        name TEXT,
-                        owner TEXT,
-                        members TEXT,
-                        createdAt INTEGER
-                    )
-                `);
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS group_messages (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        groupId INTEGER,
-                        sender TEXT,
-                        text TEXT,
-                        timestamp INTEGER
-                    )
-                `);
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS ratings (
-                        rater TEXT,
-                        target TEXT,
-                        stars INTEGER,
-                        createdAt INTEGER,
-                        PRIMARY KEY (rater, target)
-                    )
-                `);
-                await db.execute(`
-                    CREATE TABLE IF NOT EXISTS vouches (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        middleman TEXT,
-                        author TEXT,
-                        text TEXT,
-                        createdAt INTEGER,
-                        UNIQUE (middleman, author)
-                    )
-                `);
-                await db.execute(`
                     CREATE TABLE IF NOT EXISTS ip_bans (
                         ip TEXT PRIMARY KEY,
                         bannedUntil INTEGER,
@@ -4014,136 +3975,65 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             }
         }
 
+        // ===== Server API helper (session cookie; all private data and all writes go through the server) =====
+        async function srv(path, method, body) {
+            try {
+                const r = await fetch(path, {
+                    method: method || 'GET', credentials: 'same-origin', cache: 'no-store',
+                    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+                    body: body !== undefined ? JSON.stringify(body) : undefined
+                });
+                let data = {};
+                try { data = await r.json(); } catch (e) {}
+                if (r.status === 401) { location.href = 'login.html'; }
+                return { ok: r.ok, status: r.status, data: data || {} };
+            } catch (e) {
+                return { ok: false, status: 0, data: { error: 'Cannot reach the server. Check your connection.' } };
+            }
+        }
+        const srvFail = (r) => showToast(r.data.error || 'Something went wrong. Try again.');
+
+        // shape used all over the page; private fields exist only for me, other people's messages are always []
+        function normUser(u) {
+            return {
+                customId: u.customId, username: u.username, displayName: u.displayName, email: u.email || '', password: '',
+                avatar: u.avatar || null, balance: u.balance !== undefined && u.balance !== null ? u.balance : 0,
+                lastUsernameChange: u.lastUsernameChange || null, lastDisplayNameChange: u.lastDisplayNameChange || null,
+                items: u.items || [], lastItemTime: u.lastItemTime || 0, roblox: u.roblox || '', lastIp: u.lastIp || '',
+                messages: u.messages || [], card: u.card || null, isMiddleman: !!u.isMiddleman,
+                heldBalance: Number(u.heldBalance) || 0, lastSeen: Number(u.lastSeen) || 0, joinedAt: Number(u.joinedAt) || 0,
+                bannedUntil: Number(u.bannedUntil) || 0, bannedAt: Number(u.bannedAt) || 0, banReason: u.banReason || '',
+                appeal: u.appeal || '', appealAt: Number(u.appealAt) || 0, appealStatus: u.appealStatus || ''
+            };
+        }
         async function getAllUsersFromDB() {
             try {
-                const rs = await db.execute("SELECT * FROM users");
-                const _list = rs.rows.map(row => ({
-                    customId: row.customId,
-                    username: row.username,
-                    displayName: row.displayName,
-                    email: row.email,
-                    password: row.password,
-                    avatar: row.avatar,
-                    balance: row.balance !== undefined && row.balance !== null ? row.balance : 0.00,
-                    lastUsernameChange: row.lastUsernameChange,
-                    lastDisplayNameChange: row.lastDisplayNameChange,
-                    items: row.items ? JSON.parse(row.items) : [],
-                    lastItemTime: row.lastItemTime || 0,
-                    roblox: row.roblox || '',
-                    lastIp: row.lastIp || '',
-                    messages: row.messages ? JSON.parse(row.messages) : [],
-                    card: row.card || null,
-                    isMiddleman: Number(row.isMiddleman) === 1,
-                    heldBalance: Number(row.heldBalance) || 0,
-                    lastSeen: Number(row.lastSeen) || 0,
-                    joinedAt: Number(row.joinedAt) || 0,
-                    ...banFields(row)
-                }));
-                rememberPresence(_list);
-                return _list;
-            } catch (e) {
-                console.error("Error fetching users:", e);
-                return [];
-            }
+                const [a, b] = await Promise.all([srv('/api/users'), srv('/api/profile')]);
+                if (!a.ok) return [];
+                const list = (a.data.users || []).map(u => (b.ok && b.data.user && u.username === b.data.user.username) ? normUser(b.data.user) : normUser(u));
+                rememberPresence(list);
+                return list;
+            } catch (e) { console.error('Error fetching users:', e); return []; }
         }
 
         async function getUserByUsername(username) {
             try {
-                const rs = await db.execute({
-                    sql: "SELECT * FROM users WHERE username = ?",
-                    args: [username]
-                });
-                if (rs.rows.length === 0) return null;
-                const row = rs.rows[0];
-                rememberPresence([{ username: row.username, lastSeen: Number(row.lastSeen) || 0 }]);
-                return {
-                    customId: row.customId,
-                    username: row.username,
-                    displayName: row.displayName,
-                    email: row.email,
-                    password: row.password,
-                    avatar: row.avatar,
-                    balance: row.balance !== undefined && row.balance !== null ? row.balance : 0.00,
-                    lastUsernameChange: row.lastUsernameChange,
-                    lastDisplayNameChange: row.lastDisplayNameChange,
-                    items: row.items ? JSON.parse(row.items) : [],
-                    lastItemTime: row.lastItemTime || 0,
-                    roblox: row.roblox || '',
-                    lastIp: row.lastIp || '',
-                    messages: row.messages ? JSON.parse(row.messages) : [],
-                    card: row.card || null,
-                    isMiddleman: Number(row.isMiddleman) === 1,
-                    heldBalance: Number(row.heldBalance) || 0,
-                    lastSeen: Number(row.lastSeen) || 0,
-                    joinedAt: Number(row.joinedAt) || 0,
-                    ...banFields(row)
-                };
-            } catch (e) {
-                console.error("Error fetching user:", e);
-                return null;
-            }
+                const r = await srv(username === currentUser ? '/api/profile' : '/api/user/' + encodeURIComponent(username));
+                if (!r.ok || !r.data.user) return null;
+                const u = normUser(r.data.user);
+                rememberPresence([{ username: u.username, lastSeen: u.lastSeen }]);
+                return u;
+            } catch (e) { console.error('Error fetching user:', e); return null; }
         }
 
-        // opts.create = true only when a brand-new row is really wanted (username change).
-        // Everything else is UPDATE-only, so a deleted account can never be brought back by an open tab
-        // or by someone messaging that account.
-        async function saveUserToDB(userData, opts) {
-            const create = !!(opts && opts.create);
-            try {
-                const vals = [
-                    userData.customId || '1',
-                    userData.displayName || userData.username,
-                    userData.email || '',
-                    userData.password || '',
-                    userData.avatar || null,
-                    userData.balance !== undefined ? userData.balance : 0.00,
-                    userData.lastUsernameChange || null,
-                    userData.lastDisplayNameChange || null,
-                    JSON.stringify(userData.items || []),
-                    userData.lastItemTime || 0,
-                    JSON.stringify(userData.messages || []),
-                    userData.card || null
-                ];
-                if (create) {
-                    await db.execute({
-                        sql: `INSERT INTO users (customId, username, displayName, email, password, avatar, balance, lastUsernameChange, lastDisplayNameChange, items, lastItemTime, messages, card, isMiddleman, lastSeen)
-                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                              ON CONFLICT(username) DO UPDATE SET
-                                customId = excluded.customId, displayName = excluded.displayName, email = excluded.email,
-                                password = excluded.password, avatar = excluded.avatar, balance = excluded.balance,
-                                lastUsernameChange = excluded.lastUsernameChange, lastDisplayNameChange = excluded.lastDisplayNameChange,
-                                items = excluded.items, lastItemTime = excluded.lastItemTime, messages = excluded.messages, card = excluded.card`,
-                        args: [vals[0], userData.username, ...vals.slice(1), userData.isMiddleman ? 1 : 0, userData.lastSeen || 0]
-                    });
-                    if (userData.joinedAt !== undefined && userData.joinedAt !== null) {
-                        try { await db.execute({ sql: "UPDATE users SET joinedAt = ? WHERE username = ?", args: [userData.joinedAt, userData.username] }); } catch (e) {}
-                    }
-                } else {
-                    await db.execute({
-                        sql: `UPDATE users SET customId = ?, displayName = ?, email = ?, password = ?, avatar = ?, balance = ?,
-                                lastUsernameChange = ?, lastDisplayNameChange = ?, items = ?, lastItemTime = ?, messages = ?, card = ?
-                              WHERE username = ?`,
-                        args: [...vals, userData.username]
-                    });
-                }
-            } catch (e) {
-                console.error("Error saving user:", e);
-            }
+        async function deleteUserFromDB(username) {      // admin only (the server checks)
+            const r = await srv('/api/admin/delete-user', 'POST', { username });
+            if (!r.ok) srvFail(r);
+            return r.ok;
         }
+        // saveUserToDB no longer exists on purpose: the page must never write whole user rows
+        // (that is how stale copies used to overwrite balances). Use the specific /api/... routes instead.
 
-        async function deleteUserFromDB(username) {
-            try {
-                await db.execute({ sql: "DELETE FROM users WHERE username = ?", args: [username] });
-                const chk = await db.execute({ sql: "SELECT 1 FROM users WHERE username = ?", args: [username] });
-                if (chk.rows.length) return false;
-                try { await db.execute({ sql: "DELETE FROM tickets WHERE creator = ? OR partner = ?", args: [username, username] }); } catch (e) {}
-                return true;
-            } catch (e) {
-                console.error("Error deleting user:", e);
-                return false;
-            }
-        }
-        
         function getColorFromName(name) {
             const colors = ['#ff7300', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#009688', '#4caf50', '#ff9800'];
             let hash = 0;
@@ -4240,26 +4130,17 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         async function refreshPresence() {
             try {
-                const rs = await db.execute("SELECT username, lastSeen FROM users");
-                rememberPresence(rs.rows.map(r => ({ username: r.username, lastSeen: r.lastSeen })));
+                const r = await srv('/api/users/presence');
+                if (!r.ok) return;
+                rememberPresence((r.data.users || []).map(u => ({ username: u.username, lastSeen: u.lastSeen })));
                 applyPresenceToDom();
-            } catch (e) {
-                // не критично
-            }
+            } catch (e) { /* not critical */ }
         }
 
         async function heartbeat() {
             if (!currentUser) return;
-            const now = Date.now();
-            presenceMap[currentUser] = now;
-            try {
-                await db.execute({
-                    sql: "UPDATE users SET lastSeen = ? WHERE username = ?",
-                    args: [now, currentUser]
-                });
-            } catch (e) {
-                // не критично
-            }
+            presenceMap[currentUser] = Date.now();
+            try { await srv('/api/heartbeat', 'POST', {}); } catch (e) { /* not critical */ }
         }
 
         let presenceLoopsStarted = false;
@@ -4348,38 +4229,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         // Permanent bans: the account is removed 30 days after the ban
         // ===== Chats auto-delete after 2 weeks =====
         const CHAT_TTL_MS = 14 * 24 * 60 * 60 * 1000;
-        async function purgeOldChats(force) {
-            try {
-                const last = Number(localStorage.getItem('lastChatPurge')) || 0;
-                if (!force && Date.now() - last < 10 * 60 * 1000) return;
-                localStorage.setItem('lastChatPurge', String(Date.now()));
-                const cutoff = Date.now() - CHAT_TTL_MS;
-
-                // pairs with an unfinished or reported deal keep their chat (needed as evidence / for the money flow)
-                const open = await db.execute("SELECT buyer, seller FROM deals WHERE status IN ('requested','paid','not_received','reported')");
-                const keep = new Set();
-                open.rows.forEach(r => { keep.add(r.buyer + '|' + r.seller); keep.add(r.seller + '|' + r.buyer); });
-
-                const rs = await db.execute("SELECT username, messages FROM users WHERE messages IS NOT NULL AND messages != '[]'");
-                for (const row of rs.rows) {
-                    let msgs = [];
-                    try { msgs = JSON.parse(row.messages || '[]'); } catch (e) { continue; }
-                    const kept = msgs.filter(m => {
-                        if (!(Number(m.timestamp) < cutoff)) return true;
-                        const other = m.sender === row.username ? m.receiver : m.sender;
-                        return keep.has(row.username + '|' + other);
-                    });
-                    if (kept.length !== msgs.length) {
-                        await db.execute({ sql: "UPDATE users SET messages = ? WHERE username = ?", args: [JSON.stringify(kept), row.username] });
-                    }
-                }
-                await db.execute({ sql: "DELETE FROM group_messages WHERE timestamp < ?", args: [cutoff] });
-                await db.execute({ sql: "DELETE FROM deals WHERE status IN ('completed','cancelled','refunded','released') AND updatedAt < ?", args: [cutoff] });
-                await db.execute({ sql: "DELETE FROM chat_clears WHERE clearedAt < ?", args: [cutoff] });
-                await db.execute({ sql: "DELETE FROM chat_images WHERE createdAt < ?", args: [cutoff] });
-                await db.execute({ sql: "DELETE FROM typing WHERE ts < ?", args: [Date.now() - 60000] });
-            } catch (e) { console.error('Chat purge error:', e); }
-        }
+        async function purgeOldChats(force) { /* the server cleans old chats every 10 minutes now */ }
 
         async function purgeExpiredBans() {
             try {
@@ -5432,19 +5282,15 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (!currentUser) return unreadState;
             try {
                 const st = loadReadStore();
-                const meRs = await db.execute({ sql: "SELECT balance, heldBalance, messages FROM users WHERE username = ?", args: [currentUser] });
-                if (!meRs.rows.length) return unreadState;
-                const row = meRs.rows[0];
+                const pr = await srv('/api/profile');
+                if (!pr.ok || !pr.data.user) return unreadState;
+                const row = pr.data.user;
                 applyLiveBalance(row.balance, row.heldBalance);
 
                 const viewing = (messagesPage.classList.contains('active') && !document.hidden) ? activeChatUsername : null;
-                let msgs = [];
-                try { msgs = JSON.parse(row.messages || '[]'); } catch (e) {}
-                const clears = {};
-                try {
-                    (await db.execute({ sql: "SELECT other, clearedAt FROM chat_clears WHERE user = ?", args: [currentUser] }))
-                        .rows.forEach(r => { clears[r.other] = Number(r.clearedAt) || 0; });
-                } catch (e) {}
+                const msgs = row.messages || [];
+                let clears = {};
+                try { const cr = await srv('/api/chat/clears'); if (cr.ok) clears = cr.data.clears || {}; } catch (e) {}
 
                 const dm = {}, maxTs = {};
                 msgs.forEach(m => {
@@ -5458,14 +5304,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
                 const groups = {}, gMax = {};
                 try {
-                    const myGroups = await getMyGroups();
-                    if (myGroups.length) {
-                        const marks = myGroups.map(() => '?').join(',');
-                        const gr = await db.execute({
-                            sql: `SELECT groupId, sender, timestamp FROM group_messages WHERE groupId IN (${marks}) AND sender != ? AND timestamp > ?`,
-                            args: [...myGroups.map(g => g.id), currentUser, st.base]
-                        });
-                        gr.rows.forEach(r => {
+                    const gr = await srv('/api/groups/activity?since=' + Number(st.base));
+                    if (gr.ok) {
+                        (gr.data.items || []).forEach(r => {
                             const id = Number(r.groupId), t = Number(r.timestamp) || 0;
                             if (t > (gMax[id] || 0)) gMax[id] = t;
                             if (t > (st.r['g:' + id] !== undefined ? st.r['g:' + id] : st.base)) groups[id] = (groups[id] || 0) + 1;
@@ -5708,8 +5549,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 try {
                     let data = chatImageCache.get(id);
                     if (!data) {
-                        const rs = await db.execute({ sql: "SELECT data FROM chat_images WHERE id = ?", args: [id] });
-                        data = rs.rows.length ? rs.rows[0].data : null;
+                        const ir = await srv('/api/chat/image/' + encodeURIComponent(id));
+                        data = ir.ok ? ir.data.data : null;
                         if (data) chatImageCache.set(id, data);
                     }
                     if (data) {
@@ -5751,19 +5592,13 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             });
         }
         async function pushChatMessage(newMessage) {
-            const all = await getAllUsersFromDB();
-            const senderObj = all.find(u => u.username === newMessage.sender);
-            const receiverObj = all.find(u => u.username === newMessage.receiver);
-            if (senderObj) {
-                senderObj.messages = senderObj.messages || [];
-                senderObj.messages.push(newMessage);
-                await saveUserToDB(senderObj);
-            }
-            if (receiverObj && receiverObj.username !== newMessage.sender) {
-                receiverObj.messages = receiverObj.messages || [];
-                receiverObj.messages.push(newMessage);
-                await saveUserToDB(receiverObj);
-            }
+            const r = await srv('/api/chat/send', 'POST', {
+                receiver: newMessage.receiver, text: newMessage.text, itemRef: newMessage.itemRef || null,
+                itemId: newMessage.itemId || null, offer: newMessage.offer || null,
+                imageId: newMessage.imageId || null, caption: newMessage.caption || ''
+            });
+            if (!r.ok) { srvFail(r); return null; }
+            return r.data.message;
         }
         let stagedChatImage = null; // { threadKey, dataUrl } - shown above the text bar until Send is pressed
         function showStagedPreview(threadKey) {
@@ -5788,15 +5623,13 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         async function sendStagedChatImage(caption, targetUsername, threadKey, itemId, ctxItem) {
             const staged = stagedChatImage;
             if (!staged || staged.threadKey !== threadKey) return;
-            const ts = Date.now();
-            const imageId = ts + '-' + Math.random().toString(36).slice(2, 8);
-            try {
-                await db.execute({ sql: "INSERT INTO chat_images (id, sender, receiver, data, createdAt) VALUES (?, ?, ?, ?, ?)", args: [imageId, currentUser, targetUsername, staged.dataUrl, ts] });
-            } catch (e) { showToast('Could not send the picture.'); return; }
+            const up = await srv('/api/chat/image', 'POST', { receiver: targetUsername, data: staged.dataUrl });
+            if (!up.ok) { srvFail(up); return; }
+            const imageId = up.data.id;
             chatImageCache.set(imageId, staged.dataUrl);
             stagedChatImage = null;
             await pushChatMessage({
-                sender: currentUser, receiver: targetUsername, text: caption || '\uD83D\uDCF7 Photo', caption: caption || '', timestamp: ts, imageId: imageId,
+                sender: currentUser, receiver: targetUsername, text: caption || '\uD83D\uDCF7 Photo', caption: caption || '', imageId: imageId,
                 itemRef: ctxItem ? { name: ctxItem.name, price: ctxItem.label || itemPriceLabel(ctxItem), game: ctxItem.game || '', seller: ctxItem.owner || '' } : null,
                 itemId: itemId || null
             });
@@ -5812,13 +5645,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const now = Date.now();
             if (now - lastTypingSent < 2000) return;
             lastTypingSent = now;
-            try {
-                await db.execute({ sql: "INSERT INTO typing (user, other, ts) VALUES (?, ?, ?) ON CONFLICT(user, other) DO UPDATE SET ts = excluded.ts", args: [currentUser, other, now] });
-            } catch (e) { /* not critical */ }
+            try { await srv('/api/chat/typing', 'POST', { other }); } catch (e) { /* not critical */ }
         }
         async function clearTypingState(other) {
             lastTypingSent = 0;
-            try { await db.execute({ sql: "DELETE FROM typing WHERE user = ? AND other = ?", args: [currentUser, other] }); } catch (e) {}
+            try { await srv('/api/chat/typing', 'POST', { other, stop: true }); } catch (e) {}
         }
         function startTypingWatch(other) {
             if (typingPollTimer) clearInterval(typingPollTimer);
@@ -5827,8 +5658,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 if (!el) { clearInterval(typingPollTimer); typingPollTimer = null; return; }
                 if (document.hidden) return;
                 try {
-                    const rs = await db.execute({ sql: "SELECT ts FROM typing WHERE user = ? AND other = ?", args: [other, currentUser] });
-                    const live = rs.rows.length && (Date.now() - Number(rs.rows[0].ts)) < 4500;
+                    const tr = await srv('/api/chat/typing?other=' + encodeURIComponent(other));
+                    const live = tr.ok && tr.data.ts && (Date.now() - Number(tr.data.ts)) < 4500;
                     el.innerHTML = live ? `${escapeHtml(other)} is typing<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>` : '';
                 } catch (e) {}
             };
@@ -5982,30 +5813,23 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 }
             });
         }
-        async function updateOfferInDB(sender, receiver, timestamp, mutate) {
-            const all = await getAllUsersFromDB();
-            for (const name of [sender, receiver]) {
-                const u = all.find(x => x.username === name);
-                if (!u || !u.messages) continue;
-                let changed = false;
-                u.messages.forEach(m => {
-                    if (m.sender === sender && m.timestamp === timestamp && m.offer) { mutate(m); changed = true; }
-                });
-                if (changed) await saveUserToDB(u);
-            }
+        async function offerCall(msg, action, extra) {
+            const r = await srv('/api/chat/offer', 'POST', Object.assign({ sender: msg.sender, receiver: msg.receiver, timestamp: msg.timestamp, action }, extra || {}));
+            if (!r.ok) srvFail(r);
+            return r.ok;
         }
         async function handleOfferAction(act, msg, threadKey) {
             const o = msg.offer;
             if (act === 'accept') {
                 const ok = await askDealConfirm('Accept this offer?', o.mm ? 'This trade will require a middleman to complete.' : 'The other person will see that you accepted.', 'Accept');
                 if (!ok) return;
-                await updateOfferInDB(msg.sender, msg.receiver, msg.timestamp, m => { m.offer.status = 'accepted'; m.offer.by = currentUser; });
+                if (!(await offerCall(msg, 'accept'))) return;
             } else if (act === 'decline') {
                 const ok = await askDealConfirm('Decline this offer?', 'The other person will see that you declined.', 'Decline', true);
                 if (!ok) return;
-                await updateOfferInDB(msg.sender, msg.receiver, msg.timestamp, m => { m.offer.status = 'declined'; m.offer.by = currentUser; });
+                if (!(await offerCall(msg, 'decline'))) return;
             } else if (act === 'add') {
-                await updateOfferInDB(msg.sender, msg.receiver, msg.timestamp, m => { m.offer.status = 'add'; m.offer.by = currentUser; });
+                if (!(await offerCall(msg, 'add'))) return;
                 showToast('Asked them to add more items.');
             } else if (act === 'additems') {
                 openItemsDialog({
@@ -6015,10 +5839,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     confirmLabel: 'Update offer',
                     onDone: async (game, items) => {
                         const mm = offerNeedsMiddleman(o.listingGame || '', game, items.length);
-                        await updateOfferInDB(msg.sender, msg.receiver, msg.timestamp, m => {
-                            m.offer.items = items; m.offer.mm = mm; m.offer.status = 'pending'; delete m.offer.by;
-                            m.text = `Offer (${game}): ${fmtItemList(items)}` + (mm ? ' - this trade will require a middleman to complete' : '');
-                        });
+                        if (!(await offerCall(msg, 'update', { items, mm, text: `Offer (${game}): ${fmtItemList(items)}` + (mm ? ' - this trade will require a middleman to complete' : '') }))) return;
                         showToast('Offer updated!');
                         await renderChatsList(threadKey);
                     }
@@ -6259,38 +6080,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     await editMessageInDB(targetUsername, editingMessageTimestamp, messageText);
                     editingMessageTimestamp = null;
                 } else {
-                    const timestamp = Date.now();
                     const itemRefData = ctxItem ? {
                         name: ctxItem.name,
                         price: ctxItem.label || itemPriceLabel(ctxItem),
                         game: ctxItem.game || '',
                         seller: ctxItem.owner || ''
                     } : null;
-
-                    const newMessage = {
-                        sender: currentUser,
-                        receiver: targetUsername,
-                        text: messageText,
-                        timestamp: timestamp,
-                        itemRef: itemRefData,
-                        itemId: itemId || null
-                    };
-
-                    let allUsersLatest = await getAllUsersFromDB();
-                    let senderObj = allUsersLatest.find(u => u.username === currentUser);
-                    let receiverObj = allUsersLatest.find(u => u.username === targetUsername);
-
-                    if (senderObj) {
-                        senderObj.messages = senderObj.messages || [];
-                        senderObj.messages.push(newMessage);
-                        await saveUserToDB(senderObj);
-                    }
-
-                    if (receiverObj && receiverObj.username !== currentUser) {
-                        receiverObj.messages = receiverObj.messages || [];
-                        receiverObj.messages.push(newMessage);
-                        await saveUserToDB(receiverObj);
-                    }
+                    const sent = await pushChatMessage({ receiver: targetUsername, text: messageText, itemRef: itemRefData, itemId: itemId || null });
+                    if (!sent) return;
                 }
 
                 pendingChatItem = null;
@@ -6338,45 +6135,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
 
         async function editMessageInDB(targetUsername, timestamp, newText) {
-            let allUsers = await getAllUsersFromDB();
-            let senderObj = allUsers.find(u => u.username === currentUser);
-            let receiverObj = allUsers.find(u => u.username === targetUsername);
-
-            if (senderObj && senderObj.messages) {
-                senderObj.messages.forEach(m => {
-                    if (m.sender === currentUser && m.timestamp === timestamp) {
-                        m.text = newText;
-                    }
-                });
-                await saveUserToDB(senderObj);
-            }
-
-            if (receiverObj && receiverObj.messages) {
-                receiverObj.messages.forEach(m => {
-                    if (m.sender === currentUser && m.timestamp === timestamp) {
-                        m.text = newText;
-                    }
-                });
-                await saveUserToDB(receiverObj);
-            }
+            const r = await srv('/api/chat/edit', 'POST', { receiver: targetUsername, timestamp, text: newText });
+            if (!r.ok) { srvFail(r); return; }
             showToast('Message updated');
         }
 
         async function deleteMessageInDB(targetUsername, timestamp, threadKey) {
-            let allUsers = await getAllUsersFromDB();
-            let senderObj = allUsers.find(u => u.username === currentUser);
-            let receiverObj = allUsers.find(u => u.username === targetUsername);
-
-            if (senderObj && senderObj.messages) {
-                senderObj.messages = senderObj.messages.filter(m => !(m.sender === currentUser && m.timestamp === timestamp));
-                await saveUserToDB(senderObj);
-            }
-
-            if (receiverObj && receiverObj.messages) {
-                receiverObj.messages = receiverObj.messages.filter(m => !(m.sender === currentUser && m.timestamp === timestamp));
-                await saveUserToDB(receiverObj);
-            }
-
+            const r = await srv('/api/chat/delete', 'POST', { receiver: targetUsername, timestamp });
+            if (!r.ok) { srvFail(r); return; }
             showToast('Message deleted');
             await renderChatsList(threadKey || targetUsername);
         }
@@ -6393,47 +6159,17 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
         async function getMyRating(target) {
             if (!currentUser) return 0;
-            try {
-                const rs = await db.execute({ sql: "SELECT stars FROM ratings WHERE rater = ? AND target = ?", args: [currentUser, target] });
-                return rs.rows.length ? Number(rs.rows[0].stars) || 0 : 0;
-            } catch (e) { return 0; }
+            const r = await srv('/api/ratings/' + encodeURIComponent(target));
+            return r.ok ? Number(r.data.mine) || 0 : 0;
         }
         async function deleteChatForMe(key) {
             const { user: other, itemId } = tParse(key);
-            const open = await db.execute({
-                sql: "SELECT id FROM deals WHERE ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?)) AND COALESCE(itemId, '') = ? AND status IN ('requested','paid','not_received','reported') LIMIT 1",
-                args: [currentUser, other, other, currentUser, itemId]
-            });
-            if (open.rows.length) { showToast('Finish or resolve the deal in this chat before deleting it.'); return; }
             const ok = await askDealConfirm('Delete this chat?',
                 `This chat with ${other}${itemId ? ' (about this item)' : ''} will be removed only for you. ${other} will still see it until they delete it too - when both of you have deleted it, it is gone forever. Chats are also deleted automatically after 2 weeks.`,
                 'Delete chat', true);
             if (!ok) return;
-            const now = Date.now();
-            const meObj = await getUserByUsername(currentUser);
-            if (meObj) {
-                meObj.messages = (meObj.messages || []).filter(m => msgThreadKey(m, currentUser) !== key);
-                await saveUserToDB(meObj);
-            }
-            await db.execute({
-                sql: "INSERT INTO chat_clears (user, other, clearedAt) VALUES (?, ?, ?) ON CONFLICT(user, other) DO UPDATE SET clearedAt = excluded.clearedAt",
-                args: [currentUser, key, now]
-            });
-            // other side already deleted and has nothing left of this chat -> delete forever
-            const theirKey = tKey(currentUser, itemId);
-            const theirs = await getChatClearedAt(other, theirKey);
-            const otherObj = await getUserByUsername(other);
-            const theirLeft = otherObj ? (otherObj.messages || []).some(m => msgThreadKey(m, other) === theirKey) : false;
-            if (theirs && !theirLeft) {
-                await db.execute({
-                    sql: "DELETE FROM deals WHERE status IN ('completed','cancelled','refunded','released') AND COALESCE(itemId, '') = ? AND ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?))",
-                    args: [itemId, currentUser, other, other, currentUser]
-                });
-                await db.execute({
-                    sql: "DELETE FROM chat_clears WHERE (user = ? AND other = ?) OR (user = ? AND other = ?)",
-                    args: [currentUser, key, other, theirKey]
-                });
-            }
+            const r = await srv('/api/chat/clear', 'POST', { other, itemId });
+            if (!r.ok) { srvFail(r); return; }
             if (pendingChatItem && pendingChatItem.sellerUsername === other) pendingChatItem = null;
             activeChatUsername = null;
             renderedChatUser = null;
@@ -6446,24 +6182,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const MIN_DEAL = 0.01;
         const MAX_DEAL = 1000000;
         const round2 = n => Math.round(Number(n) * 100) / 100;
-
-        // All money logic runs on the server (/api/wallet, /api/deals, /api/admin/...). The browser only asks.
-        async function srv(path, method, body) {
-            try {
-                const r = await fetch(path, {
-                    method: method || 'GET', credentials: 'same-origin', cache: 'no-store',
-                    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-                    body: body !== undefined ? JSON.stringify(body) : undefined
-                });
-                let data = {};
-                try { data = await r.json(); } catch (e) {}
-                if (r.status === 401) { location.href = 'login.html'; }
-                return { ok: r.ok, status: r.status, data: data || {} };
-            } catch (e) {
-                return { ok: false, status: 0, data: { error: 'Cannot reach the server. Check your connection.' } };
-            }
-        }
-        const srvFail = (r) => showToast(r.data.error || 'Something went wrong. Try again.');
 
         function mapDeal(r) {
             return {
@@ -6776,21 +6494,17 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     b.addEventListener('mouseenter', () => stars.forEach(x => x.classList.toggle('on', Number(x.dataset.dealRate) <= Number(b.dataset.dealRate))));
                     b.addEventListener('click', async () => {
                         const n = Number(b.dataset.dealRate);
-                        try {
-                            await db.execute({
-                                sql: "INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(rater, target) DO UPDATE SET stars = excluded.stars, createdAt = excluded.createdAt",
-                                args: [currentUser, targetUsername, n, Date.now()]
-                            });
-                            showToast(`You rated ${targetUsername} ${n} star${n === 1 ? '' : 's'}`);
-                        } catch (e) { showToast('Could not save your rating.'); }
+                        const rr = await srv('/api/ratings', 'POST', { target: targetUsername, stars: n });
+                        if (rr.ok) showToast(`You rated ${targetUsername} ${n} star${n === 1 ? '' : 's'}`);
+                        else srvFail(rr);
                         await renderChatsList(threadKey);
                     });
                 });
                 rateBox.addEventListener('mouseleave', () => stars.forEach(x => x.classList.toggle('on', Number(x.dataset.dealRate) <= chatMyRating)));
             }
             root.querySelectorAll('[data-deal-rate-remove]').forEach(b => b.addEventListener('click', async () => {
-                try { await db.execute({ sql: "DELETE FROM ratings WHERE rater = ? AND target = ?", args: [currentUser, targetUsername] }); showToast('Rating removed'); }
-                catch (e) { showToast('Could not remove your rating.'); }
+                const rr = await srv('/api/ratings/remove', 'POST', { target: targetUsername });
+                if (rr.ok) showToast('Rating removed'); else srvFail(rr);
                 await renderChatsList(threadKey);
             }));
 
@@ -6902,12 +6616,12 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (!(await isKnqw())) return;
             const d = await getDeal(id);
             if (!d) return;
-            const [buyerObj, sellerObj] = await Promise.all([getUserByUsername(d.buyer), getUserByUsername(d.seller)]);
+            const chatRes = await srv('/api/admin/chat?a=' + encodeURIComponent(d.buyer) + '&b=' + encodeURIComponent(d.seller));
             const between = m => (m.sender === d.buyer && m.receiver === d.seller) || (m.sender === d.seller && m.receiver === d.buyer);
             const key = m => `${m.sender}|${m.timestamp}`;
 
             const live = new Map();
-            [buyerObj, sellerObj].forEach(u => ((u && u.messages) || []).filter(between).forEach(m => { if (!live.has(key(m))) live.set(key(m), { ...m }); }));
+            ((chatRes.ok && chatRes.data.messages) || []).filter(between).forEach(m => { if (!live.has(key(m))) live.set(key(m), { ...m }); });
 
             let snap = [];
             try { snap = d.chatSnapshot ? JSON.parse(d.chatSnapshot) : []; } catch (e) {}
@@ -7043,29 +6757,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
 
         async function sendDirectMessage(targetUsername, text) {
-            const newMessage = {
-                sender: currentUser,
-                receiver: targetUsername,
-                text: text,
-                timestamp: Date.now(),
-                itemRef: null
-            };
-
-            const allUsersLatest = await getAllUsersFromDB();
-            const senderObj = allUsersLatest.find(u => u.username === currentUser);
-            const receiverObj = allUsersLatest.find(u => u.username === targetUsername);
-
-            if (senderObj) {
-                senderObj.messages = senderObj.messages || [];
-                senderObj.messages.push(newMessage);
-                await saveUserToDB(senderObj);
-            }
-
-            if (receiverObj && receiverObj.username !== currentUser) {
-                receiverObj.messages = receiverObj.messages || [];
-                receiverObj.messages.push(newMessage);
-                await saveUserToDB(receiverObj);
-            }
+            return await pushChatMessage({ receiver: targetUsername, text: text, itemRef: null });
         }
 
         // ----- Ticket creation: pick the person you trade with (no middleman choice) -----
@@ -7579,20 +7271,17 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 }
             }
 
-            userObj.username = newUsername;
-            userObj.displayName = newDisplayName || newUsername;
-
             if (newUsername !== currentUser) {
-                await deleteUserFromDB(currentUser);
+                const rr = await srv('/api/profile/rename', 'POST', { username: newUsername });
+                if (!rr.ok) { srvFail(rr); return; }
                 let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
                 savedAccounts = savedAccounts.map(acc => acc === currentUser ? newUsername : acc);
                 localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
                 localStorage.setItem('currentUser', newUsername);
             }
-
-            await saveUserToDB(userObj, { create: newUsername !== currentUser });
-            if (newUsername !== currentUser) {
-                try { await db.execute({ sql: "UPDATE sessions SET username = ? WHERE username = ?", args: [newUsername, currentUser] }); } catch (e) { console.error(e); }
+            if ((newDisplayName || newUsername) !== userObj.displayName) {
+                const dr = await srv('/api/profile', 'POST', { displayName: newDisplayName || newUsername });
+                if (!dr.ok) { srvFail(dr); return; }
             }
             showToast('Profile updated successfully!');
             settingsModal.classList.remove('active');
@@ -7616,11 +7305,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 if (!userObj) return;
             }
 
-            userObj.email = newEmail;
-            userObj.card = activeUserCard;
-
-            await saveUserToDB(userObj);
-            try { await db.execute({ sql: "UPDATE users SET roblox = ? WHERE username = ?", args: [activeRoblox || null, currentUser] }); } catch (e) { console.error(e); }
+            const ar = await srv('/api/profile', 'POST', { email: newEmail, card: activeUserCard || null, roblox: activeRoblox || null });
+            if (!ar.ok) { srvFail(ar); return; }
             showToast('Account settings saved successfully!');
             accountSettingsModal.classList.remove('active');
             location.reload();
@@ -7763,55 +7449,18 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 }
             }
 
-            userObj.items = userObj.items || [];
-
-            if (!editingItemId && userObj.customId !== 'knqw') {
-                const LISTING_COOLDOWN = 10 * 60 * 1000;
-                const waitMs = (Number(userObj.lastItemTime) || 0) + LISTING_COOLDOWN - Date.now();
-                if (waitMs > 0) {
-                    showToast(`You can list another item in ${fmtLeft(waitMs)}.`);
-                    return;
-                }
-            }
-
-            if (editingItemId) {
-                let idx = userObj.items.findIndex(i => i.id === editingItemId);
-                if (idx !== -1) {
-                    userObj.items[idx] = {
-                        ...userObj.items[idx],
-                        name: name,
-                        description: desc,
-                        tag: tag,
-                        price: price,
-                        photo: uploadedItemPhotoData,
-                        game: selectedGameForListing,
-                        category: pickedItemCategory || '',
-                        items: currentListingItemsForSave(),
-                        wanted: (tag === 'specific' && wantedState) ? { game: wantedState.game, items: wantedState.items.slice() } : null,
-                        stock: stock
-                    };
-                }
-                showToast('Item updated successfully!');
-            } else {
-                const newItem = {
-                    id: Date.now(),
-                    name: name,
-                    description: desc,
-                    tag: tag,
-                    price: price,
-                    photo: uploadedItemPhotoData,
-                    game: selectedGameForListing,
-                    category: pickedItemCategory || '',
-                        items: currentListingItemsForSave(),
-                        wanted: (tag === 'specific' && wantedState) ? { game: wantedState.game, items: wantedState.items.slice() } : null,
-                    stock: stock
-                };
-                userObj.items.push(newItem);
-                userObj.lastItemTime = Date.now();
-                showToast('Item listed successfully!');
-            }
-
-            await saveUserToDB(userObj);
+            const payload = {
+                id: editingItemId || undefined,
+                name: name, description: desc, tag: tag, price: price,
+                photo: uploadedItemPhotoData, game: selectedGameForListing,
+                category: pickedItemCategory || '',
+                items: currentListingItemsForSave(),
+                wanted: (tag === 'specific' && wantedState) ? { game: wantedState.game, items: wantedState.items.slice() } : null,
+                stock: stock
+            };
+            const ir = await srv('/api/items', 'POST', payload);
+            if (!ir.ok) { srvFail(ir); return; }
+            showToast(editingItemId ? 'Item updated successfully!' : 'Item listed successfully!');
             createItemModal.classList.remove('active');
             renderGlobalItems();
         });
@@ -7890,7 +7539,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 tr.dataset.fUsername = String(u.username || '').toLowerCase();
                 tr.dataset.fDisplayname = String(u.displayName || '').toLowerCase();
                 tr.dataset.fEmail = String(u.email || '').toLowerCase();
-                tr.dataset.fPassword = String(u.password || '').toLowerCase();
                 tr.dataset.fMiddleman = u.isMiddleman ? 'middleman' : 'user';
                 const banned = isBanned(u);
                 const permBan = u.bannedUntil === -1;
@@ -7902,7 +7550,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     <td>${escapeHtml(u.username)}</td>
                     <td>${escapeHtml(u.displayName || u.username)}</td>
                     <td>${escapeHtml(u.email)}</td>
-                    <td>${escapeHtml(u.password)}</td>
                     <td>
                         <button class="role-toggle-btn ${u.isMiddleman ? 'active' : ''}" data-username="${escapeHtml(u.username)}" data-mm="${u.isMiddleman ? 1 : 0}">${u.isMiddleman ? 'Middleman ✓' : 'Make Middleman'}</button>
                     </td>
@@ -7966,7 +7613,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             dbModal.classList.add('active');
         });
 
-        const DB_FIELD_KEY = { id: 'fId', username: 'fUsername', displayname: 'fDisplayname', email: 'fEmail', password: 'fPassword', middleman: 'fMiddleman' };
+        const DB_FIELD_KEY = { id: 'fId', username: 'fUsername', displayname: 'fDisplayname', email: 'fEmail', middleman: 'fMiddleman' };
         function applyDbFilter() {
             const input = document.getElementById('db-search-input');
             const terms = input.value.toLowerCase().split(/\s+/).filter(Boolean);
@@ -7985,7 +7632,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (rows.length && visible === 0) {
                 const tr = document.createElement('tr');
                 tr.className = 'db-no-results';
-                tr.innerHTML = '<td colspan="8">No accounts match your search.</td>';
+                tr.innerHTML = '<td colspan="7">No accounts match your search.</td>';
                 dbTbody.appendChild(tr);
             }
         }
@@ -8604,30 +8251,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
 
         async function getRatingMeta() {
-            const meta = {};
-            try {
-                const r = await db.execute("SELECT target, AVG(stars) AS a, COUNT(*) AS c FROM ratings GROUP BY target");
-                r.rows.forEach(x => { meta[x.target] = { avg: Number(x.a) || 0, count: Number(x.c) || 0, vouches: 0 }; });
-                const v = await db.execute("SELECT middleman, COUNT(*) AS c FROM vouches GROUP BY middleman");
-                v.rows.forEach(x => {
-                    if (!meta[x.middleman]) meta[x.middleman] = { avg: 0, count: 0, vouches: 0 };
-                    meta[x.middleman].vouches = Number(x.c) || 0;
-                });
-            } catch (e) { console.error(e); }
-            return meta;
+            const r = await srv('/api/ratings/meta');
+            return r.ok ? (r.data.meta || {}) : {};
         }
 
         async function getRatingSummary(username) {
             const out = { avg: 0, count: 0, mine: 0 };
-            try {
-                const r = await db.execute({ sql: "SELECT AVG(stars) AS a, COUNT(*) AS c FROM ratings WHERE target = ?", args: [username] });
-                out.avg = Number(r.rows[0].a) || 0;
-                out.count = Number(r.rows[0].c) || 0;
-                if (currentUser) {
-                    const m = await db.execute({ sql: "SELECT stars FROM ratings WHERE target = ? AND rater = ?", args: [username, currentUser] });
-                    if (m.rows.length) out.mine = Number(m.rows[0].stars) || 0;
-                }
-            } catch (e) { console.error(e); }
+            const r = await srv('/api/ratings/' + encodeURIComponent(username));
+            if (r.ok) { out.avg = Number(r.data.avg) || 0; out.count = Number(r.data.count) || 0; out.mine = Number(r.data.mine) || 0; }
             return out;
         }
 
@@ -8678,11 +8309,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             const refresh = async () => {
                 const list = document.getElementById('rating-mgr-list');
-                let rows = [];
-                try {
-                    const rs = await db.execute({ sql: "SELECT rater, stars, createdAt FROM ratings WHERE target = ? ORDER BY createdAt DESC", args: [target] });
-                    rows = rs.rows;
-                } catch (e) { console.error(e); }
+                const lr = await srv('/api/admin/ratings/' + encodeURIComponent(target));
+                const rows = lr.ok ? (lr.data.ratings || []) : [];
                 list.innerHTML = rows.length ? rows.map(r => `
                     <div class="rating-mgr-row">
                         <span class="rm-who">${String(r.rater).startsWith('admin:') ? 'knqw (added)' : escapeHtml(r.rater)}</span>
@@ -8691,17 +8319,16 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         <button class="rm-del" type="button" data-rater="${escapeHtml(r.rater)}">Remove</button>
                     </div>`).join('') : '<div class="group-pick-empty">No ratings yet.</div>';
                 list.querySelectorAll('.rm-del').forEach(b => b.addEventListener('click', async () => {
-                    await db.execute({ sql: "DELETE FROM ratings WHERE rater = ? AND target = ?", args: [b.dataset.rater, target] });
+                    const rr = await srv('/api/admin/ratings/remove', 'POST', { target, rater: b.dataset.rater });
+                    if (!rr.ok) { srvFail(rr); return; }
                     showToast('Rating removed');
                     await refresh();
                     renderProfileRating(userObj);
                 }));
             };
             document.getElementById('rating-mgr-add-btn').onclick = async () => {
-                await db.execute({
-                    sql: "INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?)",
-                    args: ['admin:' + Date.now() + Math.floor(Math.random() * 1000), target, pick, Date.now()]
-                });
+                const rr = await srv('/api/admin/ratings', 'POST', { target, stars: pick });
+                if (!rr.ok) { srvFail(rr); return; }
                 showToast('Rating added');
                 await refresh();
                 renderProfileRating(userObj);
@@ -8709,7 +8336,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             document.getElementById('rating-mgr-clear-btn').onclick = async () => {
                 const ok = await askDealConfirm('Remove all ratings?', `Every rating of ${userObj.displayName || target} will be deleted.`, 'Remove all', true);
                 if (!ok) return;
-                await db.execute({ sql: "DELETE FROM ratings WHERE target = ?", args: [target] });
+                const rr = await srv('/api/admin/ratings/clear', 'POST', { target });
+                if (!rr.ok) { srvFail(rr); return; }
                 showToast('All ratings removed');
                 await refresh();
                 renderProfileRating(userObj);
@@ -8731,11 +8359,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         document.getElementById('profile-tab-vouches').addEventListener('click', () => setProfileTab('vouches'));
 
         async function refreshVouchCount(username) {
-            try {
-                const r = await db.execute({ sql: "SELECT COUNT(*) AS c FROM vouches WHERE middleman = ?", args: [username] });
-                const c = Number(r.rows[0].c) || 0;
-                document.getElementById('profile-vouch-count').textContent = `(${c})`;
-            } catch (e) { /* не критично */ }
+            const r = await srv('/api/vouches/' + encodeURIComponent(username));
+            if (r.ok) document.getElementById('profile-vouch-count').textContent = `(${(r.data.vouches || []).length})`;
         }
 
         async function renderVouches(userObj) {
@@ -8743,11 +8368,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const form = document.getElementById('vouch-form');
             const canVouch = !!currentUser && userObj.username !== currentUser;
             form.style.display = canVouch ? '' : 'none';
-            let rows = [];
-            try {
-                const rs = await db.execute({ sql: "SELECT id, author, text, createdAt FROM vouches WHERE middleman = ? ORDER BY createdAt DESC", args: [userObj.username] });
-                rows = rs.rows;
-            } catch (e) { console.error(e); }
+            const vr = await srv('/api/vouches/' + encodeURIComponent(userObj.username));
+            const rows = vr.ok ? (vr.data.vouches || []) : [];
             const admin = await isKnqw();
             document.getElementById('profile-vouch-count').textContent = `(${rows.length})`;
             if (canVouch) {
@@ -8766,10 +8388,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 </div>`).join('');
             list.querySelectorAll('.vouch-author').forEach(el => el.addEventListener('click', () => openProfileByUsername(el.dataset.author)));
             list.querySelectorAll('.vouch-del').forEach(b => b.addEventListener('click', async () => {
-                await db.execute({
-                    sql: "DELETE FROM vouches WHERE id = ? AND (author = ? OR ?)",
-                    args: [Number(b.dataset.vid), currentUser, admin ? 1 : 0]
-                });
+                const dr = await srv('/api/vouches/' + Number(b.dataset.vid) + '/delete', 'POST', {});
+                if (!dr.ok) srvFail(dr);
                 renderVouches(userObj);
             }));
         }
@@ -8780,83 +8400,34 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (!mm || !mm.isMiddleman || mm.username === currentUser) return;
             const text = document.getElementById('vouch-input').value.trim();
             if (text.length < 3) { showToast('Write at least 3 characters.'); return; }
-            try {
-                await db.execute({
-                    sql: "INSERT INTO vouches (middleman, author, text, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(middleman, author) DO UPDATE SET text = excluded.text, createdAt = excluded.createdAt",
-                    args: [mm.username, currentUser, text.slice(0, 300), Date.now()]
-                });
-                showToast('Vouch saved');
-            } catch (e) { showToast('Could not save your vouch.'); }
+            const vr = await srv('/api/vouches', 'POST', { middleman: mm.username, text: text.slice(0, 300) });
+            if (vr.ok) showToast('Vouch saved'); else srvFail(vr);
             renderVouches(mm);
         });
 
         // ===== Groups =====
-        // Who can I add? People I have chats with + the middleman who accepted one of my tickets.
+        // Groups live on the server now: it decides who can be added, who can read and who can write.
         async function getGroupCandidates() {
-            const me = await getUserByUsername(currentUser);
-            if (!me) return [];
-            const tags = {};
-            (me.messages || []).forEach(m => {
-                const other = m.sender === currentUser ? m.receiver : m.sender;
-                if (other && other !== currentUser) tags[other] = 'chat';
-            });
-            try {
-                const rs = await db.execute({
-                    sql: "SELECT DISTINCT claimedBy FROM tickets WHERE (creator = ? OR partner = ?) AND claimedBy IS NOT NULL AND claimedBy != '' AND status IN ('claimed', 'closed')",
-                    args: [currentUser, currentUser]
-                });
-                rs.rows.forEach(r => { if (r.claimedBy && r.claimedBy !== currentUser) tags[r.claimedBy] = 'middleman'; });
-            } catch (e) { console.error(e); }
-            const users = await getAllUsersFromDB();
-            return Object.keys(tags)
-                .map(name => ({ user: users.find(u => u.username === name), tag: tags[name] }))
-                .filter(x => x.user && !isBanned(x.user))
-                .map(x => ({ ...x.user, groupTag: x.tag }))
-                .sort((a, b) => (a.displayName || a.username).localeCompare(b.displayName || b.username));
-        }
-
-        function mapGroup(r) {
-            let members = [];
-            try { members = JSON.parse(r.members || '[]'); } catch (e) {}
-            return { id: Number(r.id), name: r.name || 'Group', owner: r.owner, members, createdAt: Number(r.createdAt) || 0 };
+            const r = await srv('/api/groups/candidates');
+            return r.ok ? (r.data.users || []) : [];
         }
         async function getGroup(id) {
-            const rs = await db.execute({ sql: "SELECT * FROM chat_groups WHERE id = ?", args: [id] });
-            return rs.rows.length ? mapGroup(rs.rows[0]) : null;
+            const r = await srv('/api/groups/' + Number(id));
+            return r.ok ? r.data.group : null;
         }
         async function getMyGroups() {
             if (!currentUser) return [];
-            try {
-                const rs = await db.execute({ sql: "SELECT * FROM chat_groups WHERE members LIKE ?", args: [`%"${currentUser.replace(/[%_"\\]/g, '')}"%`] });
-                const groups = rs.rows.map(mapGroup).filter(g => g.members.includes(currentUser));
-                if (!groups.length) return [];
-                const marks = groups.map(() => '?').join(',');
-                const last = await db.execute({
-                    sql: `SELECT groupId, MAX(timestamp) AS t FROM group_messages WHERE groupId IN (${marks}) GROUP BY groupId`,
-                    args: groups.map(g => g.id)
-                });
-                const lt = {};
-                last.rows.forEach(r => { lt[Number(r.groupId)] = Number(r.t) || 0; });
-                groups.forEach(g => { g.lastTime = lt[g.id] || g.createdAt; });
-                return groups.sort((a, b) => b.lastTime - a.lastTime);
-            } catch (e) { console.error(e); return []; }
+            const r = await srv('/api/groups');
+            return r.ok ? (r.data.groups || []) : [];
         }
         async function getGroupSig() {
             if (!currentUser) return '';
-            try {
-                const groups = await getMyGroups();
-                if (!groups.length) return '';
-                const marks = groups.map(() => '?').join(',');
-                const rs = await db.execute({
-                    sql: `SELECT COUNT(*) AS c, COALESCE(MAX(timestamp), 0) AS t FROM group_messages WHERE groupId IN (${marks})`,
-                    args: groups.map(g => g.id)
-                });
-                return groups.map(g => g.id + ':' + g.members.length + ':' + g.name).join(',') + '|' + Number(rs.rows[0].c) + ':' + Number(rs.rows[0].t);
-            } catch (e) { return ''; }
+            const r = await srv('/api/groups/sig');
+            return r.ok ? (r.data.sig || '') : '';
         }
         async function getGroupMessages(id) {
-            const rs = await db.execute({ sql: "SELECT sender, text, timestamp FROM group_messages WHERE groupId = ? ORDER BY timestamp ASC, id ASC LIMIT 500", args: [id] });
-            return rs.rows.map(r => ({ sender: r.sender, text: r.text, timestamp: Number(r.timestamp) }));
+            const r = await srv('/api/groups/' + Number(id) + '/messages');
+            return r.ok ? (r.data.messages || []) : [];
         }
 
         // ---- create group modal ----
@@ -8910,23 +8481,12 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const picked = [...document.querySelectorAll('#group-pick-list input:checked')].map(i => i.value);
                 if (!name) { showToast('Enter a group name.'); return; }
                 if (!picked.length) { showToast('Pick at least one person.'); return; }
-                const fresh = await getGroupCandidates();
-                const allowed = new Set(fresh.map(u => u.username));
-                if (picked.some(p => !allowed.has(p))) { showToast('You can only add people you have chats with.'); return; }
                 createBtn.disabled = true;
-                try {
-                    const rs = await db.execute({
-                        sql: "INSERT INTO chat_groups (name, owner, members, createdAt) VALUES (?, ?, ?, ?)",
-                        args: [name, currentUser, JSON.stringify([currentUser, ...picked]), Date.now()]
-                    });
-                    groupModalEl.classList.remove('active');
-                    showToast('Group created');
-                    await renderChatsList('g:' + Number(rs.lastInsertRowid));
-                } catch (err) {
-                    console.error(err);
-                    showToast('Could not create the group.');
-                    createBtn.disabled = false;
-                }
+                const r = await srv('/api/groups', 'POST', { name, members: picked });
+                if (!r.ok) { srvFail(r); createBtn.disabled = false; return; }
+                groupModalEl.classList.remove('active');
+                showToast('Group created');
+                await renderChatsList('g:' + Number(r.data.id));
             };
             groupModalEl.classList.add('active');
         }
@@ -8973,17 +8533,13 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 groupModalEl.classList.remove('active');
                 openProfileByUsername(el.dataset.user);
             }));
-            const writeMembers = async (members) => {
-                await db.execute({ sql: "UPDATE chat_groups SET members = ? WHERE id = ?", args: [JSON.stringify(members), g.id] });
-            };
             body.querySelectorAll('[data-remove]').forEach(b => b.addEventListener('click', async () => {
                 const who = b.dataset.remove;
                 const okRemove = await askDealConfirm('Remove member?', `${who} will be removed from "${g.name}" and will no longer see the group chat.`, 'Remove', true);
                 if (!okRemove) return;
-                const fresh = await getGroup(g.id);
-                if (!fresh || fresh.owner !== currentUser) return;
-                await writeMembers(fresh.members.filter(m => m !== who));
-                showToast(`${b.dataset.remove} was removed`);
+                const r = await srv('/api/groups/' + g.id + '/remove', 'POST', { username: who });
+                if (!r.ok) { srvFail(r); return; }
+                showToast(`${who} was removed`);
                 openGroupMembersModal(g.id);
                 renderChatsList('g:' + g.id);
             }));
@@ -8991,19 +8547,16 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (addBtn) addBtn.onclick = async () => {
                 const picked = [...document.querySelectorAll('#group-pick-list input:checked')].map(i => i.value);
                 if (!picked.length) { showToast('Pick at least one person.'); return; }
-                const allowed = new Set((await getGroupCandidates()).map(u => u.username));
-                if (picked.some(p => !allowed.has(p))) { showToast('You can only add people you have chats with.'); return; }
-                const fresh = await getGroup(g.id);
-                if (!fresh || fresh.owner !== currentUser) return;
-                await writeMembers([...new Set([...fresh.members, ...picked])]);
+                const r = await srv('/api/groups/' + g.id + '/members', 'POST', { members: picked });
+                if (!r.ok) { srvFail(r); return; }
                 showToast('Members added');
                 openGroupMembersModal(g.id);
                 renderChatsList('g:' + g.id);
             };
             const leaveBtn = document.getElementById('group-leave-btn');
             if (leaveBtn) leaveBtn.onclick = async () => {
-                const fresh = await getGroup(g.id);
-                if (fresh) await writeMembers(fresh.members.filter(m => m !== currentUser));
+                const r = await srv('/api/groups/' + g.id + '/leave', 'POST', {});
+                if (!r.ok) { srvFail(r); return; }
                 groupModalEl.classList.remove('active');
                 activeChatUsername = null; renderedChatUser = null;
                 showToast('You left the group');
@@ -9013,8 +8566,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (delBtn) delBtn.onclick = async () => {
                 const ok = await askDealConfirm('Delete group?', `"${g.name}" and all of its messages will be deleted for everyone.`, 'Delete group', true);
                 if (!ok) return;
-                await db.execute({ sql: "DELETE FROM group_messages WHERE groupId = ?", args: [g.id] });
-                await db.execute({ sql: "DELETE FROM chat_groups WHERE id = ? AND owner = ?", args: [g.id, currentUser] });
+                const r = await srv('/api/groups/' + g.id, 'DELETE');
+                if (!r.ok) { srvFail(r); return; }
                 groupModalEl.classList.remove('active');
                 activeChatUsername = null; renderedChatUser = null;
                 showToast('Group deleted');
@@ -9080,13 +8633,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const text = input.value.trim();
                 if (!text) return;
                 if (!(await chatSpamGuard())) return;
-                const fresh = await getGroup(g.id);
-                if (!fresh || !fresh.members.includes(currentUser)) { showToast('You are no longer in this group.'); renderChatsList(); return; }
+                const r = await srv('/api/groups/' + g.id + '/messages', 'POST', { text });
+                if (!r.ok) { srvFail(r); if (r.status === 403 || r.status === 404) renderChatsList(); return; }
                 input.value = '';
-                await db.execute({
-                    sql: "INSERT INTO group_messages (groupId, sender, text, timestamp) VALUES (?, ?, ?, ?)",
-                    args: [g.id, currentUser, text.slice(0, 2000), Date.now()]
-                });
                 await renderChatsList(key);
             };
             document.getElementById('chat-send-btn').addEventListener('click', send);
