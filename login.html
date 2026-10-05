@@ -369,15 +369,18 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     let busy = false;
 
     // ===== API helper (the session cookie is set by the server; JS never sees it) =====
+    // Empty = this page is served by the same server as the API (recommended). Otherwise it calls your Render server directly.
+    const SERVER_URL = 'https://unique-pdee.onrender.com';
+    const API_BASE = (location.hostname.endsWith('.onrender.com') || location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : SERVER_URL;
     async function api(path, body) {
-        const opts = { credentials: 'same-origin', cache: 'no-store' };
+        const opts = { credentials: 'include', cache: 'no-store' };
         if (body !== undefined) {
             opts.method = 'POST';
             opts.headers = { 'Content-Type': 'application/json' };
             opts.body = JSON.stringify(body);
         }
         try {
-            const r = await fetch('https://unique-pdee.onrender.com' + path, opts);
+            const r = await fetch(API_BASE + path, opts);
             let data = {};
             try { data = await r.json(); } catch (e) {}
             return { ok: r.ok, status: r.status, data: data || {} };
@@ -596,7 +599,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 return;
             }
             rememberAccount(result.data.username);
-            window.location.href = 'uniquetrading.html';
+            window.location.href = API_BASE + '/uniquetrading.html';   // the app (and its cookie) live on the server
         } finally {
             busy = false;
             submitBtn.disabled = false;
