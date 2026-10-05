@@ -377,7 +377,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             opts.body = JSON.stringify(body);
         }
         try {
-            const r = await fetch(path, opts);
+            const r = await fetch('https://unique-pdee.onrender.com' + path, opts);
             let data = {};
             try { data = await r.json(); } catch (e) {}
             return { ok: r.ok, status: r.status, data: data || {} };
