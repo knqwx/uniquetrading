@@ -1,5 +1,5 @@
 // Unique Trading backend - stage 1: signup, login, sessions
-// Egnv vars (set them in Render -> Environment):
+// Env vars (set them in Render -> Environment):
 //   TURSO_URL    e.g. libsql://your-db.aws-eu-west-1.turso.io   (for local tests: file:local.db)
 //   TURSO_TOKEN  a NEW token (rotate the old one - it was public in the HTML files)
 import express from 'express';
