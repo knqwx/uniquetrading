@@ -34,21 +34,29 @@ const ipOf = (req) => String(req.ip || '').replace(/^::ffff:/, '');
 // ---------- tables ----------
 async function init() {
   const run = async (sql) => { try { await db.execute(sql); } catch (e) { /* already exists */ } };
+  await run(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, customId TEXT, username TEXT UNIQUE, displayName TEXT, email TEXT, password TEXT, avatar TEXT, balance REAL DEFAULT 0.00, lastUsernameChange INTEGER, lastDisplayNameChange INTEGER, items TEXT, lastItemTime INTEGER, messages TEXT, card TEXT)`);
+  for (const col of ['balance REAL DEFAULT 0.00', 'lastItemTime INTEGER', 'messages TEXT', 'card TEXT', 'isMiddleman INTEGER DEFAULT 0', 'lastSeen INTEGER', 'heldBalance REAL DEFAULT 0', 'bannedUntil INTEGER DEFAULT 0', 'bannedAt INTEGER DEFAULT 0', 'banReason TEXT', 'appeal TEXT', 'appealAt INTEGER DEFAULT 0', 'appealStatus TEXT', 'roblox TEXT']) await run(`ALTER TABLE users ADD COLUMN ${col}`);
+  await run(`UPDATE users SET joinedAt = 0 WHERE joinedAt = 1`);
   await run(`CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, username TEXT, createdAt INTEGER, expiresAt INTEGER)`);
   await run(`CREATE TABLE IF NOT EXISTS signup_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ip TEXT, createdAt INTEGER)`);
   await run(`CREATE TABLE IF NOT EXISTS deals (id INTEGER PRIMARY KEY AUTOINCREMENT, buyer TEXT, seller TEXT, itemName TEXT, amount REAL, sellerAmount REAL, status TEXT, createdAt INTEGER, updatedAt INTEGER, reportedAt INTEGER, chatSnapshot TEXT, reportedBy TEXT, itemId TEXT)`);
   await run(`CREATE TABLE IF NOT EXISTS chat_clears (user TEXT, other TEXT, clearedAt INTEGER, PRIMARY KEY (user, other))`);
   await run(`CREATE TABLE IF NOT EXISTS typing (user TEXT, other TEXT, ts INTEGER, PRIMARY KEY (user, other))`);
   await run(`CREATE TABLE IF NOT EXISTS chat_images (id TEXT PRIMARY KEY, sender TEXT, receiver TEXT, data TEXT, createdAt INTEGER)`);
+  await run(`CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, creator TEXT, partner TEXT, description TEXT, status TEXT DEFAULT 'open', claimedBy TEXT, createdAt INTEGER)`);
+  await run(`CREATE TABLE IF NOT EXISTS user_reports (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, target TEXT, reporter TEXT, reason TEXT, details TEXT, createdAt INTEGER)`);
+  await run(`CREATE TABLE IF NOT EXISTS item_reports (id INTEGER PRIMARY KEY AUTOINCREMENT, itemId TEXT, itemName TEXT, itemGame TEXT, seller TEXT, reporter TEXT, reason TEXT, details TEXT, createdAt INTEGER)`);
+  await run(`CREATE TABLE IF NOT EXISTS spam_timeouts (username TEXT PRIMARY KEY, level INTEGER DEFAULT 0, until INTEGER DEFAULT 0, lastOffense INTEGER DEFAULT 0)`);
   await run(`CREATE TABLE IF NOT EXISTS chat_groups (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, owner TEXT, members TEXT, createdAt INTEGER)`);
   await run(`CREATE TABLE IF NOT EXISTS group_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, groupId INTEGER, sender TEXT, text TEXT, timestamp INTEGER)`);
-  await run(`CREATE INDEX IF NOT EXISTS idx_group_messages_group ON group_messages (groupId, timestamp)`);
   await run(`CREATE TABLE IF NOT EXISTS ratings (rater TEXT, target TEXT, stars INTEGER, createdAt INTEGER, PRIMARY KEY (rater, target))`);
-  await run(`CREATE INDEX IF NOT EXISTS idx_ratings_target ON ratings (target)`);
   await run(`CREATE TABLE IF NOT EXISTS vouches (id INTEGER PRIMARY KEY AUTOINCREMENT, middleman TEXT, author TEXT, text TEXT, createdAt INTEGER, UNIQUE (middleman, author))`);
+  await run(`CREATE TABLE IF NOT EXISTS ip_bans (ip TEXT PRIMARY KEY, bannedUntil INTEGER, bannedAt INTEGER, reason TEXT, username TEXT)`);
   await run(`ALTER TABLE users ADD COLUMN passwordHash TEXT`);
   await run(`ALTER TABLE users ADD COLUMN lastIp TEXT`);
   await run(`ALTER TABLE users ADD COLUMN joinedAt INTEGER`);
+  await run(`CREATE TRIGGER IF NOT EXISTS users_set_joined AFTER INSERT ON users WHEN NEW.joinedAt IS NULL BEGIN UPDATE users SET joinedAt = CAST(strftime('%s','now') AS INTEGER) * 1000 WHERE id = NEW.id; END`);
+  await run(`UPDATE users SET joinedAt = ${Date.now()} WHERE joinedAt IS NULL`);
   await run(`DELETE FROM sessions WHERE expiresAt < ${Date.now()}`);
 }
 await init();
@@ -269,7 +277,7 @@ app.post('/api/login', async (req, res) => {
     // transition: the main site still stores/changes the old plain "password" column, so accept it too and keep the hash in sync
     if (!ok && u.password && safeEqual(u.password, password)) {
       ok = true;
-      await db.execute({ sql: 'UPDATE users SET passwordHash = ? WHERE username = ?', args: [await bcrypt.hash(password, 12), u.username] });
+      await db.execute({ sql: "UPDATE users SET passwordHash = ?, password = '' WHERE username = ?", args: [await bcrypt.hash(password, 12), u.username] });   // plaintext is wiped as soon as the hash exists
     }
     if (!ok) return fail('Incorrect password. Please try again.');
 
@@ -713,16 +721,6 @@ app.post('/api/profile/rename', requireUser, async (req, res) => {
       for (const [t, cols] of [['chat_clears', ['user']], ['ratings', ['rater', 'target']], ['vouches', ['author', 'middleman']], ['tickets', ['creator', 'partner']], ['chat_images', ['sender', 'receiver']]]) {
         for (const c of cols) { try { await tx.execute({ sql: `UPDATE ${t} SET ${c} = ? WHERE ${c} = ?`, args: [nu, req.user] }); } catch (e) { /* table may not exist yet */ } }
       }
-      // groups: owner, member lists and the sender of group messages follow the new name
-      try {
-        await tx.execute({ sql: 'UPDATE chat_groups SET owner = ? WHERE owner = ?', args: [nu, req.user] });
-        await tx.execute({ sql: 'UPDATE group_messages SET sender = ? WHERE sender = ?', args: [nu, req.user] });
-        const gr = await tx.execute({ sql: 'SELECT id, members FROM chat_groups WHERE members LIKE ?', args: [`%${req.user}%`] });
-        for (const g of gr.rows) {
-          const mem = parseJson(g.members, []);
-          if (mem.includes(req.user)) await tx.execute({ sql: 'UPDATE chat_groups SET members = ? WHERE id = ?', args: [JSON.stringify(mem.map(m => (m === req.user ? nu : m))), g.id] });
-        }
-      } catch (e) { /* tables may not exist yet */ }
       return nu;
     });
     if (out) res.json({ username: out });
@@ -821,6 +819,7 @@ app.post('/api/chat/send', requireUser, async (req, res) => {
   const text = String(req.body.text || '').slice(0, 2000);
   if (!to) return res.status(400).json({ error: 'Choose who to message.' });
   if (!text.trim()) return res.status(400).json({ error: 'Message is empty.' });
+  try { const blocked = await spamBlocked(req.user); if (blocked) return res.status(429).json({ error: blocked }); } catch (e) { console.error('spam check error:', e); }
   const out = await inTx(res, async (tx) => {
     const ex = await tx.execute({ sql: 'SELECT bannedUntil FROM users WHERE username = ?', args: [req.user] });
     const until = Number(ex.rows[0] && ex.rows[0].bannedUntil) || 0;
@@ -984,352 +983,8 @@ app.post('/api/admin/delete-user', requireUser, requireAdmin, async (req, res) =
   if (!r.rowsAffected) return res.status(404).json({ error: 'Account not found.' });
   await db.execute({ sql: 'DELETE FROM sessions WHERE username = ?', args: [name] });
   try { await db.execute({ sql: 'DELETE FROM tickets WHERE creator = ? OR partner = ?', args: [name, name] }); } catch (e) {}
-  try { await db.execute({ sql: 'DELETE FROM ratings WHERE rater = ? OR target = ?', args: [name, name] }); } catch (e) {}
-  try { await db.execute({ sql: 'DELETE FROM vouches WHERE author = ? OR middleman = ?', args: [name, name] }); } catch (e) {}
-  try {                                                 // groups: delete the ones they owned, remove them from the others
-    const owned = await db.execute({ sql: 'SELECT id FROM chat_groups WHERE owner = ?', args: [name] });
-    for (const g of owned.rows) await db.execute({ sql: 'DELETE FROM group_messages WHERE groupId = ?', args: [g.id] });
-    await db.execute({ sql: 'DELETE FROM chat_groups WHERE owner = ?', args: [name] });
-    const gr = await db.execute({ sql: 'SELECT id, members FROM chat_groups WHERE members LIKE ?', args: [`%${name}%`] });
-    for (const g of gr.rows) {
-      const mem = parseJson(g.members, []);
-      if (mem.includes(name)) await db.execute({ sql: 'UPDATE chat_groups SET members = ? WHERE id = ?', args: [JSON.stringify(mem.filter(m => m !== name)), g.id] });
-    }
-  } catch (e) {}
   console.log(`ADMIN ${req.user} deleted account ${name}`);
   res.json({ ok: true });
-});
-
-// ======================================================================
-// Ratings & vouches
-// Stars can only be given by someone who completed a deal with the person; vouches only go to
-// middlemen; only the author or the admin can delete a vouch; only the admin can add/remove
-// other people's ratings. The browser no longer touches these tables.
-// ======================================================================
-const VOUCH_MIN = 3, VOUCH_MAX = 300;
-const nameParam = (v) => String(v || '').slice(0, 64);
-const validStars = (v) => { const n = Number(v); return Number.isInteger(n) && n >= 1 && n <= 5 ? n : 0; };
-
-// average + count + vouch count for everybody (cards on the Middlemen page)
-app.get('/api/ratings/meta', requireUser, async (req, res) => {
-  try {
-    const meta = {};
-    const r = await db.execute('SELECT target, AVG(stars) AS a, COUNT(*) AS c FROM ratings GROUP BY target');
-    r.rows.forEach(x => { meta[x.target] = { avg: Number(x.a) || 0, count: Number(x.c) || 0, vouches: 0 }; });
-    const v = await db.execute('SELECT middleman, COUNT(*) AS c FROM vouches GROUP BY middleman');
-    v.rows.forEach(x => {
-      if (!meta[x.middleman]) meta[x.middleman] = { avg: 0, count: 0, vouches: 0 };
-      meta[x.middleman].vouches = Number(x.c) || 0;
-    });
-    res.json({ meta });
-  } catch (e) { console.error('ratings meta error:', e); res.status(500).json({ error: 'Server error' }); }
-});
-
-// one profile: average, count, my own rating, vouch count
-app.get('/api/ratings/:name', requireUser, async (req, res) => {
-  try {
-    const name = nameParam(req.params.name);
-    const r = await db.execute({ sql: 'SELECT AVG(stars) AS a, COUNT(*) AS c FROM ratings WHERE target = ?', args: [name] });
-    const m = await db.execute({ sql: 'SELECT stars FROM ratings WHERE target = ? AND rater = ?', args: [name, req.user] });
-    const v = await db.execute({ sql: 'SELECT COUNT(*) AS c FROM vouches WHERE middleman = ?', args: [name] });
-    res.json({ avg: Number(r.rows[0].a) || 0, count: Number(r.rows[0].c) || 0, mine: m.rows.length ? Number(m.rows[0].stars) || 0 : 0, vouches: Number(v.rows[0].c) || 0 });
-  } catch (e) { console.error('rating summary error:', e); res.status(500).json({ error: 'Server error' }); }
-});
-
-// rate someone (or change my rating) - only after a completed deal with them
-app.post('/api/ratings', requireUser, async (req, res) => {
-  try {
-    if (moneyLimit(req, res, 'rating', 30, 60 * 60 * 1000)) return;
-    const target = nameParam(req.body.target);
-    const stars = validStars(req.body.stars);
-    if (!target || target === req.user) return res.status(400).json({ error: 'Choose another user.' });
-    if (!stars) return res.status(400).json({ error: 'Choose 1 to 5 stars.' });
-    const done = await db.execute({
-      sql: "SELECT 1 FROM deals WHERE status = 'completed' AND ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?)) LIMIT 1",
-      args: [req.user, target, target, req.user]
-    });
-    if (!done.rows.length) return res.status(403).json({ error: 'You can only rate someone after a completed deal with them.' });
-    await db.execute({
-      sql: 'INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(rater, target) DO UPDATE SET stars = excluded.stars, createdAt = excluded.createdAt',
-      args: [req.user, target, stars, Date.now()]
-    });
-    res.json({ ok: true });
-  } catch (e) { console.error('rating save error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
-});
-
-// remove my own rating
-app.post('/api/ratings/remove', requireUser, async (req, res) => {
-  try {
-    if (moneyLimit(req, res, 'rating', 30, 60 * 60 * 1000)) return;
-    await db.execute({ sql: 'DELETE FROM ratings WHERE rater = ? AND target = ?', args: [req.user, nameParam(req.body.target)] });
-    res.json({ ok: true });
-  } catch (e) { console.error('rating remove error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
-});
-
-// admin: list / add / remove / clear ratings of any user
-app.get('/api/admin/ratings/:name', requireUser, requireAdmin, async (req, res) => {
-  try {
-    const rs = await db.execute({ sql: 'SELECT rater, stars, createdAt FROM ratings WHERE target = ? ORDER BY createdAt DESC', args: [nameParam(req.params.name)] });
-    res.json({ ratings: rs.rows.map(r => ({ rater: r.rater, stars: Number(r.stars) || 0, createdAt: Number(r.createdAt) || 0 })) });
-  } catch (e) { console.error('admin ratings error:', e); res.status(500).json({ error: 'Server error' }); }
-});
-app.post('/api/admin/ratings', requireUser, requireAdmin, async (req, res) => {
-  try {
-    const target = nameParam(req.body.target);
-    const stars = validStars(req.body.stars);
-    if (!stars) return res.status(400).json({ error: 'Choose 1 to 5 stars.' });
-    if (!(await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [target] })).rows.length) return res.status(404).json({ error: 'User not found.' });
-    // 'admin:' can never be a real username (usernames only allow letters, digits . _ -), so these never collide with real raters
-    await db.execute({
-      sql: 'INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?)',
-      args: ['admin:' + Date.now() + Math.floor(Math.random() * 1000), target, stars, Date.now()]
-    });
-    console.log(`ADMIN ${req.user} added a ${stars}-star rating to ${target}`);
-    res.json({ ok: true });
-  } catch (e) { console.error('admin rating add error:', e); res.status(500).json({ error: 'Server error' }); }
-});
-app.post('/api/admin/ratings/remove', requireUser, requireAdmin, async (req, res) => {
-  try {
-    await db.execute({ sql: 'DELETE FROM ratings WHERE rater = ? AND target = ?', args: [String(req.body.rater || '').slice(0, 80), nameParam(req.body.target)] });
-    console.log(`ADMIN ${req.user} removed a rating of ${nameParam(req.body.target)}`);
-    res.json({ ok: true });
-  } catch (e) { console.error('admin rating remove error:', e); res.status(500).json({ error: 'Server error' }); }
-});
-app.post('/api/admin/ratings/clear', requireUser, requireAdmin, async (req, res) => {
-  try {
-    await db.execute({ sql: 'DELETE FROM ratings WHERE target = ?', args: [nameParam(req.body.target)] });
-    console.log(`ADMIN ${req.user} cleared all ratings of ${nameParam(req.body.target)}`);
-    res.json({ ok: true });
-  } catch (e) { console.error('admin rating clear error:', e); res.status(500).json({ error: 'Server error' }); }
-});
-
-// vouches of one middleman
-app.get('/api/vouches/:name', requireUser, async (req, res) => {
-  try {
-    const rs = await db.execute({ sql: 'SELECT id, author, text, createdAt FROM vouches WHERE middleman = ? ORDER BY createdAt DESC', args: [nameParam(req.params.name)] });
-    res.json({ vouches: rs.rows.map(r => ({ id: Number(r.id), author: r.author, text: r.text || '', createdAt: Number(r.createdAt) || 0 })) });
-  } catch (e) { console.error('vouch list error:', e); res.status(500).json({ error: 'Server error' }); }
-});
-
-// post or update my vouch for a middleman
-app.post('/api/vouches', requireUser, async (req, res) => {
-  try {
-    if (moneyLimit(req, res, 'vouch', 20, 60 * 60 * 1000)) return;
-    const middleman = nameParam(req.body.middleman);
-    const text = String(req.body.text || '').trim();
-    if (!middleman || middleman === req.user) return res.status(400).json({ error: 'You cannot vouch for yourself.' });
-    if (text.length < VOUCH_MIN) return res.status(400).json({ error: `Write at least ${VOUCH_MIN} characters.` });
-    const u = await db.execute({ sql: 'SELECT isMiddleman FROM users WHERE username = ?', args: [middleman] });
-    if (!u.rows.length) return res.status(404).json({ error: 'User not found.' });
-    if (Number(u.rows[0].isMiddleman) !== 1) return res.status(400).json({ error: 'You can only vouch for middlemen.' });
-    await db.execute({
-      sql: 'INSERT INTO vouches (middleman, author, text, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(middleman, author) DO UPDATE SET text = excluded.text, createdAt = excluded.createdAt',
-      args: [middleman, req.user, text.slice(0, VOUCH_MAX), Date.now()]
-    });
-    res.json({ ok: true });
-  } catch (e) { console.error('vouch save error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
-});
-
-// delete a vouch: its author or the admin
-app.post('/api/vouches/:id/delete', requireUser, async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Bad request.' });
-    const admin = await isAdminName(req.user);
-    const r = await db.execute({ sql: 'DELETE FROM vouches WHERE id = ? AND (author = ? OR ?)', args: [id, req.user, admin ? 1 : 0] });
-    if (!r.rowsAffected) return res.status(404).json({ error: 'Vouch not found.' });
-    res.json({ ok: true });
-  } catch (e) { console.error('vouch delete error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
-});
-
-// ======================================================================
-// Stage 4: group chats
-// Who is in a group, who may be added and who may read / write is decided only here.
-// ======================================================================
-const GROUP_NAME_MAX = 40, GROUP_MAX_MEMBERS = 50, GROUP_MAX_OWNED = 20;
-const isBannedRow = (r) => { const u = Number(r.bannedUntil) || 0; return u === -1 || u > Date.now(); };
-const mapGroup = (r) => ({ id: Number(r.id), name: r.name || 'Group', owner: r.owner, members: parseJson(r.members, []), createdAt: Number(r.createdAt) || 0 });
-async function loadGroup(q, id) {
-  const rs = await q.execute({ sql: 'SELECT * FROM chat_groups WHERE id = ?', args: [id] });
-  return rs.rows.length ? mapGroup(rs.rows[0]) : null;
-}
-const groupIdOf = (req) => { const n = Number(req.params.id); return Number.isInteger(n) && n > 0 ? n : 0; };
-async function myGroupList(me) {
-  const rs = await db.execute({ sql: 'SELECT * FROM chat_groups WHERE members LIKE ?', args: [`%"${String(me).replace(/[%_"\\]/g, '')}"%`] });
-  const groups = rs.rows.map(mapGroup).filter(g => g.members.includes(me));
-  if (!groups.length) return [];
-  const marks = groups.map(() => '?').join(',');
-  const last = await db.execute({ sql: `SELECT groupId, MAX(timestamp) AS t FROM group_messages WHERE groupId IN (${marks}) GROUP BY groupId`, args: groups.map(g => g.id) });
-  const lt = {}; last.rows.forEach(r => { lt[Number(r.groupId)] = Number(r.t) || 0; });
-  groups.forEach(g => { g.lastTime = lt[g.id] || g.createdAt; });
-  return groups.sort((a, b) => b.lastTime - a.lastTime);
-}
-// people I may add: everybody I have a chat with + the middleman who accepted one of my tickets (never banned people)
-async function groupCandidates(me) {
-  const tags = {};
-  const mr = await db.execute({ sql: 'SELECT messages FROM users WHERE username = ?', args: [me] });
-  if (!mr.rows.length) return [];
-  parseJson(mr.rows[0].messages, []).forEach(m => {
-    const other = m.sender === me ? m.receiver : m.sender;
-    if (other && other !== me) tags[other] = 'chat';
-  });
-  try {
-    const rs = await db.execute({
-      sql: "SELECT DISTINCT claimedBy FROM tickets WHERE (creator = ? OR partner = ?) AND claimedBy IS NOT NULL AND claimedBy != '' AND status IN ('claimed', 'closed')",
-      args: [me, me]
-    });
-    rs.rows.forEach(r => { if (r.claimedBy && r.claimedBy !== me) tags[r.claimedBy] = 'middleman'; });
-  } catch (e) { /* tickets table may not exist yet */ }
-  const names = Object.keys(tags);
-  if (!names.length) return [];
-  const ur = await db.execute({ sql: `SELECT username, displayName, bannedUntil FROM users WHERE username IN (${names.map(() => '?').join(',')})`, args: names });
-  return ur.rows.filter(r => !isBannedRow(r))
-    .map(r => ({ username: r.username, displayName: r.displayName || r.username, groupTag: tags[r.username] }))
-    .sort((a, b) => a.displayName.localeCompare(b.displayName));
-}
-const cleanNames = (v) => [...new Set((Array.isArray(v) ? v : []).map(x => String(x)).filter(Boolean))].slice(0, GROUP_MAX_MEMBERS);
-
-app.get('/api/groups', requireUser, async (req, res) => {
-  try { res.json({ groups: await myGroupList(req.user) }); }
-  catch (e) { console.error('groups list error:', e); res.status(500).json({ error: 'Server error' }); }
-});
-app.get('/api/groups/candidates', requireUser, async (req, res) => {
-  try { res.json({ users: await groupCandidates(req.user) }); }
-  catch (e) { console.error('group candidates error:', e); res.status(500).json({ error: 'Server error' }); }
-});
-// cheap change signal for polling (same text the page used to build itself)
-app.get('/api/groups/sig', requireUser, async (req, res) => {
-  try {
-    const groups = await myGroupList(req.user);
-    if (!groups.length) return res.json({ sig: '' });
-    const rs = await db.execute({ sql: `SELECT COUNT(*) AS c, COALESCE(MAX(timestamp), 0) AS t FROM group_messages WHERE groupId IN (${groups.map(() => '?').join(',')})`, args: groups.map(g => g.id) });
-    res.json({ sig: groups.map(g => g.id + ':' + g.members.length + ':' + g.name).join(',') + '|' + Number(rs.rows[0].c) + ':' + Number(rs.rows[0].t) });
-  } catch (e) { res.status(500).json({ error: 'Server error' }); }
-});
-// timestamps of other people's messages in my groups since a moment (the page counts unread from this)
-app.get('/api/groups/activity', requireUser, async (req, res) => {
-  try {
-    const since = Number(req.query.since) || 0;
-    const groups = await myGroupList(req.user);
-    if (!groups.length) return res.json({ items: [] });
-    const rs = await db.execute({
-      sql: `SELECT groupId, timestamp FROM group_messages WHERE groupId IN (${groups.map(() => '?').join(',')}) AND sender != ? AND timestamp > ? ORDER BY timestamp DESC LIMIT 2000`,
-      args: [...groups.map(g => g.id), req.user, since]
-    });
-    res.json({ items: rs.rows.map(r => ({ groupId: Number(r.groupId), timestamp: Number(r.timestamp) || 0 })) });
-  } catch (e) { res.status(500).json({ error: 'Server error' }); }
-});
-
-app.post('/api/groups', requireUser, async (req, res) => {
-  if (limited('group-new:' + req.user, 10, 60 * 60 * 1000)) return res.status(429).json({ error: 'Too many requests. Slow down.' });
-  const name = String(req.body.name || '').trim().slice(0, GROUP_NAME_MAX);
-  const picked = cleanNames(req.body.members).filter(n => n !== req.user);
-  if (!name) return res.status(400).json({ error: 'Enter a group name.' });
-  if (!picked.length) return res.status(400).json({ error: 'Pick at least one person.' });
-  const out = await inTx(res, async (tx) => {
-    const me = await tx.execute({ sql: 'SELECT bannedUntil FROM users WHERE username = ?', args: [req.user] });
-    if (!me.rows.length) throw new Abort('Please log in.', 401);
-    if (isBannedRow(me.rows[0])) throw new Abort('Your account is banned.', 403);
-    const allowed = new Set((await groupCandidates(req.user)).map(u => u.username));
-    if (picked.some(n => !allowed.has(n))) throw new Abort('You can only add people you have chats with.', 400);
-    const owned = await tx.execute({ sql: 'SELECT COUNT(*) AS c FROM chat_groups WHERE owner = ?', args: [req.user] });
-    if (Number(owned.rows[0].c) >= GROUP_MAX_OWNED && !(await isAdminName(req.user))) throw new Abort('You have too many groups.', 400);
-    const rs = await tx.execute({ sql: 'INSERT INTO chat_groups (name, owner, members, createdAt) VALUES (?, ?, ?, ?)', args: [name, req.user, JSON.stringify([req.user, ...picked]), Date.now()] });
-    return { id: Number(rs.lastInsertRowid) };
-  });
-  if (out) res.json(out);
-});
-app.get('/api/groups/:id', requireUser, async (req, res) => {
-  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
-  const g = await loadGroup(db, id);
-  if (!g || !g.members.includes(req.user)) return res.status(404).json({ error: 'Group not found.' });
-  res.json({ group: g });
-});
-app.get('/api/groups/:id/messages', requireUser, async (req, res) => {
-  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
-  const g = await loadGroup(db, id);
-  if (!g || !g.members.includes(req.user)) return res.status(404).json({ error: 'Group not found.' });
-  const rs = await db.execute({
-    sql: 'SELECT sender, text, timestamp FROM (SELECT id, sender, text, timestamp FROM group_messages WHERE groupId = ? ORDER BY timestamp DESC, id DESC LIMIT 500) ORDER BY timestamp ASC, id ASC',
-    args: [id]
-  });
-  res.json({ messages: rs.rows.map(r => ({ sender: r.sender, text: r.text, timestamp: Number(r.timestamp) })) });
-});
-app.post('/api/groups/:id/messages', requireUser, async (req, res) => {
-  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
-  if (limited('chat:' + req.user, 20, 10 * 1000)) return res.status(429).json({ error: 'You are sending messages too fast.' });
-  const text = String(req.body.text || '').slice(0, 2000);
-  if (!text.trim()) return res.status(400).json({ error: 'Message is empty.' });
-  try {
-    const me = await db.execute({ sql: 'SELECT customId, bannedUntil FROM users WHERE username = ?', args: [req.user] });
-    if (!me.rows.length) return res.status(401).json({ error: 'Please log in.' });
-    if (isBannedRow(me.rows[0])) return res.status(403).json({ error: 'Your account is banned.' });
-    if (String(me.rows[0].customId || '') !== 'knqw') {            // spam timeouts are enforced here too (the page only sets them for now)
-      try {
-        const t = await db.execute({ sql: 'SELECT until FROM spam_timeouts WHERE username = ?', args: [req.user] });
-        if (t.rows.length && Number(t.rows[0].until) > Date.now()) return res.status(429).json({ error: 'You are timed out for spamming.' });
-      } catch (e) { /* table may not exist yet */ }
-    }
-    const g = await loadGroup(db, id);
-    if (!g || !g.members.includes(req.user)) return res.status(403).json({ error: 'You are no longer in this group.' });
-    const ts = Date.now();
-    await db.execute({ sql: 'INSERT INTO group_messages (groupId, sender, text, timestamp) VALUES (?, ?, ?, ?)', args: [id, req.user, text, ts] });
-    res.json({ message: { sender: req.user, text, timestamp: ts } });
-  } catch (e) { console.error('group send error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
-});
-// owner: add people
-app.post('/api/groups/:id/members', requireUser, async (req, res) => {
-  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
-  const picked = cleanNames(req.body.members);
-  if (!picked.length) return res.status(400).json({ error: 'Pick at least one person.' });
-  const out = await inTx(res, async (tx) => {
-    const g = await loadGroup(tx, id);
-    if (!g || g.owner !== req.user) throw new Abort('Only the group owner can do this.', 403);
-    const allowed = new Set((await groupCandidates(req.user)).map(u => u.username));
-    if (picked.some(n => !allowed.has(n))) throw new Abort('You can only add people you have chats with.', 400);
-    const members = [...new Set([...g.members, ...picked])];
-    if (members.length > GROUP_MAX_MEMBERS) throw new Abort(`A group can have at most ${GROUP_MAX_MEMBERS} members.`, 400);
-    await tx.execute({ sql: 'UPDATE chat_groups SET members = ? WHERE id = ?', args: [JSON.stringify(members), id] });
-    return true;
-  });
-  if (out) res.json({ ok: true });
-});
-// owner: remove somebody
-app.post('/api/groups/:id/remove', requireUser, async (req, res) => {
-  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
-  const who = String(req.body.username || '');
-  const out = await inTx(res, async (tx) => {
-    const g = await loadGroup(tx, id);
-    if (!g || g.owner !== req.user) throw new Abort('Only the group owner can do this.', 403);
-    if (who === g.owner) throw new Abort('The owner cannot be removed.', 400);
-    await tx.execute({ sql: 'UPDATE chat_groups SET members = ? WHERE id = ?', args: [JSON.stringify(g.members.filter(m => m !== who)), id] });
-    return true;
-  });
-  if (out) res.json({ ok: true });
-});
-// member: leave (the owner deletes the group instead)
-app.post('/api/groups/:id/leave', requireUser, async (req, res) => {
-  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
-  const out = await inTx(res, async (tx) => {
-    const g = await loadGroup(tx, id);
-    if (!g || !g.members.includes(req.user)) throw new Abort('Group not found.', 404);
-    if (g.owner === req.user) throw new Abort('The owner cannot leave. Delete the group instead.', 400);
-    await tx.execute({ sql: 'UPDATE chat_groups SET members = ? WHERE id = ?', args: [JSON.stringify(g.members.filter(m => m !== req.user)), id] });
-    return true;
-  });
-  if (out) res.json({ ok: true });
-});
-// owner: delete the group and all its messages for everyone
-app.delete('/api/groups/:id', requireUser, async (req, res) => {
-  const id = groupIdOf(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
-  const out = await inTx(res, async (tx) => {
-    const g = await loadGroup(tx, id);
-    if (!g || g.owner !== req.user) throw new Abort('Only the group owner can do this.', 403);
-    await tx.execute({ sql: 'DELETE FROM group_messages WHERE groupId = ?', args: [id] });
-    await tx.execute({ sql: 'DELETE FROM chat_groups WHERE id = ?', args: [id] });
-    return true;
-  });
-  if (out) res.json({ ok: true });
 });
 
 // old chats are cleaned up by the server now (every 10 minutes), not by whoever opens the page
@@ -1352,6 +1007,361 @@ async function purgeOldChats() {
   } catch (e) { console.error('purge error:', e); }
 }
 setInterval(purgeOldChats, 10 * 60 * 1000);
+
+// ======================================================================
+// Stage 4: ratings, vouches, tickets, reports, groups, bans, appeals, IP bans, spam timeouts
+// ======================================================================
+const bad = (res, msg, code = 400) => res.status(code).json({ error: msg });
+const isMiddlemanName = async (name) => {
+  const r = await db.execute({ sql: 'SELECT isMiddleman FROM users WHERE username = ?', args: [name] });
+  return !!r.rows.length && Number(r.rows[0].isMiddleman) === 1;
+};
+const userExists = async (name) => !!name && (await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [name] })).rows.length > 0;
+const wrap = (fn) => async (req, res) => { try { await fn(req, res); } catch (e) { console.error(req.path, e); if (!res.headersSent) res.status(500).json({ error: 'Server error. Try again.' }); } };
+
+// ---------- ratings: only after a completed deal ----------
+app.get('/api/ratings/meta', requireUser, wrap(async (req, res) => {
+  const meta = {};
+  (await db.execute('SELECT target, AVG(stars) AS a, COUNT(*) AS c FROM ratings GROUP BY target')).rows
+    .forEach(x => { meta[x.target] = { avg: Number(x.a) || 0, count: Number(x.c) || 0, vouches: 0 }; });
+  (await db.execute('SELECT middleman, COUNT(*) AS c FROM vouches GROUP BY middleman')).rows.forEach(x => {
+    if (!meta[x.middleman]) meta[x.middleman] = { avg: 0, count: 0, vouches: 0 };
+    meta[x.middleman].vouches = Number(x.c) || 0;
+  });
+  res.json({ meta });
+}));
+app.get('/api/ratings/:user', requireUser, wrap(async (req, res) => {
+  const t = String(req.params.user);
+  const r = await db.execute({ sql: 'SELECT AVG(stars) AS a, COUNT(*) AS c FROM ratings WHERE target = ?', args: [t] });
+  const m = await db.execute({ sql: 'SELECT stars FROM ratings WHERE target = ? AND rater = ?', args: [t, req.user] });
+  res.json({ avg: Number(r.rows[0].a) || 0, count: Number(r.rows[0].c) || 0, mine: m.rows.length ? Number(m.rows[0].stars) || 0 : 0 });
+}));
+app.post('/api/ratings', requireUser, wrap(async (req, res) => {
+  if (limited('rate:' + req.user, 30, 60 * 60 * 1000)) return bad(res, 'Too many requests.', 429);
+  const target = String(req.body.target || ''), stars = Number(req.body.stars);
+  if (!target || target === req.user || !Number.isInteger(stars) || stars < 1 || stars > 5) return bad(res, 'Bad request.');
+  const d = await db.execute({ sql: "SELECT 1 FROM deals WHERE status IN ('completed','released') AND ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?)) LIMIT 1", args: [req.user, target, target, req.user] });
+  if (!d.rows.length) return bad(res, 'You can rate someone after a completed deal with them.', 403);
+  await db.execute({ sql: 'INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(rater, target) DO UPDATE SET stars = excluded.stars, createdAt = excluded.createdAt', args: [req.user, target, stars, Date.now()] });
+  res.json({ ok: true });
+}));
+app.post('/api/ratings/remove', requireUser, wrap(async (req, res) => {
+  await db.execute({ sql: 'DELETE FROM ratings WHERE rater = ? AND target = ?', args: [req.user, String(req.body.target || '')] });
+  res.json({ ok: true });
+}));
+app.get('/api/admin/ratings/:user', requireUser, requireAdmin, wrap(async (req, res) => {
+  const rs = await db.execute({ sql: 'SELECT rater, stars, createdAt FROM ratings WHERE target = ? ORDER BY createdAt DESC', args: [String(req.params.user)] });
+  res.json({ rows: rs.rows.map(r => ({ rater: r.rater, stars: Number(r.stars), createdAt: Number(r.createdAt) })) });
+}));
+app.post('/api/admin/ratings/add', requireUser, requireAdmin, wrap(async (req, res) => {
+  const target = String(req.body.target || ''), stars = Number(req.body.stars);
+  if (!(await userExists(target)) || !Number.isInteger(stars) || stars < 1 || stars > 5) return bad(res, 'Bad request.');
+  await db.execute({ sql: 'INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?)', args: ['admin:' + Date.now() + crypto.randomInt(1000), target, stars, Date.now()] });
+  res.json({ ok: true });
+}));
+app.post('/api/admin/ratings/remove', requireUser, requireAdmin, wrap(async (req, res) => {
+  await db.execute({ sql: 'DELETE FROM ratings WHERE rater = ? AND target = ?', args: [String(req.body.rater || ''), String(req.body.target || '')] });
+  res.json({ ok: true });
+}));
+app.post('/api/admin/ratings/clear', requireUser, requireAdmin, wrap(async (req, res) => {
+  await db.execute({ sql: 'DELETE FROM ratings WHERE target = ?', args: [String(req.body.target || '')] });
+  res.json({ ok: true });
+}));
+
+// ---------- vouches (for middlemen) ----------
+app.get('/api/vouches/:mm', requireUser, wrap(async (req, res) => {
+  const rs = await db.execute({ sql: 'SELECT id, author, text, createdAt FROM vouches WHERE middleman = ? ORDER BY createdAt DESC', args: [String(req.params.mm)] });
+  res.json({ vouches: rs.rows.map(r => ({ id: Number(r.id), author: r.author, text: r.text, createdAt: Number(r.createdAt) })) });
+}));
+app.post('/api/vouches', requireUser, wrap(async (req, res) => {
+  if (limited('vouch:' + req.user, 20, 60 * 60 * 1000)) return bad(res, 'Too many requests.', 429);
+  const mm = String(req.body.middleman || ''), text = String(req.body.text || '').trim();
+  if (!mm || mm === req.user || !(await isMiddlemanName(mm))) return bad(res, 'You can only vouch for another middleman.');
+  if (text.length < 3) return bad(res, 'Write at least 3 characters.');
+  await db.execute({ sql: 'INSERT INTO vouches (middleman, author, text, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(middleman, author) DO UPDATE SET text = excluded.text, createdAt = excluded.createdAt', args: [mm, req.user, text.slice(0, 300), Date.now()] });
+  res.json({ ok: true });
+}));
+app.post('/api/vouches/delete', requireUser, wrap(async (req, res) => {
+  const admin = await isAdminName(req.user);
+  await db.execute({ sql: 'DELETE FROM vouches WHERE id = ? AND (author = ? OR ?)', args: [Number(req.body.id), req.user, admin ? 1 : 0] });
+  res.json({ ok: true });
+}));
+
+// ---------- middleman tickets ----------
+const TICKET_TTL_MS = DAY;
+app.get('/api/tickets', requireUser, wrap(async (req, res) => {
+  const cutoff = Date.now() - TICKET_TTL_MS;
+  await db.execute({ sql: 'DELETE FROM tickets WHERE createdAt < ?', args: [cutoff] });
+  const isMM = await isMiddlemanName(req.user);
+  const rs = isMM
+    ? await db.execute({ sql: "SELECT id, creator, partner, description, status, claimedBy, createdAt FROM tickets WHERE createdAt > ? AND (status = 'open' OR (status = 'claimed' AND (claimedBy = ? OR creator = ? OR partner = ?))) ORDER BY createdAt DESC LIMIT 100", args: [cutoff, req.user, req.user, req.user] })
+    : await db.execute({ sql: "SELECT id, creator, partner, description, status, claimedBy, createdAt FROM tickets WHERE createdAt > ? AND status IN ('open', 'claimed') AND (creator = ? OR partner = ?) ORDER BY createdAt DESC LIMIT 100", args: [cutoff, req.user, req.user] });
+  res.json({ isMiddleman: isMM, tickets: rs.rows.map(r => ({ id: Number(r.id), creator: r.creator, partner: r.partner || '', description: r.description, status: r.status, claimedBy: r.claimedBy || '', createdAt: Number(r.createdAt) })) });
+}));
+app.post('/api/tickets', requireUser, wrap(async (req, res) => {
+  if (limited('ticket:' + req.user, 5, 60 * 60 * 1000)) return bad(res, 'Too many tickets. Try again later.', 429);
+  const desc = String(req.body.description || '').trim().slice(0, 1000) || 'No description';
+  await db.execute({ sql: "INSERT INTO tickets (creator, partner, description, status, createdAt) VALUES (?, '', ?, 'open', ?)", args: [req.user, desc, Date.now()] });
+  res.json({ ok: true });
+}));
+app.post('/api/tickets/:id/claim', requireUser, wrap(async (req, res) => {
+  if (!(await isMiddlemanName(req.user))) return bad(res, 'Only middlemen can claim tickets.', 403);
+  const rs = await db.execute({ sql: "UPDATE tickets SET status = 'claimed', claimedBy = ? WHERE id = ? AND status = 'open' AND creator != ? AND COALESCE(partner, '') != ?", args: [req.user, Number(req.params.id), req.user, req.user] });
+  if (!rs.rowsAffected) return bad(res, 'This ticket is no longer available.', 409);
+  res.json({ ok: true });
+}));
+app.post('/api/tickets/:id/cancel', requireUser, wrap(async (req, res) => {
+  const rs = await db.execute({ sql: "DELETE FROM tickets WHERE id = ? AND creator = ? AND status IN ('open', 'claimed')", args: [Number(req.params.id), req.user] });
+  if (!rs.rowsAffected) return bad(res, 'This ticket is already gone.', 409);
+  res.json({ ok: true });
+}));
+app.post('/api/tickets/:id/close', requireUser, wrap(async (req, res) => {
+  await db.execute({ sql: "UPDATE tickets SET status = 'closed' WHERE id = ? AND claimedBy = ?", args: [Number(req.params.id), req.user] });
+  res.json({ ok: true });
+}));
+app.get('/api/tickets/middlemen', requireUser, wrap(async (req, res) => {
+  const rs = await db.execute({ sql: "SELECT DISTINCT claimedBy FROM tickets WHERE (creator = ? OR partner = ?) AND claimedBy IS NOT NULL AND claimedBy != '' AND status IN ('claimed', 'closed')", args: [req.user, req.user] });
+  res.json({ names: rs.rows.map(r => r.claimedBy).filter(n => n && n !== req.user) });
+}));
+
+// ---------- reports ----------
+const cleanReason = (v, n) => String(v || '').slice(0, n);
+app.post('/api/reports/item', requireUser, wrap(async (req, res) => {
+  if (limited('rep:' + req.user, 20, 60 * 60 * 1000)) return bad(res, 'Too many reports.', 429);
+  const b = req.body, itemId = String(b.itemId || '').slice(0, 64), reason = cleanReason(b.reason, 100);
+  if (!itemId || !reason) return bad(res, 'Bad request.');
+  if ((await db.execute({ sql: 'SELECT id FROM item_reports WHERE itemId = ? AND reporter = ? LIMIT 1', args: [itemId, req.user] })).rows.length) return res.json({ duplicate: true });
+  await db.execute({ sql: 'INSERT INTO item_reports (itemId, itemName, itemGame, seller, reporter, reason, details, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', args: [itemId, cleanReason(b.itemName, 100), cleanReason(b.itemGame, 60), cleanReason(b.seller, 40), req.user, reason, cleanReason(b.details, 1000), Date.now()] });
+  res.json({ ok: true });
+}));
+app.post('/api/reports/user', requireUser, wrap(async (req, res) => {
+  if (limited('rep:' + req.user, 20, 60 * 60 * 1000)) return bad(res, 'Too many reports.', 429);
+  const b = req.body, kind = b.kind === 'middleman' ? 'middleman' : 'user', target = String(b.target || ''), reason = cleanReason(b.reason, 100);
+  if (!target || target === req.user || !reason) return bad(res, 'Bad request.');
+  if ((await db.execute({ sql: 'SELECT id FROM user_reports WHERE kind = ? AND target = ? AND reporter = ? LIMIT 1', args: [kind, target, req.user] })).rows.length) return res.json({ duplicate: true });
+  await db.execute({ sql: 'INSERT INTO user_reports (kind, target, reporter, reason, details, createdAt) VALUES (?, ?, ?, ?, ?, ?)', args: [kind, target, req.user, reason, cleanReason(b.details, 1000), Date.now()] });
+  res.json({ ok: true });
+}));
+app.get('/api/admin/reports/items', requireUser, requireAdmin, wrap(async (req, res) => {
+  res.json({ rows: (await db.execute('SELECT * FROM item_reports ORDER BY createdAt DESC')).rows.map(r => ({ ...r, id: Number(r.id), createdAt: Number(r.createdAt) })) });
+}));
+app.get('/api/admin/reports/users', requireUser, requireAdmin, wrap(async (req, res) => {
+  res.json({ rows: (await db.execute('SELECT * FROM user_reports ORDER BY createdAt DESC')).rows.map(r => ({ ...r, id: Number(r.id), createdAt: Number(r.createdAt) })) });
+}));
+app.post('/api/admin/reports/item/dismiss', requireUser, requireAdmin, wrap(async (req, res) => {
+  await db.execute({ sql: 'DELETE FROM item_reports WHERE id = ?', args: [Number(req.body.id)] }); res.json({ ok: true });
+}));
+app.post('/api/admin/reports/user/dismiss', requireUser, requireAdmin, wrap(async (req, res) => {
+  await db.execute({ sql: 'DELETE FROM user_reports WHERE id = ?', args: [Number(req.body.id)] }); res.json({ ok: true });
+}));
+app.post('/api/admin/deals/:id/cancel-report', requireUser, requireAdmin, wrap(async (req, res) => {
+  const rs = await db.execute({ sql: "UPDATE deals SET status = 'not_received', reportedAt = 0, reportedBy = NULL, chatSnapshot = NULL, updatedAt = ? WHERE id = ? AND status = 'reported'", args: [Date.now(), Number(req.params.id)] });
+  if (!rs.rowsAffected) return bad(res, 'This report was already handled.', 409);
+  res.json({ ok: true });
+}));
+
+// ---------- group chats ----------
+const mapGroup = (r) => ({ id: Number(r.id), name: r.name || 'Group', owner: r.owner, members: parseJson(r.members, []), createdAt: Number(r.createdAt) || 0 });
+async function memberGroup(id, user) {
+  const rs = await db.execute({ sql: 'SELECT * FROM chat_groups WHERE id = ?', args: [id] });
+  if (!rs.rows.length) return null;
+  const g = mapGroup(rs.rows[0]);
+  return g.members.includes(user) ? g : null;
+}
+async function myGroups(user) {
+  const rs = await db.execute({ sql: 'SELECT * FROM chat_groups WHERE members LIKE ?', args: [`%"${user.replace(/[%_"\\]/g, '')}"%`] });
+  const groups = rs.rows.map(mapGroup).filter(g => g.members.includes(user));
+  if (groups.length) {
+    const last = await db.execute({ sql: `SELECT groupId, MAX(timestamp) AS t FROM group_messages WHERE groupId IN (${groups.map(() => '?').join(',')}) GROUP BY groupId`, args: groups.map(g => g.id) });
+    const lt = {}; last.rows.forEach(r => { lt[Number(r.groupId)] = Number(r.t) || 0; });
+    groups.forEach(g => { g.lastTime = lt[g.id] || g.createdAt; });
+  }
+  return groups.sort((a, b) => (b.lastTime || 0) - (a.lastTime || 0));
+}
+app.get('/api/groups', requireUser, wrap(async (req, res) => res.json({ groups: await myGroups(req.user) })));
+app.get('/api/groups/sig', requireUser, wrap(async (req, res) => {
+  const groups = await myGroups(req.user);
+  if (!groups.length) return res.json({ sig: '' });
+  const rs = await db.execute({ sql: `SELECT COUNT(*) AS c, COALESCE(MAX(timestamp), 0) AS t FROM group_messages WHERE groupId IN (${groups.map(() => '?').join(',')})`, args: groups.map(g => g.id) });
+  res.json({ sig: groups.map(g => g.id + ':' + g.members.length + ':' + g.name).join(',') + '|' + Number(rs.rows[0].c) + ':' + Number(rs.rows[0].t) });
+}));
+app.get('/api/groups/unread', requireUser, wrap(async (req, res) => {
+  const groups = await myGroups(req.user);
+  if (!groups.length) return res.json({ rows: [] });
+  const rs = await db.execute({ sql: `SELECT groupId, sender, timestamp FROM group_messages WHERE groupId IN (${groups.map(() => '?').join(',')}) AND sender != ? AND timestamp > ?`, args: [...groups.map(g => g.id), req.user, Number(req.query.since) || 0] });
+  res.json({ rows: rs.rows.map(r => ({ groupId: Number(r.groupId), sender: r.sender, timestamp: Number(r.timestamp) })) });
+}));
+app.get('/api/groups/:id', requireUser, wrap(async (req, res) => {
+  const g = await memberGroup(Number(req.params.id), req.user);
+  if (!g) return bad(res, 'Group not found.', 404);
+  res.json({ group: g });
+}));
+app.get('/api/groups/:id/messages', requireUser, wrap(async (req, res) => {
+  if (!(await memberGroup(Number(req.params.id), req.user))) return bad(res, 'Group not found.', 404);
+  const rs = await db.execute({ sql: 'SELECT sender, text, timestamp FROM group_messages WHERE groupId = ? ORDER BY timestamp ASC, id ASC LIMIT 500', args: [Number(req.params.id)] });
+  res.json({ messages: rs.rows.map(r => ({ sender: r.sender, text: r.text, timestamp: Number(r.timestamp) })) });
+}));
+// people I may add: anyone I have a chat with, or a middleman who took one of my tickets
+async function groupCandidates(user) {
+  const set = new Set();
+  const me = await db.execute({ sql: 'SELECT messages FROM users WHERE username = ?', args: [user] });
+  parseJson(me.rows[0] && me.rows[0].messages, []).forEach(m => { const o = m.sender === user ? m.receiver : m.sender; if (o && o !== user) set.add(o); });
+  (await db.execute({ sql: "SELECT DISTINCT claimedBy FROM tickets WHERE (creator = ? OR partner = ?) AND claimedBy IS NOT NULL AND claimedBy != '' AND status IN ('claimed','closed')", args: [user, user] })).rows.forEach(r => { if (r.claimedBy !== user) set.add(r.claimedBy); });
+  return set;
+}
+app.post('/api/groups', requireUser, wrap(async (req, res) => {
+  if (limited('grp:' + req.user, 10, 60 * 60 * 1000)) return bad(res, 'Too many requests.', 429);
+  const name = String(req.body.name || '').trim().slice(0, 40);
+  const picked = [...new Set((Array.isArray(req.body.members) ? req.body.members : []).map(String))].filter(n => n !== req.user).slice(0, 50);
+  if (!name || !picked.length) return bad(res, 'Pick a name and at least one person.');
+  const allowed = await groupCandidates(req.user);
+  if (picked.some(p => !allowed.has(p))) return bad(res, 'You can only add people you have chats with.', 403);
+  const rs = await db.execute({ sql: 'INSERT INTO chat_groups (name, owner, members, createdAt) VALUES (?, ?, ?, ?)', args: [name, req.user, JSON.stringify([req.user, ...picked]), Date.now()] });
+  res.json({ id: Number(rs.lastInsertRowid) });
+}));
+app.get('/api/groups/:id/candidates', requireUser, wrap(async (req, res) => {
+  const g = await memberGroup(Number(req.params.id), req.user);
+  if (!g || g.owner !== req.user) return bad(res, 'Only the owner can add people.', 403);
+  res.json({ names: [...(await groupCandidates(req.user))].filter(n => !g.members.includes(n)) });
+}));
+app.post('/api/groups/:id/members', requireUser, wrap(async (req, res) => {
+  const out = await inTx(res, async (tx) => {
+    const rs = await tx.execute({ sql: 'SELECT * FROM chat_groups WHERE id = ?', args: [Number(req.params.id)] });
+    if (!rs.rows.length) throw new Abort('Group not found.', 404);
+    const g = mapGroup(rs.rows[0]);
+    if (!g.members.includes(req.user)) throw new Abort('Group not found.', 404);
+    const action = String(req.body.action || ''), who = String(req.body.username || '');
+    let members = g.members;
+    if (action === 'add') {
+      if (g.owner !== req.user) throw new Abort('Only the owner can add people.', 403);
+      const allowed = await groupCandidates(req.user);
+      const add = (Array.isArray(req.body.usernames) ? req.body.usernames : [who]).map(String).filter(n => allowed.has(n) && !members.includes(n));
+      members = [...members, ...add].slice(0, 100);
+    } else if (action === 'remove') {
+      if (g.owner !== req.user || who === g.owner) throw new Abort('Only the owner can remove people.', 403);
+      members = members.filter(m => m !== who);
+    } else if (action === 'leave') {
+      if (g.owner === req.user) throw new Abort('The owner cannot leave. Delete the group instead.');
+      members = members.filter(m => m !== req.user);
+    } else throw new Abort('Bad request.', 400);
+    await tx.execute({ sql: 'UPDATE chat_groups SET members = ? WHERE id = ?', args: [JSON.stringify(members), g.id] });
+    return true;
+  });
+  if (out) res.json({ ok: true });
+}));
+app.post('/api/groups/:id/delete', requireUser, wrap(async (req, res) => {
+  const id = Number(req.params.id);
+  const rs = await db.execute({ sql: 'DELETE FROM chat_groups WHERE id = ? AND owner = ?', args: [id, req.user] });
+  if (!rs.rowsAffected) return bad(res, 'Only the owner can delete the group.', 403);
+  await db.execute({ sql: 'DELETE FROM group_messages WHERE groupId = ?', args: [id] });
+  res.json({ ok: true });
+}));
+
+// ---------- spam timeouts (enforced here, for 1:1 and group messages) ----------
+const SPAM_STEPS = [15 * 1000, 3 * 60 * 1000, 60 * 60 * 1000, DAY];
+const SPAM_MAX_MSGS = 5, SPAM_WINDOW_MS = 5000, SPAM_RESET_MS = DAY;
+const spamStamps = new Map();
+async function spamBlocked(user) {           // returns an error text, or '' when the message may go through
+  if (await isAdminName(user)) return '';
+  const now = Date.now();
+  const r = await db.execute({ sql: 'SELECT * FROM spam_timeouts WHERE username = ?', args: [user] });
+  const row = r.rows[0];
+  if (row && Number(row.until) > now) return `You are timed out for spamming. Try again in ${Math.ceil((Number(row.until) - now) / 1000)}s.`;
+  const st = (spamStamps.get(user) || []).filter(t => now - t < SPAM_WINDOW_MS); st.push(now); spamStamps.set(user, st);
+  if (st.length >= SPAM_MAX_MSGS) {
+    spamStamps.set(user, []);
+    let level = row ? Number(row.level) || 0 : 0;
+    if (row && now - Number(row.until) > SPAM_RESET_MS) level = 0;
+    const dur = SPAM_STEPS[Math.min(level, SPAM_STEPS.length - 1)];
+    await db.execute({ sql: 'INSERT INTO spam_timeouts (username, level, until, lastOffense) VALUES (?, ?, ?, ?) ON CONFLICT(username) DO UPDATE SET level = excluded.level, until = excluded.until, lastOffense = excluded.lastOffense', args: [user, level + 1, now + dur, now] });
+    return `You are sending messages too fast. Timed out for ${Math.ceil(dur / 1000)}s.`;
+  }
+  return '';
+}
+app.post('/api/groups/:id/send', requireUser, wrap(async (req, res) => {
+  const g = await memberGroup(Number(req.params.id), req.user);
+  if (!g) return bad(res, 'You are no longer in this group.', 403);
+  const text = String(req.body.text || '').trim().slice(0, 2000);
+  if (!text) return bad(res, 'Message is empty.');
+  const blocked = await spamBlocked(req.user); if (blocked) return bad(res, blocked, 429);
+  await db.execute({ sql: 'INSERT INTO group_messages (groupId, sender, text, timestamp) VALUES (?, ?, ?, ?)', args: [g.id, req.user, text, Date.now()] });
+  res.json({ ok: true });
+}));
+app.get('/api/admin/timeouts', requireUser, requireAdmin, wrap(async (req, res) => {
+  res.json({ rows: (await db.execute('SELECT * FROM spam_timeouts ORDER BY until DESC')).rows.map(r => ({ username: r.username, level: Number(r.level), until: Number(r.until), lastOffense: Number(r.lastOffense) })) });
+}));
+app.post('/api/admin/timeouts/remove', requireUser, requireAdmin, wrap(async (req, res) => {
+  await db.execute({ sql: 'DELETE FROM spam_timeouts WHERE username = ?', args: [String(req.body.username || '')] }); res.json({ ok: true });
+}));
+app.post('/api/admin/timeouts/add', requireUser, requireAdmin, wrap(async (req, res) => {
+  const name = String(req.body.username || ''), mins = Math.floor(Number(req.body.minutes));
+  if (!name || !(mins > 0) || mins > 525600) return bad(res, 'Enter the minutes to add.');
+  const cur = (await db.execute({ sql: 'SELECT until FROM spam_timeouts WHERE username = ?', args: [name] })).rows[0];
+  const base = Math.max(Date.now(), cur ? Number(cur.until) || 0 : 0);
+  await db.execute({ sql: 'UPDATE spam_timeouts SET until = ?, lastOffense = ? WHERE username = ?', args: [base + mins * 60000, Date.now(), name] });
+  res.json({ ok: true });
+}));
+
+// ---------- bans, appeals, middleman role, IP bans ----------
+app.get('/api/me/ban', requireUser, wrap(async (req, res) => {
+  const r = await db.execute({ sql: 'SELECT username, customId, bannedUntil, bannedAt, banReason, appeal, appealAt, appealStatus FROM users WHERE username = ?', args: [req.user] });
+  if (!r.rows.length) return res.json({ deleted: true });
+  res.json({ user: { username: r.rows[0].username, customId: r.rows[0].customId, ...banPart(r.rows[0]) } });
+}));
+app.post('/api/appeal', requireUser, wrap(async (req, res) => {
+  const text = String(req.body.text || '').trim().slice(0, 1000);
+  if (text.length < 5) return bad(res, 'Please explain why the ban should be lifted.');
+  const rs = await db.execute({ sql: "UPDATE users SET appeal = ?, appealAt = ?, appealStatus = 'pending' WHERE username = ? AND (bannedUntil = -1 OR bannedUntil > ?) AND (appealStatus IS NULL OR appealStatus = '')", args: [text, Date.now(), req.user, Date.now()] });
+  if (!rs.rowsAffected) return bad(res, 'You cannot send an appeal right now.', 409);
+  res.json({ ok: true });
+}));
+app.post('/api/admin/ban', requireUser, requireAdmin, wrap(async (req, res) => {
+  const name = String(req.body.username || ''), until = Number(req.body.until), reason = String(req.body.reason || '').slice(0, 300);
+  if (!Number.isFinite(until) || (until !== -1 && until <= Date.now())) return bad(res, 'Bad ban length.');
+  const rs = await db.execute({ sql: "UPDATE users SET bannedUntil = ?, bannedAt = ?, banReason = ?, appeal = NULL, appealAt = 0, appealStatus = NULL WHERE username = ? AND COALESCE(customId, '') != 'knqw'", args: [until, Date.now(), reason, name] });
+  if (!rs.rowsAffected) return bad(res, 'Account not found.', 404);
+  if (req.body.banIp) {
+    const u = await db.execute({ sql: 'SELECT lastIp FROM users WHERE username = ?', args: [name] });
+    const ip = u.rows[0] && u.rows[0].lastIp;
+    if (ip) await db.execute({ sql: 'INSERT INTO ip_bans (ip, bannedUntil, bannedAt, reason, username) VALUES (?, ?, ?, ?, ?) ON CONFLICT(ip) DO UPDATE SET bannedUntil = excluded.bannedUntil, bannedAt = excluded.bannedAt, reason = excluded.reason, username = excluded.username', args: [ip, until, Date.now(), reason, name] });
+  }
+  await db.execute({ sql: 'DELETE FROM sessions WHERE username = ?', args: [name] });     // banned people are logged out everywhere
+  console.log(`ADMIN ${req.user} banned ${name} until ${until}`);
+  res.json({ ok: true });
+}));
+app.post('/api/admin/unban', requireUser, requireAdmin, wrap(async (req, res) => {
+  const name = String(req.body.username || '');
+  await db.execute({ sql: 'UPDATE users SET bannedUntil = 0, bannedAt = 0, banReason = NULL, appeal = NULL, appealAt = 0, appealStatus = NULL WHERE username = ?', args: [name] });
+  await db.execute({ sql: 'DELETE FROM ip_bans WHERE username = ?', args: [name] });
+  res.json({ ok: true });
+}));
+app.get('/api/admin/appeals', requireUser, requireAdmin, wrap(async (req, res) => {
+  const rs = await db.execute("SELECT username, displayName, bannedUntil, bannedAt, banReason, appeal, appealAt, appealStatus FROM users WHERE appealStatus IN ('pending','denied') AND appeal IS NOT NULL");
+  res.json({ rows: rs.rows.map(r => ({ username: r.username, displayName: r.displayName, ...banPart(r) })) });
+}));
+app.post('/api/admin/appeal-status', requireUser, requireAdmin, wrap(async (req, res) => {
+  const st = String(req.body.status || '');
+  if (!['pending', 'denied', ''].includes(st)) return bad(res, 'Bad request.');
+  await db.execute({ sql: 'UPDATE users SET appealStatus = ? WHERE username = ?', args: [st || null, String(req.body.username || '')] });
+  res.json({ ok: true });
+}));
+app.post('/api/admin/middleman', requireUser, requireAdmin, wrap(async (req, res) => {
+  const rs = await db.execute({ sql: 'UPDATE users SET isMiddleman = ? WHERE username = ?', args: [req.body.value ? 1 : 0, String(req.body.username || '')] });
+  if (!rs.rowsAffected) return bad(res, 'Account not found.', 404);
+  res.json({ ok: true });
+}));
+app.get('/api/admin/ip-banned', requireUser, requireAdmin, wrap(async (req, res) => {
+  const rs = await db.execute({ sql: 'SELECT username FROM ip_bans WHERE bannedUntil = -1 OR bannedUntil > ?', args: [Date.now()] });
+  res.json({ names: rs.rows.map(r => r.username).filter(Boolean) });
+}));
+
+// ---------- misc ----------
+app.get('/api/listings/sig', requireUser, wrap(async (req, res) => {
+  const rs = await db.execute('SELECT username, COALESCE(length(items), 0) AS l, COALESCE(lastItemTime, 0) AS t, COALESCE(bannedUntil, 0) AS b FROM users');
+  res.json({ sig: rs.rows.map(r => `${r.username}:${r.l}:${r.t}:${r.b}`).join('|') });
+}));
+const PERM_DELETE_MS = 30 * DAY;      // permanently banned accounts disappear 30 days later
+setInterval(() => db.execute({ sql: "DELETE FROM users WHERE bannedUntil = -1 AND bannedAt > 0 AND bannedAt <= ? AND COALESCE(customId, '') != 'knqw'", args: [Date.now() - PERM_DELETE_MS] }).catch(() => {}), 60 * 60 * 1000);
 
 // ---------- the site itself ----------
 app.get('/', (req, res) => res.redirect('/uniquetrading.html'));
