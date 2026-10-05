@@ -16,6 +16,14 @@ if (!process.env.TURSO_URL) { console.error('TURSO_URL is not set'); process.exi
 const db = createClient({ url: process.env.TURSO_URL, authToken: process.env.TURSO_TOKEN });
 
 const app = express();
+// Express 4 does not catch errors thrown inside async routes: one failed database call used to crash the whole server
+// (Render then answers 502 without CORS headers, which the browser reports as a CORS error). Every handler is wrapped so errors become JSON 500s.
+for (const m of ['get', 'post', 'delete']) {
+  const orig = app[m].bind(app);
+  app[m] = (p, ...handlers) => orig(p, ...handlers.map(h => (typeof h === 'function' && h.length < 4) ? (req, res, next) => Promise.resolve(h(req, res, next)).catch(next) : h));
+}
+process.on('unhandledRejection', (e) => console.error('unhandledRejection:', e));
+process.on('uncaughtException', (e) => console.error('uncaughtException:', e));
 app.disable('x-powered-by');
 app.set('trust proxy', 1);                 // Render sits behind a proxy: req.ip is the real visitor IP
 app.use(express.json({ limit: '50kb' }));
@@ -184,7 +192,16 @@ const safeEqual = (a, b) => {
 };
 
 // ---------- API ----------
-app.get('/api/health', (req, res) => res.json({ ok: true }));
+app.get('/api/health', async (req, res) => {
+  if (!req.query.deep) return res.json({ ok: true });
+  // /api/health?deep=1 tells you whether the database connection really works (set DEBUG_HEALTH=1 in Render to also see the error text)
+  const out = { ok: true, read: false, write: false };
+  const show = process.env.DEBUG_HEALTH === '1';
+  try { await db.execute('SELECT COUNT(*) FROM users'); out.read = true; } catch (e) { out.ok = false; if (show) out.readError = String(e.message || e).slice(0, 200); }
+  try { await db.execute('CREATE TABLE IF NOT EXISTS _healthcheck (t INTEGER)'); await db.execute({ sql: 'INSERT INTO _healthcheck (t) VALUES (?)', args: [Date.now()] }); await db.execute('DELETE FROM _healthcheck'); out.write = true; }
+  catch (e) { out.ok = false; if (show) out.writeError = String(e.message || e).slice(0, 200); }
+  res.status(out.ok ? 200 : 500).json(out);
+});
 
 app.get('/api/ip-status', async (req, res) => {
   const ban = await activeIpBan(ipOf(req));
@@ -1386,5 +1403,15 @@ setInterval(() => db.execute({ sql: "DELETE FROM users WHERE bannedUntil = -1 AN
 app.get('/', (req, res) => res.redirect('/uniquetrading.html'));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// last resort: any error that reaches here becomes a clean JSON 500 (and is written to the Render log)
+app.use((err, req, res, next) => {
+  console.error('ERROR on', req.method, req.path, '->', err && (err.stack || err.message || err));
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: 'Server error. Try again.' });
+});
+(async () => {                       // one line in the Render log that says whether the database works
+  try { await db.execute('SELECT COUNT(*) FROM users'); console.log('DB check: read OK'); } catch (e) { console.error('DB check: READ FAILED ->', e.message); }
+  try { await db.execute('CREATE TABLE IF NOT EXISTS _healthcheck (t INTEGER)'); await db.execute('DELETE FROM _healthcheck'); console.log('DB check: write OK'); } catch (e) { console.error('DB check: WRITE FAILED ->', e.message, '(is TURSO_TOKEN a read-write token?)'); }
+})();
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log('Unique Trading backend listening on ' + port));
