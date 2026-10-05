@@ -20,6 +20,21 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);                 // Render sits behind a proxy: req.ip is the real visitor IP
 app.use(express.json({ limit: '50kb' }));
 app.use(cookieParser());
+// CORS: only your own site may call the API from a browser (extra origins: ALLOWED_ORIGINS=https://a.com,https://b.com)
+const ALLOWED_ORIGINS = new Set(['https://unique-pdee.onrender.com', ...String(process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)]);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) res.setHeader('Vary', 'Origin');
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Max-Age', '600');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(origin && !ALLOWED_ORIGINS.has(origin) ? 403 : 204);
+  next();
+});
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
