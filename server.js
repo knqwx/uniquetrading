@@ -159,11 +159,16 @@ function ipBanText(ban) {
 }
 
 // ---------- sessions ----------
+// Same-site (default): SameSite=Lax. If login.html is hosted on ANOTHER site than this server, set CROSS_SITE_COOKIES=1 in Render
+// (cookies then become SameSite=None; Secure, which browsers need for cross-site fetches).
+const CROSS_SITE = process.env.CROSS_SITE_COOKIES === '1';
+const IS_SECURE = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+const cookieOpts = (maxAge) => ({ httpOnly: true, secure: CROSS_SITE ? true : IS_SECURE, sameSite: CROSS_SITE ? 'none' : 'lax', maxAge, path: '/' });
 async function startSession(res, username) {
   const sid = crypto.randomBytes(32).toString('hex');
   const now = Date.now();
   await db.execute({ sql: 'INSERT INTO sessions (id, username, createdAt, expiresAt) VALUES (?, ?, ?, ?)', args: [sid, username, now, now + SESSION_MS] });
-  res.cookie('sid', sid, { httpOnly: true, secure: process.env.NODE_ENV === 'production' || process.env.RENDER === 'true', sameSite: 'lax', maxAge: SESSION_MS, path: '/' });
+  res.cookie('sid', sid, cookieOpts(SESSION_MS));
 }
 export async function requireUser(req, res, next) {      // use this on every future endpoint
   try {
@@ -265,7 +270,7 @@ app.post('/api/signup', async (req, res) => {
       throw e;
     }
     if (ip) await db.execute({ sql: 'INSERT INTO signup_log (ip, createdAt) VALUES (?, ?)', args: [ip, now] });
-    res.cookie('ut_su', String(now), { httpOnly: true, sameSite: 'lax', maxAge: DAY, path: '/', secure: process.env.NODE_ENV === 'production' || process.env.RENDER === 'true' });
+    res.cookie('ut_su', String(now), cookieOpts(DAY));
     await startSession(res, username);
     res.json({ username });
   } catch (e) {
@@ -311,7 +316,7 @@ app.post('/api/login', async (req, res) => {
 
 app.post('/api/logout', async (req, res) => {
   try { await db.execute({ sql: 'DELETE FROM sessions WHERE id = ?', args: [String(req.cookies.sid || '')] }); } catch (e) {}
-  res.clearCookie('sid', { path: '/' });
+  res.clearCookie('sid', { ...cookieOpts(0), maxAge: undefined });
   res.json({ ok: true });
 });
 
