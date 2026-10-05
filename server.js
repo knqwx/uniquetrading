@@ -21,7 +21,7 @@ app.set('trust proxy', 1);                 // Render sits behind a proxy: req.ip
 app.use(express.json({ limit: '50kb' }));
 app.use(cookieParser());
 // CORS: only your own site may call the API from a browser (extra origins: ALLOWED_ORIGINS=https://a.com,https://b.com)
-const ALLOWED_ORIGINS = new Set(['https://unique-pdee.onrender.com', ...String(process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)]);
+const ALLOWED_ORIGINS = new Set(['https://unique-pdee.onrender.com', 'https://knqwx.github.io', ...String(process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)]);
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin) res.setHeader('Vary', 'Origin');
@@ -159,10 +159,9 @@ function ipBanText(ban) {
 }
 
 // ---------- sessions ----------
-// Same-site (default): SameSite=Lax. If login.html is hosted on ANOTHER site than this server, set CROSS_SITE_COOKIES=1 in Render
-// (cookies then become SameSite=None; Secure, which browsers need for cross-site fetches).
-const CROSS_SITE = process.env.CROSS_SITE_COOKIES === '1';
+// Cookies are SameSite=None; Secure on Render, which browsers need when the pages are on another site (github.io).
 const IS_SECURE = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+const CROSS_SITE = IS_SECURE && process.env.CROSS_SITE_COOKIES !== '0';   // on Render: on by default because the pages live on github.io; set CROSS_SITE_COOKIES=0 to turn off
 const cookieOpts = (maxAge) => ({ httpOnly: true, secure: CROSS_SITE ? true : IS_SECURE, sameSite: CROSS_SITE ? 'none' : 'lax', maxAge, path: '/' });
 async function startSession(res, username) {
   const sid = crypto.randomBytes(32).toString('hex');
