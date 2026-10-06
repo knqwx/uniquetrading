@@ -181,6 +181,13 @@ async function startSession(res, username) {
   const now = Date.now();
   await db.execute({ sql: 'INSERT INTO sessions (id, username, createdAt, expiresAt) VALUES (?, ?, ?, ?)', args: [sid, username, now, now + SESSION_MS] });
   res.cookie('sid', sid, cookieOpts(SESSION_MS));
+  // remember every session this browser has, so "Switch Account" works without logging in again
+  const list = readSids(res.req).filter(x => x !== sid);
+  list.push(sid);
+  res.cookie('sids', list.slice(-10).join(','), cookieOpts(SESSION_MS));
+}
+function readSids(req) {
+  return String((req && req.cookies && req.cookies.sids) || '').split(',').filter(x => /^[a-f0-9]{64}$/.test(x)).slice(0, 10);
 }
 export async function requireUser(req, res, next) {      // use this on every future endpoint
   try {
@@ -344,7 +351,24 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+app.post('/api/switch', async (req, res) => {
+  try {
+    const username = String(req.body.username || '');
+    const sids = readSids(req);
+    if (!username || !sids.length) return res.status(401).json({ error: 'Please log in.' });
+    const r = await db.execute({ sql: `SELECT id FROM sessions WHERE username = ? AND expiresAt > ? AND id IN (${sids.map(() => '?').join(',')})`, args: [username, Date.now(), ...sids] });
+    if (!r.rows.length) return res.status(401).json({ error: 'Please log in.' });
+    const sid = String(r.rows[0].id);
+    res.cookie('sid', sid, cookieOpts(SESSION_MS));
+    res.json({ username });
+  } catch (e) { res.status(500).json({ error: 'Server error' }); }
+});
+
 app.post('/api/logout', async (req, res) => {
+  try {
+    const cur = String(req.cookies.sid || '');
+    res.cookie('sids', readSids(req).filter(x => x !== cur).join(','), cookieOpts(SESSION_MS));
+  } catch (e) {}
   try { await db.execute({ sql: 'DELETE FROM sessions WHERE id = ?', args: [String(req.cookies.sid || '')] }); } catch (e) {}
   res.clearCookie('sid', { ...cookieOpts(0), maxAge: undefined });
   res.json({ ok: true });
