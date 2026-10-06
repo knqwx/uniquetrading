@@ -112,13 +112,34 @@ async function init() {
 await init();
 setInterval(() => db.execute({ sql: 'DELETE FROM sessions WHERE expiresAt < ?', args: [Date.now()] }).catch(() => {}), 60 * 60 * 1000);
 
-// ---------- tiny in-memory rate limiter ----------
+// ---------- rate limiter (memory + database) ----------
+// Hits are counted in memory (fast, synchronous) and written to the database in small batches, then reloaded on startup,
+// so a restart or redeploy no longer gives everybody a fresh allowance.
+await db.execute('CREATE TABLE IF NOT EXISTS rate_hits (k TEXT, t INTEGER)');
+await db.execute('CREATE INDEX IF NOT EXISTS rate_hits_k ON rate_hits (k)');
+const RATE_KEEP_MS = 2 * 60 * 60 * 1000;          // longest window used anywhere is 1 hour
 const buckets = new Map();
+try {
+  const old = await db.execute({ sql: 'SELECT k, t FROM rate_hits WHERE t > ? ORDER BY t', args: [Date.now() - RATE_KEEP_MS] });
+  for (const r of old.rows) { const k = String(r.k); if (!buckets.has(k)) buckets.set(k, []); buckets.get(k).push(Number(r.t)); }
+  console.log(`Rate limits restored: ${old.rows.length} recent hits`);
+} catch (e) { console.error('rate limit restore failed:', e.message); }
+let rateQueue = [];
+async function flushRateHits() {
+  if (!rateQueue.length) return;
+  const batch = rateQueue; rateQueue = [];
+  try { await db.batch(batch.map(([k, t]) => ({ sql: 'INSERT INTO rate_hits (k, t) VALUES (?, ?)', args: [k, t] })), 'write'); }
+  catch (e) { console.error('rate limit save failed:', e.message); rateQueue = batch.concat(rateQueue).slice(-5000); }
+}
+setInterval(flushRateHits, 2000);
+setInterval(() => db.execute({ sql: 'DELETE FROM rate_hits WHERE t < ?', args: [Date.now() - RATE_KEEP_MS] }).catch(() => {}), 10 * 60 * 1000);
+for (const sig of ['SIGTERM', 'SIGINT']) process.once(sig, () => { flushRateHits().finally(() => process.exit(0)); });   // Render sends SIGTERM on every deploy/restart
 function limited(key, max, windowMs) {
   const now = Date.now();
   const b = (buckets.get(key) || []).filter(t => now - t < windowMs);
   b.push(now);
   buckets.set(key, b);
+  rateQueue.push([key, now]);
   return b.length > max;
 }
 setInterval(() => { const now = Date.now(); for (const [k, v] of buckets) if (!v.some(t => now - t < DAY)) buckets.delete(k); }, 10 * 60 * 1000);
@@ -624,6 +645,12 @@ app.post('/api/deals', requireUser, async (req, res) => {
     if (!buyer || buyer === req.user) return res.status(400).json({ error: 'Choose another user.' });
     if (!(amount >= MIN_DEAL) || amount > MAX_DEAL) return res.status(400).json({ error: 'Enter a valid amount.' });
     if (!(await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [buyer] })).rows.length) return res.status(404).json({ error: 'User not found.' });
+    // a payment request is only allowed inside an existing chat: the buyer must already have written to this seller
+    // (about the same item, when the request is for a specific item). Senders are set by the server, so this cannot be faked.
+    const mine = await db.execute({ sql: 'SELECT messages FROM users WHERE username = ?', args: [req.user] });
+    const thread = parseJson(mine.rows[0] && mine.rows[0].messages, []);
+    const chatted = Array.isArray(thread) && thread.some(m => m && m.sender === buyer && m.receiver === req.user && (!itemId || String(m.itemId || '') === itemId));
+    if (!chatted) return res.status(403).json({ error: 'You can only ask for payment in a chat where this buyer has written to you.' });
     const dup = await db.execute({
       sql: "SELECT id FROM deals WHERE seller = ? AND buyer = ? AND COALESCE(itemId, '') = ? AND status = 'requested'",
       args: [req.user, buyer, itemId]
@@ -787,10 +814,43 @@ const adminUser = (r) => ({
   lastIp: r.lastIp || '', lastItemTime: Number(r.lastItemTime) || 0
 });
 
+// /api/users is the long list every page load fetches, so it carries only light fields: no listings (items) and no pictures.
+// Pictures are a small URL (served by /api/avatar/:name, cacheable); listings come from /api/listings, only for screens that need them.
+const USER_LIST_COLS = 'customId, username, displayName, roblox, isMiddleman, lastSeen, joinedAt, bannedUntil, bannedAt, banReason, appeal, appealAt, appealStatus, email, balance, heldBalance, lastIp, lastItemTime, (CASE WHEN avatar IS NOT NULL AND avatar != \'\' THEN 1 ELSE 0 END) AS hasAvatar';
+const lightUser = (r) => ({
+  customId: r.customId, username: r.username, displayName: r.displayName || r.username,
+  avatar: Number(r.hasAvatar) ? '/api/avatar/' + encodeURIComponent(r.username) : null,
+  roblox: r.roblox || '', isMiddleman: Number(r.isMiddleman) === 1,
+  lastSeen: Number(r.lastSeen) || 0, joinedAt: Number(r.joinedAt) || 0, ...banPart(r)
+});
+const lightAdminUser = (r) => ({
+  ...lightUser(r), email: r.email || '', balance: Number(r.balance) || 0, heldBalance: Number(r.heldBalance) || 0,
+  lastIp: r.lastIp || '', lastItemTime: Number(r.lastItemTime) || 0
+});
 app.get('/api/users', requireUser, async (req, res) => {
   const admin = await isAdminName(req.user);
-  const rs = await db.execute('SELECT * FROM users');
-  res.json({ users: rs.rows.map(admin ? adminUser : publicUser) });
+  const rs = await db.execute(`SELECT ${USER_LIST_COLS} FROM users`);
+  res.json({ users: rs.rows.map(admin ? lightAdminUser : lightUser) });
+});
+
+// listings of everybody (the marketplace), kept out of /api/users on purpose
+app.get('/api/listings', requireUser, async (req, res) => {
+  const rs = await db.execute("SELECT username, items FROM users WHERE items IS NOT NULL AND items NOT IN ('', '[]', 'null')");
+  res.json({ listings: rs.rows.map(r => ({ username: r.username, items: parseJson(r.items, []) })) });
+});
+
+// profile picture as a real image, so it is cached by the browser instead of being repeated inside every JSON list
+app.get('/api/avatar/:name', requireUser, async (req, res) => {
+  const rs = await db.execute({ sql: 'SELECT avatar FROM users WHERE username = ?', args: [String(req.params.name)] });
+  const m = rs.rows.length && /^data:(image\/(?:png|jpe?g|webp|gif));base64,([A-Za-z0-9+/=]+)$/.exec(String(rs.rows[0].avatar || ''));
+  if (!m) return res.status(404).end();
+  const buf = Buffer.from(m[2], 'base64');
+  const etag = '"' + crypto.createHash('sha1').update(buf).digest('hex') + '"';
+  res.setHeader('ETag', etag);
+  res.setHeader('Cache-Control', 'private, no-cache');       // always revalidate (cheap 304), so a new picture shows up at once
+  if (req.headers['if-none-match'] === etag) return res.status(304).end();
+  res.setHeader('Content-Type', m[1]);
+  res.send(buf);
 });
 
 app.get('/api/users/presence', requireUser, async (req, res) => {
