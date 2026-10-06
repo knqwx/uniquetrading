@@ -369,9 +369,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     let busy = false;
 
 // ===== API helper (the session cookie is set by the server; JS never sees it) =====
-    const SERVER_URL = 'https://unique-pdee.onrender.com';
-    // Добавили проверку вашего github.io домена в условие:
-    const API_BASE = (location.hostname.endsWith('.onrender.com') || location.hostname.endsWith('github.io') || location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : SERVER_URL;
+const SERVER_URL = 'https://unique-pdee.onrender.com';
+    const API_BASE = (location.hostname.endsWith('.onrender.com') || location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : SERVER_URL;
     
     async function api(path, body) {
         const opts = { credentials: 'include', cache: 'no-store' };
