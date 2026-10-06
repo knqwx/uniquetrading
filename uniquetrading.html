@@ -2754,7 +2754,25 @@
             .modal-content { padding: 20px 16px; max-width: 94vw; max-height: 92vh; overflow-y: auto; }
             input[type=text], input[type=number], input[type=password], input[type=email], input[type=search], input:not([type]), textarea, select { font-size: 16px !important; }
         }
-    </style>
+    
+        /* ===== Admin hub ===== */
+        .admin-tabs { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; max-width: 1180px; margin: 0 auto 24px; }
+        .admin-tab { background-color: #171717; color: #888888; border: 1px solid #2a2a2a; border-radius: 10px; padding: 10px 18px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: color 0.2s, background-color 0.2s, border-color 0.2s; }
+        .admin-tab:hover { color: #ffffff; background-color: #262626; }
+        .admin-tab.active { color: #ff7300; background-color: rgba(255,115,0,0.15); border-color: #ff7300; cursor: default; }
+        .admin-pane { display: none; width: 100%; max-width: 1180px; margin: 0 auto; }
+        .admin-pane.active { display: block; }
+        #admin-page .middlemen-container, #admin-page .money-container { max-width: 100%; }
+        #admin-page .db-table-container { max-height: calc(100vh - 330px); }
+        .flag-pill { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-left: 8px; white-space: nowrap; vertical-align: middle; }
+        .flag-pill.ip { background-color: rgba(255,176,32,0.15); color: #ffb020; }
+        .flag-pill.vpn { background-color: rgba(255,77,77,0.15); color: #ff4d4d; }
+        .flag-pill.dup { background-color: rgba(140,158,255,0.15); color: #8c9eff; }
+        .flag-row { margin-top: 6px; }
+        .flag-row .flag-pill { margin: 0 6px 0 0; }
+        .flags-hint { color: #777777; font-size: 12px; line-height: 1.45; margin: 0 0 12px; }
+        @media (max-width: 700px) { .admin-tab { padding: 8px 12px; font-size: 13px; } }
+</style>
 </head>
 <body>
 
@@ -2960,11 +2978,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
     <!-- Admin shortcuts (knqw), middle-left of the screen -->
     <div class="side-admin-nav" id="side-admin-nav">
-        <button class="side-admin-btn" id="reports-nav-btn" style="display: none;">Reports</button>
-        <button class="side-admin-btn" id="appeals-nav-btn" style="display: none;">Appeals</button>
-        <button class="side-admin-btn" id="timeouts-nav-btn" style="display: none;">Timeouts</button>
-        <button class="side-admin-btn" id="money-nav-btn" style="display: none;">Money</button>
-        <button class="side-admin-btn" id="open-db-btn" style="display: none;">Database</button>
+        <button class="side-admin-btn" id="admin-nav-btn" style="display: none;">Admin</button>
     </div>
 
     <!-- Главная страница (Live Listings) -->
@@ -3063,6 +3077,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     </div>
 
                     <button class="save-settings-btn" id="withdraw-action-btn">Withdraw to Real Money</button>
+                    <div class="setting-hint" id="withdraw-limit-hint" style="margin-top: 8px;">Limit: 1 withdrawal per hour.</div>
                 </div>
             </div>
 
@@ -3569,45 +3584,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         </div>
     </div>
 
-    <!-- Модальное окно базы данных -->
-    <div class="modal-overlay" id="db-modal">
-        <div class="modal-content db-modal-content">
-            <button class="close-modal" id="close-db-modal-btn">&times;</button>
-            <div class="db-header-row">
-                <div class="db-title">Database Accounts</div>
-                <div class="search-field db-search-field" id="db-search-field">
-                    <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                    <input type="text" id="db-search-input" placeholder="Search accounts..." autocomplete="off">
-                    <button type="button" class="search-clear" id="db-search-clear" title="Clear">&times;</button>
-                </div>
-            </div>
-            <div class="db-filters" id="db-filters">
-                <span class="db-filters-label">Search in:</span>
-                <button type="button" class="db-filter-chip active" data-field="username">Username</button>
-                <button type="button" class="db-filter-chip active" data-field="email">Email</button>
-                <button type="button" class="db-filter-chip active" data-field="displayname">Display Name</button>
-                <button type="button" class="db-filter-chip active" data-field="id">ID</button>
-                <button type="button" class="db-filter-chip active" data-field="middleman">Middleman</button>
-            </div>
-            <div class="db-table-container">
-                <table class="db-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Username</th>
-                            <th>Display Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="db-tbody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <!-- Модальное окно подтверждения удаления -->
     <div class="modal-overlay" id="confirm-modal">
         <div class="modal-content">
@@ -3683,19 +3659,54 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         </div>
     </div>
 
-    <!-- Appeals (только knqw) -->
-    <div class="middlemen-page" id="appeals-page">
-        <div class="middlemen-container">
+    <!-- Admin hub (knqw): Reports, Appeals, Timeouts, Money, Database, Flags -->
+    <div class="middlemen-page" id="admin-page">
+        <div class="admin-tabs" id="admin-tabs">
+            <button type="button" class="admin-tab" data-admin-tab="reports">Reports</button>
+            <button type="button" class="admin-tab" data-admin-tab="appeals">Appeals</button>
+            <button type="button" class="admin-tab" data-admin-tab="timeouts">Timeouts</button>
+            <button type="button" class="admin-tab" data-admin-tab="money">Money</button>
+            <button type="button" class="admin-tab" data-admin-tab="db">Database</button>
+            <button type="button" class="admin-tab" data-admin-tab="flags">Flags</button>
+        </div>
+        <div class="admin-pane" id="admin-pane-reports">
+                <div class="middlemen-container">
+            <div class="mm-panel">
+                <div class="mm-panel-title">Reported deals <span id="reports-count"></span></div>
+                <div class="mm-ticket-list" id="reports-list" style="max-height: none;"></div>
+            </div>
+            <div class="mm-panel" style="margin-top: 20px;">
+                <div class="mm-panel-title">Reported items <span id="item-reports-count"></span></div>
+                <div class="mm-ticket-list" id="item-reports-list" style="max-height: none;"></div>
+            </div>
+            <div class="mm-panel" style="margin-top: 20px;">
+                <div class="mm-panel-title">Reported users <span id="user-reports-count"></span></div>
+                <div class="mm-ticket-list" id="user-reports-list" style="max-height: none;"></div>
+            </div>
+            <div class="mm-panel" style="margin-top: 20px;">
+                <div class="mm-panel-title">Reported middlemen <span id="mm-reports-count"></span></div>
+                <div class="mm-ticket-list" id="mm-reports-list" style="max-height: none;"></div>
+            </div>
+        </div>
+        </div>
+        <div class="admin-pane" id="admin-pane-appeals">
+                <div class="middlemen-container">
             <div class="mm-panel">
                 <div class="mm-panel-title">Ban appeals <span id="appeals-count"></span></div>
                 <div class="mm-ticket-list" id="appeals-list" style="max-height: none;"></div>
             </div>
         </div>
-    </div>
-
-    <!-- Money (только knqw) -->
-    <div class="middlemen-page" id="money-page">
-        <div class="middlemen-container money-container">
+        </div>
+        <div class="admin-pane" id="admin-pane-timeouts">
+                <div class="middlemen-container">
+            <div class="mm-panel">
+                <div class="mm-panel-title">Spam timeouts <span id="timeouts-count"></span> <button class="mm-ticket-btn" id="timeouts-refresh" type="button" style="margin-left:10px;">Refresh</button></div>
+                <div class="mm-ticket-list" id="timeouts-list" style="max-height: none;"></div>
+            </div>
+        </div>
+        </div>
+        <div class="admin-pane" id="admin-pane-money">
+                <div class="middlemen-container money-container">
             <div class="money-stats">
                 <div class="money-stat"><div class="money-stat-label">Total money</div><div class="money-stat-value" id="money-total">$0</div><div class="money-stat-sub">Wallets + held</div></div>
                 <div class="money-stat"><div class="money-stat-label">In wallets</div><div class="money-stat-value" id="money-wallets">$0</div><div class="money-stat-sub" id="money-wallets-sub"></div></div>
@@ -3731,30 +3742,63 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 <div class="mm-ticket-list" id="money-tx-list" style="max-height: none;"></div>
             </div>
         </div>
-    </div>
-
-    <!-- Reports (только knqw) -->
-    <div class="middlemen-page" id="reports-page">
-        <div class="middlemen-container">
+        </div>
+        <div class="admin-pane" id="admin-pane-db">
             <div class="mm-panel">
-                <div class="mm-panel-title">Reported deals <span id="reports-count"></span></div>
-                <div class="mm-ticket-list" id="reports-list" style="max-height: none;"></div>
+            <div class="db-header-row">
+                <div class="db-title">Database Accounts</div>
+                <div class="search-field db-search-field" id="db-search-field">
+                    <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="db-search-input" placeholder="Search accounts..." autocomplete="off">
+                    <button type="button" class="search-clear" id="db-search-clear" title="Clear">&times;</button>
+                </div>
             </div>
-            <div class="mm-panel" style="margin-top: 20px;">
-                <div class="mm-panel-title">Reported items <span id="item-reports-count"></span></div>
-                <div class="mm-ticket-list" id="item-reports-list" style="max-height: none;"></div>
+            <div class="db-filters" id="db-filters">
+                <span class="db-filters-label">Search in:</span>
+                <button type="button" class="db-filter-chip active" data-field="username">Username</button>
+                <button type="button" class="db-filter-chip active" data-field="email">Email</button>
+                <button type="button" class="db-filter-chip active" data-field="displayname">Display Name</button>
+                <button type="button" class="db-filter-chip active" data-field="id">ID</button>
+                <button type="button" class="db-filter-chip active" data-field="middleman">Middleman</button>
             </div>
-            <div class="mm-panel" style="margin-top: 20px;">
-                <div class="mm-panel-title">Reported users <span id="user-reports-count"></span></div>
-                <div class="mm-ticket-list" id="user-reports-list" style="max-height: none;"></div>
+            <div class="db-table-container">
+                <table class="db-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Display Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="db-tbody"></tbody>
+                </table>
             </div>
-            <div class="mm-panel" style="margin-top: 20px;">
-                <div class="mm-panel-title">Reported middlemen <span id="mm-reports-count"></span></div>
-                <div class="mm-ticket-list" id="mm-reports-list" style="max-height: none;"></div>
             </div>
         </div>
+        <div class="admin-pane" id="admin-pane-flags">
+        <div class="middlemen-container">
+            <div class="mm-panel">
+                <div class="mm-panel-title">Accounts on the same IP <span id="flags-ip-count"></span> <button class="mm-ticket-btn" id="flags-refresh" type="button" style="margin-left:10px;">Refresh</button></div>
+                <div class="flags-hint">Accounts that signed up or logged in from the same IP address. Shared Wi-Fi, schools and mobile networks can cause false matches.</div>
+                <div class="mm-ticket-list" id="flags-ip-list" style="max-height: none;"></div>
+            </div>
+            <div class="mm-panel" style="margin-top: 20px;">
+                <div class="mm-panel-title">Accounts using a VPN / proxy <span id="flags-vpn-count"></span></div>
+                <div class="flags-hint" id="flags-vpn-note"></div>
+                <div class="mm-ticket-list" id="flags-vpn-list" style="max-height: none;"></div>
+            </div>
+            <div class="mm-panel" style="margin-top: 20px;">
+                <div class="mm-panel-title">Duplicate listings <span id="flags-dup-count"></span></div>
+                <div class="flags-hint">The same seller listing the same thing more than once (same game, type, name, price and items). Stock can be used instead of listing twice.</div>
+                <div class="mm-ticket-list" id="flags-dup-list" style="max-height: none;"></div>
+            </div>
+        </div>
+        </div>
     </div>
-
     <div class="modal-overlay" id="report-chat-modal">
         <div class="modal-content report-modal">
             <button class="close-modal" id="report-chat-close">&times;</button>
@@ -3851,16 +3895,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             <div class="report-item-actions">
                 <button class="deal-btn" id="report-user-cancel" type="button">Cancel</button>
                 <button class="deal-btn danger" id="report-user-submit" type="button">Send report</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Timeouts (only knqw) -->
-    <div class="middlemen-page" id="timeouts-page">
-        <div class="middlemen-container">
-            <div class="mm-panel">
-                <div class="mm-panel-title">Spam timeouts <span id="timeouts-count"></span> <button class="mm-ticket-btn" id="timeouts-refresh" type="button" style="margin-left:10px;">Refresh</button></div>
-                <div class="mm-ticket-list" id="timeouts-list" style="max-height: none;"></div>
             </div>
         </div>
     </div>
@@ -4191,7 +4225,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const modalAvatarBox = document.getElementById('modal-avatar-box');
         const modalUsernameText = document.getElementById('modal-username-text');
         const modalUserIdText = document.getElementById('modal-userid-text');
-        const openDbBtn = document.getElementById('open-db-btn');
+        const adminPage = document.getElementById('admin-page');
+        const adminNavBtn = document.getElementById('admin-nav-btn');
+        let adminTab = null;
         const yourItemsTitleText = document.getElementById('your-items-title-text');
 
         const settingsModal = document.getElementById('settings-modal');
@@ -4241,8 +4277,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const accountsList = document.getElementById('accounts-list');
         const addAccountBtn = document.getElementById('add-account-btn');
 
-        const dbModal = document.getElementById('db-modal');
-        const closeDbModalBtn = document.getElementById('close-db-modal-btn');
         const dbTbody = document.getElementById('db-tbody');
 
         const confirmModal = document.getElementById('confirm-modal');
@@ -4550,15 +4584,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     `;
 
                     if (userObj.customId === 'knqw') {
-                        const rb = document.getElementById('reports-nav-btn');
-                        if (rb) rb.style.display = '';
-                        const ab = document.getElementById('appeals-nav-btn');
-                        if (ab) ab.style.display = '';
-                        const mb = document.getElementById('money-nav-btn');
-                        if (mb) mb.style.display = '';
-                        const tb = document.getElementById('timeouts-nav-btn');
-                        if (tb) tb.style.display = '';
-                        openDbBtn.style.display = '';
+                        adminNavBtn.style.display = '';
                         appealsAdmin = true;
                         updateAppealsBadge();
                     }
@@ -4725,7 +4751,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             selectGameModal.classList.remove('active');
             createItemModal.classList.remove('active');
             switchModal.classList.remove('active');
-            dbModal.classList.remove('active');
             confirmModal.classList.remove('active');
             linkCardModal.classList.remove('active');
 
@@ -4734,6 +4759,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             setBal(document.getElementById('header-balance-amount'), freshUser.balance || 0);
             document.getElementById('balance-held-line').textContent = `On hold: ${fmtMoney(freshUser.heldBalance)} (released when the buyer confirms delivery)`;
             document.getElementById('withdraw-amount-input').value = '';
+            refreshWithdrawHint();
             resetTopUpForm();
             document.getElementById('admin-amount-input').value = '';
             adminUserSearch.value = '';
@@ -4753,12 +4779,26 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             switchToHome();
         });
 
-        document.getElementById('withdraw-action-btn').addEventListener('click', () => {
+        async function refreshWithdrawHint() {
+            const hint = document.getElementById('withdraw-limit-hint');
+            hint.textContent = 'Limit: 1 withdrawal per hour.';
+            try {
+                const w = await srv('/api/wallet');
+                const next = Number(w.data && w.data.nextWithdrawAt) || 0;
+                if (next > Date.now()) hint.textContent = `Limit: 1 withdrawal per hour. You can withdraw again in ${Math.ceil((next - Date.now()) / 60000)} min.`;
+            } catch (e) {}
+        }
+        document.getElementById('withdraw-action-btn').addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
             const amount = parseFloat(document.getElementById('withdraw-amount-input').value);
             if (!amount || amount <= 0) {
                 showToast('Please enter a valid withdrawal amount.');
                 return;
             }
+            btn.disabled = true;
+            const r = await srv('/api/wallet/withdraw', 'POST', { amount });
+            btn.disabled = false;
+            if (!r.ok) { showToast(r.data.error || 'Withdrawal failed. Try again.'); refreshWithdrawHint(); return; }
             showToast(`Withdrawal of ${fmtMoney(amount)} requested successfully!`);
             balancePage.classList.remove('active');
             switchToHome();
@@ -5100,7 +5140,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             selectGameModal.classList.remove('active');
             createItemModal.classList.remove('active');
             switchModal.classList.remove('active');
-            dbModal.classList.remove('active');
             confirmModal.classList.remove('active');
             linkCardModal.classList.remove('active');
 
@@ -5147,7 +5186,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             selectGameModal.classList.remove('active');
             createItemModal.classList.remove('active');
             switchModal.classList.remove('active');
-            dbModal.classList.remove('active');
             confirmModal.classList.remove('active');
             linkCardModal.classList.remove('active');
 
@@ -6461,8 +6499,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
 
         // ===== Reports page (knqw only) =====
-        const reportsPage = document.getElementById('reports-page');
-        const reportsNavBtn = document.getElementById('reports-nav-btn');
         const reportChatModal = document.getElementById('report-chat-modal');
 
         async function isKnqw() {
@@ -6470,23 +6506,30 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             return !!me && me.customId === 'knqw';
         }
 
-        async function openReportsPage() {
-            if (!(await isKnqw())) { showToast('Only knqw can view reports.'); return; }
-            closeAppealsPage(); closeMoneyPage(); closeTimeoutsPage();
-            currentViewMode = 'reports';
+        async function openAdminPage(tab) {
+            tab = ['reports', 'appeals', 'timeouts', 'money', 'db', 'flags'].includes(tab) ? tab : (adminTab || 'reports');
+            if (adminPage.classList.contains('active') && adminTab === tab) return;   // already on this tab: do nothing
+            if (!(await isKnqw())) { showToast('Only knqw can open the admin panel.'); return; }
+            closeInfoPages();
+            currentViewMode = 'admin';
             [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
-            reportsNavBtn.classList.add('active');
+            adminNavBtn.classList.add('active');
             mainContentArea.style.display = 'none';
             [middlemenPage, itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
-             selectGameModal, createItemModal, switchModal, dbModal, confirmModal, linkCardModal, ticketModal
+             selectGameModal, createItemModal, switchModal, confirmModal, linkCardModal, ticketModal
             ].forEach(el => el.classList.remove('active'));
-            reportsPage.classList.add('active');
+            adminTab = tab;
+            document.querySelectorAll('#admin-tabs .admin-tab').forEach(b => b.classList.toggle('active', b.dataset.adminTab === tab));
+            document.querySelectorAll('.admin-pane').forEach(p => p.classList.toggle('active', p.id === 'admin-pane-' + tab));
+            adminPage.classList.add('active');
+            adminPage.scrollTop = 0;
             window.scrollTo({ top: 0, behavior: 'smooth' });
-            await renderReports();
+            const renderers = { reports: renderReports, appeals: renderAppeals, timeouts: renderTimeouts, money: loadMoney, db: renderDbTable, flags: renderFlags };
+            await renderers[tab]();
         }
-        function closeReportsPage() {
-            reportsPage.classList.remove('active');
-            reportsNavBtn.classList.remove('active');
+        function closeAdminPage() {
+            adminPage.classList.remove('active');
+            adminNavBtn.classList.remove('active');
         }
 
         async function renderReports() {
@@ -6584,15 +6627,28 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             box.scrollTop = box.scrollHeight;
         }
 
-        reportsNavBtn.addEventListener('click', openReportsPage);
+        adminNavBtn.addEventListener('click', () => openAdminPage(adminTab || 'reports'));
+        document.querySelectorAll('#admin-tabs .admin-tab').forEach(b => b.addEventListener('click', () => openAdminPage(b.dataset.adminTab)));
         document.getElementById('report-chat-close').addEventListener('click', () => reportChatModal.classList.remove('active'));
         reportChatModal.addEventListener('click', e => { if (e.target === reportChatModal) reportChatModal.classList.remove('active'); });
-        // Any other main navigation closes the reports page
+        // Clicking the tab you are already on does nothing. Any other main navigation closes the admin panel.
+        function isOnTab(id) {
+            const open = (pg) => !!pg && pg.classList.contains('active');
+            if (id === 'home-link' || id === 'home-brand-link') return onListingTab('all');
+            if (id === 'marketplace-nav-btn') return onListingTab('marketplace');
+            if (id === 'trading-nav-btn') return onListingTab('trading');
+            if (id === 'middlemen-nav-btn') return currentViewMode === 'middlemen' && open(middlemenPage);
+            if (id === 'games-nav-btn') return currentViewMode === 'games' && open(gamesPage);
+            if (id === 'scams-nav-btn') return currentViewMode === 'scams' && open(scamsPage);
+            return false;
+        }
         document.querySelector('header').addEventListener('click', e => {
-            if (e.target.closest('#home-link, .nav-left button:not(#reports-nav-btn):not(#appeals-nav-btn):not(#money-nav-btn):not(#timeouts-nav-btn), #header-balance-box, #header-messages-btn')) { closeReportsPage(); closeAppealsPage(); closeMoneyPage(); closeTimeoutsPage(); }
+            const tab = e.target.closest('#home-link, #home-brand-link, #marketplace-nav-btn, #trading-nav-btn, #middlemen-nav-btn, #games-nav-btn, #scams-nav-btn');
+            if (tab && isOnTab(tab.id)) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+            if (e.target.closest('#home-link, #home-brand-link, .nav-left button, #header-balance-box, #header-messages-btn')) closeAdminPage();
         }, true);
         setInterval(() => {
-            if (reportsPage.classList.contains('active') && !document.hidden) renderReports();
+            if (adminPage.classList.contains('active') && adminTab === 'reports' && !document.hidden) renderReports();
         }, 8000);
 
         // ===== Вкладка Middlemen =====
@@ -6613,7 +6669,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             mainContentArea.style.display = 'none';
 
             [itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
-             selectGameModal, createItemModal, switchModal, dbModal, confirmModal, linkCardModal, ticketModal
+             selectGameModal, createItemModal, switchModal, confirmModal, linkCardModal, ticketModal
             ].forEach(el => el.classList.remove('active'));
 
             middlemenPage.classList.add('active');
@@ -7462,13 +7518,13 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             window.location.href = 'login.html';
         });
 
-        openDbBtn.addEventListener('click', async () => {
-            profileModal.classList.remove('active');
+        async function renderDbTable() {
             let allUsers = await getAllUsersFromDB();
 
             dbTbody.innerHTML = '';
             const ipBannedSet = new Set();
             try { const ib = await srv('/api/admin/ip-banned'); if (ib.ok) (ib.data.names || []).forEach(n => ipBannedSet.add(n)); } catch (e) {}
+            const dbFlags = await getFlagSets();
             allUsers.forEach(u => {
                 const isProtected = u.customId === 'knqw';
                 const tr = document.createElement('tr');
@@ -7491,7 +7547,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     <td>
                         <button class="role-toggle-btn ${u.isMiddleman ? 'active' : ''}" data-username="${escapeHtml(u.username)}" data-mm="${u.isMiddleman ? 1 : 0}">${u.isMiddleman ? 'Middleman ✓' : 'Make Middleman'}</button>
                     </td>
-                    <td>${statusHtml}</td>
+                    <td>${statusHtml}${flagPillsHtml(u.username, dbFlags)}</td>
                     <td>
                         <div class="db-actions">
                             ${banned
@@ -7517,7 +7573,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
                     await setMiddlemanRole(uname, makeMiddleman);
                     showToast(makeMiddleman ? `${uname} is now a Middleman` : `Middleman role removed from ${uname}`);
-                    openDbBtn.click();
+                    renderDbTable();
                 });
             });
 
@@ -7527,7 +7583,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     userToDelete = uname;
                     confirmModalTitle.textContent = 'Delete Account';
                     confirmText.textContent = `Are you sure you want to delete account "${uname}"?`;
-                    dbModal.classList.remove('active');
                     confirmModal.classList.add('active');
                 });
             });
@@ -7542,13 +7597,12 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     await unbanUser(uname);
                     showToast(`${uname} has been unbanned`);
                     updateAppealsBadge();
-                    openDbBtn.click();
+                    renderDbTable();
                 });
             });
 
             applyDbFilter();
-            dbModal.classList.add('active');
-        });
+        }
 
         const DB_FIELD_KEY = { id: 'fId', username: 'fUsername', displayname: 'fDisplayname', email: 'fEmail', middleman: 'fMiddleman' };
         function applyDbFilter() {
@@ -7586,18 +7640,12 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             document.getElementById('db-search-input').focus();
         });
 
-        closeDbModalBtn.addEventListener('click', () => {
-            dbModal.classList.remove('active');
-        });
-
         closeConfirmModalBtn.addEventListener('click', () => {
             confirmModal.classList.remove('active');
-            dbModal.classList.add('active');
         });
 
         confirmNoBtn.addEventListener('click', () => {
             confirmModal.classList.remove('active');
-            dbModal.classList.add('active');
         });
 
         confirmYesBtn.addEventListener('click', async () => {
@@ -7606,7 +7654,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 if (targetUser && targetUser.customId === 'knqw') {
                     showToast('Protected account cannot be deleted!');
                     confirmModal.classList.remove('active');
-                    dbModal.classList.add('active');
                     return;
                 }
 
@@ -7614,7 +7661,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 if (!deleted) {
                     showToast('Could not delete this account. Please try again.');
                     confirmModal.classList.remove('active');
-                    openDbBtn.click();
+                    renderDbTable();
                     return;
                 }
                 let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
@@ -7625,10 +7672,88 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     logoutAndReload();
                 } else {
                     confirmModal.classList.remove('active');
-                    openDbBtn.click();
+                    renderDbTable();
                 }
             }
         });
+
+        // ===== Flags: shared IPs, VPN / proxy users, duplicate listings (knqw) =====
+        let flagsCache = null, flagsCacheAt = 0;
+        async function getFlags(force) {
+            if (!force && flagsCache && Date.now() - flagsCacheAt < 60000) return flagsCache;
+            const r = await srv('/api/admin/flags');
+            if (!r.ok) return flagsCache;
+            flagsCache = r.data; flagsCacheAt = Date.now();
+            return flagsCache;
+        }
+        async function getFlagSets() {
+            const sets = { ip: new Set(), vpn: new Set(), dup: new Set() };
+            try {
+                const f = await getFlags(false);
+                if (f) {
+                    (f.sameIp || []).forEach(g => g.users.forEach(u => sets.ip.add(u.username)));
+                    (f.vpn || []).forEach(u => sets.vpn.add(u.username));
+                    (f.duplicates || []).forEach(u => sets.dup.add(u.username));
+                }
+            } catch (e) {}
+            return sets;
+        }
+        function flagPillsHtml(username, sets) {
+            const p = [];
+            if (sets.ip.has(username)) p.push('<span class="flag-pill ip">Same IP</span>');
+            if (sets.vpn.has(username)) p.push('<span class="flag-pill vpn">VPN</span>');
+            if (sets.dup.has(username)) p.push('<span class="flag-pill dup">Duplicate listings</span>');
+            return p.length ? `<div class="flag-row">${p.join('')}</div>` : '';
+        }
+        const LISTING_TYPE_LABEL = { selling: 'Selling', specific: 'Looking for specific trade', any: 'Looking for offers' };
+        async function renderFlags() {
+            if (!(await isKnqw())) return;
+            const f = await getFlags(true);
+            if (!f) { showToast('Could not load flags.'); return; }
+            const empty = (t) => `<div class="reports-empty">${t}</div>`;
+            const ipList = document.getElementById('flags-ip-list');
+            const vpnList = document.getElementById('flags-vpn-list');
+            const dupList = document.getElementById('flags-dup-list');
+            const ago = (t) => t ? escapeHtml(getTimeAgo(t)) : 'unknown';
+
+            document.getElementById('flags-ip-count').textContent = f.sameIp.length ? `(${f.sameIp.length})` : '';
+            ipList.innerHTML = f.sameIp.length ? f.sameIp.map(g => `
+                <div class="mm-ticket">
+                    <div class="mm-ticket-top">
+                        <div class="mm-ticket-users">IP ${escapeHtml(g.ip)}${g.vpn ? '<span class="flag-pill vpn">VPN / proxy IP</span>' : ''}</div>
+                        <div class="mm-ticket-time">${g.users.length} accounts</div>
+                    </div>
+                    <div class="mm-ticket-desc" style="max-height:none;">${g.users.map(u => `${userLinkHtml(u.username)}${u.banned ? ' (banned)' : ''} - joined ${ago(u.joinedAt)}`).join('\n')}</div>
+                </div>`).join('') : empty('No accounts share an IP address.');
+
+            document.getElementById('flags-vpn-count').textContent = f.vpn.length ? `(${f.vpn.length})` : '';
+            let note = 'Each IP is looked up once when an account signs up or logs in (VPN, proxy, Tor or datacenter addresses).';
+            if (!f.vpnCheck) note = 'The VPN lookup is turned off on the server (VPN_CHECK=0).';
+            else if (f.ipsUnchecked) note += ` ${f.ipsUnchecked} IP${f.ipsUnchecked === 1 ? ' is' : 's are'} not checked yet.`;
+            document.getElementById('flags-vpn-note').textContent = note;
+            vpnList.innerHTML = f.vpn.length ? f.vpn.map(u => `
+                <div class="mm-ticket">
+                    <div class="mm-ticket-top">
+                        <div class="mm-ticket-users">${userLinkHtml(u.username)}${u.banned ? ' (banned)' : ''}<span class="flag-pill vpn">VPN / proxy</span></div>
+                        <div class="mm-ticket-time">${u.ips.length} flagged IP${u.ips.length === 1 ? '' : 's'}</div>
+                    </div>
+                    <div class="mm-ticket-desc" style="max-height:none;">${u.ips.map(i => `${escapeHtml(i.ip)} - ${escapeHtml(i.kind)} - last seen ${ago(i.lastSeen)}`).join('\n')}</div>
+                </div>`).join('') : empty('No accounts using a VPN or proxy.');
+
+            document.getElementById('flags-dup-count').textContent = f.duplicates.length ? `(${f.duplicates.length})` : '';
+            dupList.innerHTML = f.duplicates.length ? f.duplicates.map(d => `
+                <div class="mm-ticket">
+                    <div class="mm-ticket-top">
+                        <div class="mm-ticket-users">${userLinkHtml(d.username)}${d.banned ? ' (banned)' : ''}<span class="flag-pill dup">${d.count}x same listing</span></div>
+                    </div>
+                    <div class="mm-ticket-desc" style="max-height:none;">${escapeHtml(d.name)}\nGame: ${escapeHtml(d.game || '-')}\nType: ${escapeHtml(LISTING_TYPE_LABEL[d.tag] || d.tag)}${d.tag === 'selling' && d.price ? ` - Price: $${escapeHtml(fmtPriceNum(d.price))}` : ''}</div>
+                </div>`).join('') : empty('No duplicate listings.');
+
+            [ipList, vpnList, dupList].forEach(bindUserLinks);
+            const total = f.sameIp.length + f.vpn.length + f.duplicates.length;
+            document.querySelector('#admin-tabs [data-admin-tab="flags"]').textContent = total ? `Flags (${total})` : 'Flags';
+        }
+        document.getElementById('flags-refresh').addEventListener('click', renderFlags);
 
         // ===== Ban screen (shown to banned users) =====
         let banScreenUser = null;
@@ -7840,13 +7965,12 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             banReasonInput.value = '';
             banCustomGroup.style.display = 'none';
             banPermHint.style.display = 'none';
-            dbModal.classList.remove('active');
             banModal.classList.add('active');
         }
         function closeBanModal() {
             banModal.classList.remove('active');
             banTarget = null;
-            openDbBtn.click();
+            renderDbTable();
         }
         banDurationSel.addEventListener('change', () => {
             banCustomGroup.style.display = banDurationSel.value === 'custom' ? '' : 'none';
@@ -7894,8 +8018,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         });
 
         // ===== Appeals page (knqw) =====
-        const appealsPage = document.getElementById('appeals-page');
-        const appealsNavBtn = document.getElementById('appeals-nav-btn');
+        const appealsNavBtn = document.querySelector('#admin-tabs [data-admin-tab="appeals"]');
+        function setAppealsBadge(n) {
+            appealsNavBtn.textContent = n ? `Appeals (${n})` : 'Appeals';
+            adminNavBtn.textContent = n ? `Admin (${n})` : 'Admin';
+        }
         let appealsAdmin = false;
 
         async function getAppeals() {
@@ -7909,29 +8036,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             try {
                 const list = await getAppeals();
                 const pending = list.filter(a => a.appealStatus === 'pending').length;
-                appealsNavBtn.textContent = pending ? `Appeals (${pending})` : 'Appeals';
+                setAppealsBadge(pending);
             } catch (e) { /* не критично */ }
         }
         setInterval(() => { if (appealsAdmin && !document.hidden) updateAppealsBadge(); }, 30000);
-
-        async function openAppealsPage() {
-            if (!(await isKnqw())) { showToast('Only knqw can view appeals.'); return; }
-            closeReportsPage(); closeMoneyPage(); closeTimeoutsPage();
-            currentViewMode = 'appeals';
-            [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
-            appealsNavBtn.classList.add('active');
-            mainContentArea.style.display = 'none';
-            [middlemenPage, itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
-             selectGameModal, createItemModal, switchModal, dbModal, confirmModal, linkCardModal, ticketModal
-            ].forEach(el => el.classList.remove('active'));
-            appealsPage.classList.add('active');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            await renderAppeals();
-        }
-        function closeAppealsPage() {
-            appealsPage.classList.remove('active');
-            appealsNavBtn.classList.remove('active');
-        }
 
         async function renderAppeals() {
             const list = document.getElementById('appeals-list');
@@ -7941,7 +8049,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             appeals.sort((a, b) => (a.appealStatus === 'pending' ? 0 : 1) - (b.appealStatus === 'pending' ? 0 : 1) || b.appealAt - a.appealAt);
             const pending = appeals.filter(a => a.appealStatus === 'pending').length;
             document.getElementById('appeals-count').textContent = pending ? `(${pending})` : '';
-            appealsNavBtn.textContent = pending ? `Appeals (${pending})` : 'Appeals';
+            setAppealsBadge(pending);
             if (!appeals.length) { list.innerHTML = '<div class="reports-empty">No ban appeals.</div>'; return; }
 
             list.innerHTML = appeals.map(a => {
@@ -7980,40 +8088,18 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             }));
         }
 
-        appealsNavBtn.addEventListener('click', openAppealsPage);
         setInterval(() => {
-            if (appealsPage.classList.contains('active') && !document.hidden) renderAppeals();
+            if (adminPage.classList.contains('active') && adminTab === 'appeals' && !document.hidden) renderAppeals();
         }, 8000);
 
 
         // ===== Money page (knqw only) =====
-        const moneyPage = document.getElementById('money-page');
-        const moneyNavBtn = document.getElementById('money-nav-btn');
         let moneyData = { users: [], deals: [] };
 
         function dealStatusLabel(st) {
             return ({ paid: 'Waiting for buyer', not_received: 'Items not received', reported: 'Reported' })[st] || st;
         }
         function dealStatusPillClass(st) { return st === 'paid' ? 'ok' : (st === 'reported' ? 'banned' : 'warn'); }
-
-        async function openMoneyPage() {
-            if (!(await isKnqw())) { showToast('Only knqw can view this page.'); return; }
-            closeReportsPage(); closeAppealsPage(); closeTimeoutsPage();
-            currentViewMode = 'money';
-            [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
-            moneyNavBtn.classList.add('active');
-            mainContentArea.style.display = 'none';
-            [middlemenPage, itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
-             selectGameModal, createItemModal, switchModal, dbModal, confirmModal, linkCardModal, ticketModal
-            ].forEach(el => el.classList.remove('active'));
-            moneyPage.classList.add('active');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            await loadMoney();
-        }
-        function closeMoneyPage() {
-            moneyPage.classList.remove('active');
-            moneyNavBtn.classList.remove('active');
-        }
 
         async function loadMoney() {
             if (!(await isKnqw())) return;
@@ -8165,13 +8251,12 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             document.getElementById('rc-pay').onclick = () => adminResolveDeal(d.id, 'pay');
         }
 
-        moneyNavBtn.addEventListener('click', openMoneyPage);
         ['money-search', 'money-min'].forEach(id => document.getElementById(id).addEventListener('input', renderMoneyBoard));
         document.getElementById('money-sort').addEventListener('change', renderMoneyBoard);
         document.getElementById('money-hide-zero').addEventListener('change', renderMoneyBoard);
         document.getElementById('money-tx-search').addEventListener('input', renderMoneyTx);
         document.getElementById('money-tx-status').addEventListener('change', renderMoneyTx);
-        setInterval(() => { if (moneyPage.classList.contains('active') && !document.hidden && !adminDealBusy) loadMoney(); }, 8000);
+        setInterval(() => { if (adminPage.classList.contains('active') && adminTab === 'money' && !document.hidden && !adminDealBusy) loadMoney(); }, 8000);
 
         // ===== Ratings & vouches =====
         let profileViewUser = null;
@@ -8660,13 +8745,13 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             gamesNavBtn.classList.remove('active'); scamsNavBtn.classList.remove('active');
         }
         function openInfoPage(page, btn, mode) {
-            closeReportsPage(); closeAppealsPage(); closeMoneyPage(); closeTimeoutsPage(); closeInfoPages();
+            closeAdminPage(); closeInfoPages();
             currentViewMode = mode;
             [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
             btn.classList.add('active');
             mainContentArea.style.display = 'none';
             [middlemenPage, itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
-             selectGameModal, createItemModal, switchModal, dbModal, confirmModal, linkCardModal, ticketModal
+             selectGameModal, createItemModal, switchModal, confirmModal, linkCardModal, ticketModal
             ].forEach(el => el.classList.remove('active'));
             page.classList.add('active');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -8841,27 +8926,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         async function chatSpamGuard() { return true; }   // spam limits and timeouts are enforced by the server
 
         // ===== Timeouts page (knqw only) =====
-        const timeoutsPage = document.getElementById('timeouts-page');
-        const timeoutsNavBtn = document.getElementById('timeouts-nav-btn');
-        async function openTimeoutsPage() {
-            if (!(await isKnqw())) { showToast('Only knqw can view timeouts.'); return; }
-            closeReportsPage(); closeAppealsPage(); closeMoneyPage();
-            currentViewMode = 'timeouts';
-            [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
-            timeoutsNavBtn.classList.add('active');
-            mainContentArea.style.display = 'none';
-            [middlemenPage, itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
-             selectGameModal, createItemModal, switchModal, dbModal, confirmModal, linkCardModal, ticketModal
-            ].forEach(el => el.classList.remove('active'));
-            timeoutsPage.classList.add('active');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            await renderTimeouts();
-        }
-
-        function closeTimeoutsPage() {
-            timeoutsPage.classList.remove('active');
-            timeoutsNavBtn.classList.remove('active');
-        }
         async function renderTimeouts() {
             const list = document.getElementById('timeouts-list');
             if (!(await isKnqw())) { list.innerHTML = ''; return; }
@@ -8906,12 +8970,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 renderTimeouts();
             }));
         }
-        timeoutsNavBtn.addEventListener('click', openTimeoutsPage);
         document.getElementById('timeouts-refresh').addEventListener('click', renderTimeouts);
         setInterval(() => {
-            if (!timeoutsPage.classList.contains('active')) return;
+            if (!(adminPage.classList.contains('active') && adminTab === 'timeouts')) return;
             const now = Date.now();
-            timeoutsPage.querySelectorAll('[data-until]').forEach(el => {
+            document.getElementById('timeouts-list').querySelectorAll('[data-until]').forEach(el => {
                 const left = Number(el.dataset.until) - now;
                 el.textContent = left > 0 ? `Timed out - ${fmtLeft(left)} left` : 'Expired';
                 if (left <= 0) { el.className = 'to-status-expired'; el.removeAttribute('data-until'); }
