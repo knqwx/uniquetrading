@@ -83,6 +83,12 @@ async function init() {
   await run(`ALTER TABLE users ADD COLUMN passwordHash TEXT`);
   await run(`ALTER TABLE users ADD COLUMN lastIp TEXT`);
   await run(`ALTER TABLE users ADD COLUMN joinedAt INTEGER`);
+  await run(`ALTER TABLE users ADD COLUMN lastWithdrawAt INTEGER DEFAULT 0`);
+  // every IP an account has signed up / logged in / browsed from (used for the "same IP" and VPN flags)
+  await run(`CREATE TABLE IF NOT EXISTS user_ips (username TEXT, ip TEXT, firstSeen INTEGER, lastSeen INTEGER, PRIMARY KEY (username, ip))`);
+  // cached VPN / proxy / datacenter lookup per IP
+  await run(`CREATE TABLE IF NOT EXISTS ip_info (ip TEXT PRIMARY KEY, proxy INTEGER DEFAULT 0, hosting INTEGER DEFAULT 0, checkedAt INTEGER)`);
+  await run(`INSERT OR IGNORE INTO user_ips (username, ip, firstSeen, lastSeen) SELECT username, lastIp, COALESCE(joinedAt, ${Date.now()}), ${Date.now()} FROM users WHERE lastIp IS NOT NULL AND lastIp != ''`);
   await run(`CREATE TRIGGER IF NOT EXISTS users_set_joined AFTER INSERT ON users WHEN NEW.joinedAt IS NULL BEGIN UPDATE users SET joinedAt = CAST(strftime('%s','now') AS INTEGER) * 1000 WHERE id = NEW.id; END`);
   await run(`UPDATE users SET joinedAt = ${Date.now()} WHERE joinedAt IS NULL`);
   await run(`DELETE FROM sessions WHERE expiresAt < ${Date.now()}`);
@@ -171,6 +177,37 @@ function ipBanText(ban) {
   return `Your IP address is banned ${when}.` + (ban.reason ? ` Reason: ${ban.reason}` : '');
 }
 
+// ---------- ip tracking + VPN / proxy lookup ----------
+// Every IP an account uses is saved in user_ips. New IPs are looked up once (ip-api.com) and cached in ip_info for 30 days.
+// Optional env vars: IPAPI_KEY (paid ip-api.com key, uses https) - VPN_CHECK=0 (turn the lookup off)
+const isPrivateIp = (ip) => !ip || ip === '::1' || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|fc|fd|fe80)/i.test(ip);
+const ipSeen = new Map(), ipPending = new Set();
+async function checkIpInfo(ip) {
+  if (isPrivateIp(ip) || process.env.VPN_CHECK === '0' || ipPending.has(ip)) return;
+  const rs = await db.execute({ sql: 'SELECT checkedAt FROM ip_info WHERE ip = ?', args: [ip] });
+  if (rs.rows.length && Date.now() - Number(rs.rows[0].checkedAt) < 30 * DAY) return;
+  if (limited('ipapi', 40, 60 * 1000)) return;          // the free plan allows 45 lookups per minute; retried the next time the IP is seen
+  ipPending.add(ip);
+  try {
+    const key = process.env.IPAPI_KEY;
+    const url = key ? `https://pro.ip-api.com/json/${encodeURIComponent(ip)}?fields=status,proxy,hosting&key=${encodeURIComponent(key)}` : `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,proxy,hosting`;
+    const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    const j = await r.json();
+    if (j.status !== 'success') return;
+    await db.execute({ sql: 'INSERT INTO ip_info (ip, proxy, hosting, checkedAt) VALUES (?, ?, ?, ?) ON CONFLICT(ip) DO UPDATE SET proxy = excluded.proxy, hosting = excluded.hosting, checkedAt = excluded.checkedAt', args: [ip, j.proxy ? 1 : 0, j.hosting ? 1 : 0, Date.now()] });
+  } catch (e) { /* lookup failed: try again later */ }
+  finally { ipPending.delete(ip); }
+}
+function trackIp(username, ip) {
+  if (!username || !ip) return;
+  const key = username + '|' + ip, now = Date.now();
+  if (now - (ipSeen.get(key) || 0) < 10 * 60 * 1000) return;     // write at most once per 10 minutes per account+IP
+  ipSeen.set(key, now);
+  db.execute({ sql: 'INSERT INTO user_ips (username, ip, firstSeen, lastSeen) VALUES (?, ?, ?, ?) ON CONFLICT(username, ip) DO UPDATE SET lastSeen = excluded.lastSeen', args: [username, ip, now, now] }).catch(() => {});
+  checkIpInfo(ip).catch(() => {});
+}
+setInterval(() => { const cut = Date.now() - DAY; for (const [k, t] of ipSeen) if (t < cut) ipSeen.delete(k); }, 60 * 60 * 1000);
+
 // ---------- sessions ----------
 // Cookies are SameSite=None; Secure on Render, which browsers need when the pages are on another site (github.io).
 const IS_SECURE = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
@@ -194,6 +231,7 @@ export async function requireUser(req, res, next) {      // use this on every fu
     const r = await db.execute({ sql: 'SELECT username FROM sessions WHERE id = ? AND expiresAt > ?', args: [String(req.cookies.sid || ''), Date.now()] });
     if (!r.rows.length) return res.status(401).json({ error: 'Please log in.' });
     req.user = String(r.rows[0].username);
+    trackIp(req.user, ipOf(req));
     next();
   } catch (e) { res.status(500).json({ error: 'Server error' }); }
 }
@@ -307,6 +345,7 @@ app.post('/api/signup', async (req, res) => {
       throw e;
     }
     if (ip) await db.execute({ sql: 'INSERT INTO signup_log (ip, createdAt) VALUES (?, ?)', args: [ip, now] });
+    trackIp(username, ip);
     res.cookie('ut_su', String(now), cookieOpts(DAY));
     await startSession(res, username);
     res.json({ username });
@@ -343,6 +382,7 @@ app.post('/api/login', async (req, res) => {
       if (ban) return fail(ipBanText(ban), 403);
     }
     if (ip) { try { await db.execute({ sql: 'UPDATE users SET lastIp = ? WHERE username = ?', args: [ip, u.username] }); } catch (e) {} }
+    trackIp(String(u.username), ip);
     await startSession(res, String(u.username));
     res.json({ username: String(u.username) });
   } catch (e) {
@@ -438,9 +478,35 @@ app.post('/api/change-password', requireUser, async (req, res) => {
 
 // ---------- wallet ----------
 app.get('/api/wallet', requireUser, async (req, res) => {
-  const r = await db.execute({ sql: 'SELECT balance, heldBalance FROM users WHERE username = ?', args: [req.user] });
+  const r = await db.execute({ sql: 'SELECT balance, heldBalance, lastWithdrawAt FROM users WHERE username = ?', args: [req.user] });
   if (!r.rows.length) return res.status(401).json({ error: 'Please log in.' });
-  res.json({ balance: Number(r.rows[0].balance) || 0, held: Number(r.rows[0].heldBalance) || 0 });
+  const last = Number(r.rows[0].lastWithdrawAt) || 0;
+  res.json({ balance: Number(r.rows[0].balance) || 0, held: Number(r.rows[0].heldBalance) || 0, nextWithdrawAt: last ? last + WITHDRAW_COOLDOWN : 0 });
+});
+
+// Withdrawals: one per hour per account, enforced here (not in the page). Like before, this only records the request: no money is moved or deducted yet.
+const WITHDRAW_COOLDOWN = 60 * 60 * 1000;
+app.post('/api/wallet/withdraw', requireUser, async (req, res) => {
+  try {
+    if (moneyLimit(req, res, 'withdraw', 20, 60 * 60 * 1000)) return;
+    const amount = parseMoney(req.body.amount);
+    if (!(amount > 0) || amount > 1000000) return res.status(400).json({ error: 'Please enter a valid withdrawal amount.' });
+    const rs = await db.execute({ sql: 'SELECT balance, lastWithdrawAt, bannedUntil FROM users WHERE username = ?', args: [req.user] });
+    if (!rs.rows.length) return res.status(401).json({ error: 'Please log in.' });
+    const u = rs.rows[0];
+    const until = Number(u.bannedUntil) || 0;
+    if (until === -1 || until > Date.now()) return res.status(403).json({ error: 'Your account is banned.' });
+    if (amount > (Number(u.balance) || 0)) return res.status(400).json({ error: 'You do not have enough balance for this withdrawal.' });
+    const now = Date.now();
+    // atomic: only one request can claim the hourly slot
+    const upd = await db.execute({ sql: 'UPDATE users SET lastWithdrawAt = ? WHERE username = ? AND COALESCE(lastWithdrawAt, 0) <= ?', args: [now, req.user, now - WITHDRAW_COOLDOWN] });
+    if (!upd.rowsAffected) {
+      const wait = (Number(u.lastWithdrawAt) || 0) + WITHDRAW_COOLDOWN - now;
+      return res.status(429).json({ error: `You can only withdraw once per hour. Try again in ${Math.max(1, Math.ceil(wait / 60000))} min.`, nextWithdrawAt: now + Math.max(0, wait) });
+    }
+    console.log(`WITHDRAW request ${req.user} ${amount}`);
+    res.json({ ok: true, nextWithdrawAt: now + WITHDRAW_COOLDOWN });
+  } catch (e) { console.error('withdraw error:', e); res.status(500).json({ error: 'Withdrawal failed. Try again.' }); }
 });
 
 // Top-up is a DEMO (free money). It only works while PAYMENT_DEMO_MODE=1 is set in Render. Remove that variable before real launch.
@@ -792,7 +858,7 @@ app.post('/api/profile/rename', requireUser, async (req, res) => {
         if (r.username === nu) items.forEach(i => { if (i.sellerUsername) { i.sellerUsername = nu; changed = true; } if (i.owner) { i.owner = nu; changed = true; } });
         if (changed) await tx.execute({ sql: 'UPDATE users SET messages = ?, items = ? WHERE username = ?', args: [JSON.stringify(msgs), JSON.stringify(items), r.username] });
       }
-      for (const [t, cols] of [['chat_clears', ['user']], ['ratings', ['rater', 'target']], ['vouches', ['author', 'middleman']], ['tickets', ['creator', 'partner']], ['chat_images', ['sender', 'receiver']]]) {
+      for (const [t, cols] of [['chat_clears', ['user']], ['ratings', ['rater', 'target']], ['vouches', ['author', 'middleman']], ['tickets', ['creator', 'partner']], ['chat_images', ['sender', 'receiver']], ['user_ips', ['username']]]) {
         for (const c of cols) { try { await tx.execute({ sql: `UPDATE ${t} SET ${c} = ? WHERE ${c} = ?`, args: [nu, req.user] }); } catch (e) { /* table may not exist yet */ } }
       }
       return nu;
@@ -1057,6 +1123,7 @@ app.post('/api/admin/delete-user', requireUser, requireAdmin, async (req, res) =
   if (!r.rowsAffected) return res.status(404).json({ error: 'Account not found.' });
   await db.execute({ sql: 'DELETE FROM sessions WHERE username = ?', args: [name] });
   try { await db.execute({ sql: 'DELETE FROM tickets WHERE creator = ? OR partner = ?', args: [name, name] }); } catch (e) {}
+  try { await db.execute({ sql: 'DELETE FROM user_ips WHERE username = ?', args: [name] }); } catch (e) {}
   console.log(`ADMIN ${req.user} deleted account ${name}`);
   res.json({ ok: true });
 });
@@ -1430,6 +1497,60 @@ app.get('/api/admin/ip-banned', requireUser, requireAdmin, wrap(async (req, res)
 }));
 
 // ---------- misc ----------
+// ---------- admin: flags (same IP, VPN / proxy, duplicate listings) ----------
+const normTxt = (v) => String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' ');
+app.get('/api/admin/flags', requireUser, requireAdmin, wrap(async (req, res) => {
+  const now = Date.now();
+  const urs = await db.execute('SELECT customId, username, displayName, joinedAt, bannedUntil, items FROM users');
+  const byName = new Map(urs.rows.map(r => [String(r.username), r]));
+  const skip = (n) => { const u = byName.get(n); return !u || String(u.customId || '') === 'knqw'; };      // deleted accounts and the admin are never flagged
+  const brief = (n) => { const u = byName.get(n); const bu = Number(u.bannedUntil) || 0; return { username: n, displayName: u.displayName || n, joinedAt: Number(u.joinedAt) || 0, banned: bu === -1 || bu > now }; };
+
+  const info = new Map((await db.execute('SELECT ip, proxy, hosting FROM ip_info')).rows.map(r => [String(r.ip), { proxy: Number(r.proxy) === 1, hosting: Number(r.hosting) === 1 }]));
+  const perIp = new Map(), perUser = new Map(), unchecked = new Set();
+  for (const r of (await db.execute('SELECT username, ip, lastSeen FROM user_ips ORDER BY lastSeen DESC')).rows) {
+    const name = String(r.username), ip = String(r.ip);
+    if (skip(name)) continue;
+    if (!perIp.has(ip)) perIp.set(ip, []);
+    if (!perIp.get(ip).includes(name)) perIp.get(ip).push(name);
+    if (!perUser.has(name)) perUser.set(name, []);
+    perUser.get(name).push({ ip, lastSeen: Number(r.lastSeen) || 0 });
+    if (!isPrivateIp(ip) && !info.has(ip)) unchecked.add(ip);
+  }
+  const sameIp = [...perIp].filter(([ip, names]) => !isPrivateIp(ip) && names.length >= 2)
+    .map(([ip, names]) => { const i = info.get(ip) || {}; return { ip, vpn: !!(i.proxy || i.hosting), users: names.map(brief) }; })
+    .sort((a, b) => b.users.length - a.users.length);
+  const vpn = [];
+  for (const [name, list] of perUser) {
+    const bad = list.filter(x => { const i = info.get(x.ip); return i && (i.proxy || i.hosting); })
+      .map(x => ({ ip: x.ip, kind: info.get(x.ip).proxy ? 'VPN / proxy' : 'Hosting / datacenter', lastSeen: x.lastSeen }));
+    if (bad.length) vpn.push({ ...brief(name), ips: bad });
+  }
+
+  // the same seller listing the same thing more than once (name, game, type, price and items are equal)
+  const duplicates = [];
+  for (const r of urs.rows) {
+    const name = String(r.username);
+    if (skip(name)) continue;
+    const items = parseJson(r.items, []);
+    if (!Array.isArray(items)) continue;
+    const groups = new Map();
+    for (const it of items) {
+      const key = [normTxt(it.game), normTxt(it.tag), normTxt(it.name), String(it.price == null ? '' : it.price).replace(/,/g, '').trim(),
+        JSON.stringify((Array.isArray(it.items) ? it.items : []).map(normTxt).sort()),
+        it.wanted ? normTxt(it.wanted.game) + JSON.stringify((Array.isArray(it.wanted.items) ? it.wanted.items : []).map(normTxt).sort()) : ''].join('|');
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(it);
+    }
+    for (const g of groups.values()) {
+      if (g.length < 2) continue;
+      duplicates.push({ ...brief(name), name: String(g[0].name || ''), game: String(g[0].game || ''), tag: String(g[0].tag || ''), price: String(g[0].price == null ? '' : g[0].price), count: g.length, ids: g.map(x => x.id) });
+    }
+  }
+  duplicates.sort((a, b) => b.count - a.count);
+  res.json({ sameIp, vpn, duplicates, ipsUnchecked: unchecked.size, vpnCheck: process.env.VPN_CHECK !== '0' });
+}));
+
 app.get('/api/listings/sig', requireUser, wrap(async (req, res) => {
   const rs = await db.execute('SELECT username, COALESCE(length(items), 0) AS l, COALESCE(lastItemTime, 0) AS t, COALESCE(bannedUntil, 0) AS b FROM users');
   res.json({ sig: rs.rows.map(r => `${r.username}:${r.l}:${r.t}:${r.b}`).join('|') });
