@@ -2655,6 +2655,9 @@
         .about-links { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
         .about-discord { display: inline-flex; align-items: center; gap: 8px; background: #5865f2; color: #fff; text-decoration: none; font-weight: 600; font-size: 14px; padding: 10px 16px; border-radius: 10px; }
         .about-discord:hover { opacity: 0.88; }
+        #faq-modal .info-modal, #terms-modal .info-modal { scrollbar-width: none; -ms-overflow-style: none; }
+        #faq-modal .info-modal::-webkit-scrollbar, #terms-modal .info-modal::-webkit-scrollbar { display: none; width: 0; height: 0; }
+        .message-bubble.msg-sending { opacity: 0.6; }
         .faq-list { display: flex; flex-direction: column; gap: 8px; }
         .faq-item { background: #262626; border-radius: 10px; padding: 0; overflow: hidden; }
         .faq-item summary { cursor: pointer; padding: 13px 16px; color: #fff; font-weight: 600; font-size: 14px; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -4617,7 +4620,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 card.innerHTML = `
                     ${imgHtml}
                     <div class="global-item-name">${escapeHtml(item.name)}</div>
-                    ${wantedLineHtml(item)}
                     <div class="global-item-footer">
                         <div class="global-item-price">${escapeHtml(priceText)}</div>
                         <div class="global-item-time" data-ts="${Number(item.id) || 0}">${escapeHtml(timeAgo)}</div>
@@ -5423,6 +5425,19 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (!r.ok) { srvFail(r); return null; }
             return r.data.message;
         }
+        const pendingSends = [];
+        function appendPendingBubbles(container, threadKey) {
+            if (!container) return;
+            pendingSends.filter(p => p.threadKey === threadKey).forEach(p => {
+                if (container.querySelector('[data-pending-id="' + p.id + '"]')) return;
+                const d = document.createElement('div');
+                d.className = 'message-bubble outgoing msg-sending';
+                d.setAttribute('data-pending-id', p.id);
+                d.innerHTML = `<span class="msg-text-content">${escapeHtml(p.text)}</span><span class="msg-time">Sending...</span>`;
+                container.appendChild(d);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
         let stagedChatImage = null; // { threadKey, dataUrl } - shown above the text bar until Send is pressed
         function showStagedPreview(threadKey) {
             const box = document.getElementById('chat-staged');
@@ -5822,6 +5837,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 oldScroll.replaceWith(fresh);
                 fresh.scrollTop = wasNearBottom ? fresh.scrollHeight : prevTop;
                 wireChatMessages(fresh);
+                appendPendingBubbles(fresh, threadKey);
                 loadChatImages(fresh).then(() => { if (wasNearBottom) fresh.scrollTop = fresh.scrollHeight; });
                 return;
             }
@@ -5865,6 +5881,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (hdrName) { hdrName.style.cursor = 'pointer'; hdrName.addEventListener('click', () => openProfileByUsername(targetUsername)); }
 
             wireChatMessages(scrollContainer);
+            appendPendingBubbles(scrollContainer, threadKey);
             showStagedPreview(threadKey);
             document.getElementById('chat-staged-x').addEventListener('click', () => { stagedChatImage = null; showStagedPreview(threadKey); });
             loadChatImages(scrollContainer).then(() => { scrollContainer.scrollTop = scrollContainer.scrollHeight; });
@@ -5909,8 +5926,21 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         game: ctxItem.game || '',
                         seller: ctxItem.owner || ''
                     } : null;
-                    const sent = await pushChatMessage({ receiver: targetUsername, text: messageText, itemRef: itemRefData, itemId: itemId || null });
-                    if (!sent) return;
+                    const pend = { id: 'p' + Date.now() + Math.random().toString(36).slice(2, 6), threadKey: threadKey, text: messageText };
+                    pendingSends.push(pend);
+                    inputField.value = '';
+                    appendPendingBubbles(document.getElementById('chat-messages-scroll'), threadKey);
+                    let sent = null;
+                    try { sent = await pushChatMessage({ receiver: targetUsername, text: messageText, itemRef: itemRefData, itemId: itemId || null }); }
+                    finally {
+                        const i = pendingSends.indexOf(pend);
+                        if (i >= 0) pendingSends.splice(i, 1);
+                    }
+                    if (!sent) {
+                        document.querySelectorAll('[data-pending-id="' + pend.id + '"]').forEach(el => el.remove());
+                        if (!inputField.value) inputField.value = text;
+                        return;
+                    }
                 }
 
                 pendingChatItem = null;
@@ -6901,7 +6931,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 card.innerHTML = `
                     <img class="item-card-img" ${itemImgAttrs(item)} alt="Item">
                     <div class="item-card-name">${escapeHtml(item.name)}</div>
-                    ${wantedLineHtml(item)}
                     <div class="item-card-price">${escapeHtml(priceText)}</div>
                 `;
 
@@ -7307,7 +7336,17 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         return;
                     }
                     if (!isCurrent) {
-                        window.location.href = 'login.html?u=' + encodeURIComponent(username);
+                        (async () => {
+                            try {
+                                const sr = await fetch(API_BASE + '/api/switch', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) });
+                                if (sr.ok) {
+                                    try { localStorage.setItem('currentUser', username); } catch (e) {}
+                                    location.reload();
+                                    return;
+                                }
+                            } catch (e) {}
+                            window.location.href = 'login.html?u=' + encodeURIComponent(username);   // no saved session: ask for the password once
+                        })();
                     }
                 });
 
