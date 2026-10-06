@@ -2664,8 +2664,8 @@
         .about-links { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
         .about-discord { display: inline-flex; align-items: center; gap: 8px; background: #5865f2; color: #fff; text-decoration: none; font-weight: 600; font-size: 14px; padding: 10px 16px; border-radius: 10px; }
         .about-discord:hover { opacity: 0.88; }
-        #faq-modal .info-modal, #terms-modal .info-modal { scrollbar-width: none; -ms-overflow-style: none; }
-        #faq-modal .info-modal::-webkit-scrollbar, #terms-modal .info-modal::-webkit-scrollbar { display: none; width: 0; height: 0; }
+        #faq-modal .info-modal, #terms-modal .info-modal, #help-modal .info-modal { scrollbar-width: none; -ms-overflow-style: none; }
+        #faq-modal .info-modal::-webkit-scrollbar, #terms-modal .info-modal::-webkit-scrollbar, #help-modal .info-modal::-webkit-scrollbar { display: none; width: 0; height: 0; }
         .message-bubble.msg-sending { opacity: 0.6; }
         .faq-list { display: flex; flex-direction: column; gap: 8px; }
         .faq-item { background: #262626; border-radius: 10px; padding: 0; overflow: hidden; }
@@ -4550,14 +4550,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         initHeaderAuth();
 
-        let itemsLoadedOnce = false;
+        let itemsLoadedOnce = false, lastRenderedMode = null;
         function showItemSkeletons(n) {
-            globalItemsGrid.innerHTML = '<div class="global-item-card skeleton-card"></div>'.repeat(n || 12);
+            globalItemsGrid.innerHTML = '<div class="global-item-card skeleton-card"></div>'.repeat(n || 15);
         }
-        showItemSkeletons(12);   // empty placeholder cards until the real listings arrive
+        showItemSkeletons(15);   // empty placeholder cards until the real listings arrive
 
         async function renderGlobalItems() {
-            if (!itemsLoadedOnce) showItemSkeletons(12);
+            if (!itemsLoadedOnce || lastRenderedMode !== listingMode) showItemSkeletons(15);   // first load and every tab switch
             let allUsers = await getAllUsersFromDB();
             let allItems = [];
 
@@ -4612,6 +4612,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             }
 
             itemsLoadedOnce = true;
+            lastRenderedMode = listingMode;
             globalItemsGrid.innerHTML = '';
             if (allItems.length === 0) {
                 globalItemsGrid.innerHTML = searchTerms.length
