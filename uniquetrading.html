@@ -3813,7 +3813,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         // Empty when this page is served by the same server as the API; otherwise (e.g. GitHub Pages) it calls the Render server directly.
         const SERVER_URL = 'https://unique-pdee.onrender.com';
-        const API_BASE = (location.hostname.endsWith('.onrender.com') || location.hostname.endsWith('github.io') || location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : SERVER_URL;
+        const API_BASE = (location.hostname.endsWith('.onrender.com') || location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : SERVER_URL;
         // ===== Server API helper (session cookie; all private data and all writes go through the server) =====
         async function srv(path, method, body) {
             try {
