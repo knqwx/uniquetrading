@@ -477,6 +477,15 @@
             font-size: 11px;
         }
 
+        .skeleton-card {
+            pointer-events: none;
+            cursor: default;
+            min-height: 232px;
+            animation: skeletonPulse 1.4s ease-in-out infinite;
+        }
+        .skeleton-card:hover { border-color: #383838; transform: none; }
+        @keyframes skeletonPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
         .no-global-items {
             grid-column: 1 / -1;
             text-align: center;
@@ -4541,7 +4550,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         initHeaderAuth();
 
+        let itemsLoadedOnce = false;
+        function showItemSkeletons(n) {
+            globalItemsGrid.innerHTML = '<div class="global-item-card skeleton-card"></div>'.repeat(n || 12);
+        }
+        showItemSkeletons(12);   // empty placeholder cards until the real listings arrive
+
         async function renderGlobalItems() {
+            if (!itemsLoadedOnce) showItemSkeletons(12);
             let allUsers = await getAllUsersFromDB();
             let allItems = [];
 
@@ -4595,6 +4611,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 });
             }
 
+            itemsLoadedOnce = true;
             globalItemsGrid.innerHTML = '';
             if (allItems.length === 0) {
                 globalItemsGrid.innerHTML = searchTerms.length
