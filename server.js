@@ -48,9 +48,25 @@ app.use((req, res, next) => {
   if (req.method === 'OPTIONS') return res.sendStatus(origin && !ALLOWED_ORIGINS.has(origin) ? 403 : 204);
   next();
 });
+// Content-Security-Policy. The page uses inline <script>/<style> and a few inline handlers, so 'unsafe-inline' is still needed
+// for scripts; everything else is locked down (no foreign scripts, no framing, no <base>/<object>, forms only post to self).
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "img-src 'self' data: blob:",
+  "connect-src 'self' https://unique-pdee.onrender.com https://api.ipify.org https://api64.ipify.org",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'self'",
+  "frame-ancestors 'none'"
+].join('; ');
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
+  res.setHeader('X-Frame-Options', 'DENY');                       // clickjacking: nobody may embed the site in a frame
+  res.setHeader('Content-Security-Policy', CSP);
   if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');
   next();
 });
@@ -510,10 +526,14 @@ app.post('/api/wallet/withdraw', requireUser, async (req, res) => {
 });
 
 // Top-up is a DEMO (free money). It only works while PAYMENT_DEMO_MODE=1 is set in Render. Remove that variable before real launch.
+// Fixed: the demo credit is no longer open to everyone. Even with PAYMENT_DEMO_MODE=1 only the admin account can use it,
+// so flipping the switch on Render can no longer hand out free money to regular users.
 app.post('/api/wallet/topup', requireUser, async (req, res) => {
   try {
     if (process.env.PAYMENT_DEMO_MODE !== '1') return res.status(403).json({ error: 'Payment provider is not connected.' });
-    if (moneyLimit(req, res, 'topup', 20, 60 * 60 * 1000)) return;
+    const who = await db.execute({ sql: 'SELECT customId FROM users WHERE username = ?', args: [req.user] });
+    if (!who.rows.length || String(who.rows[0].customId || '') !== 'knqw') return res.status(403).json({ error: 'Payment provider is not connected.' });
+    if (moneyLimit(req, res, 'topup', 5, 60 * 60 * 1000)) return;
     const amount = parseMoney(req.body.amount);
     if (!(amount >= MIN_TOPUP)) return res.status(400).json({ error: `Minimum purchase is $${MIN_TOPUP}.` });
     if (amount > MAX_TOPUP) return res.status(400).json({ error: `Maximum purchase is $${MAX_TOPUP}.` });
@@ -521,6 +541,7 @@ app.post('/api/wallet/topup', requireUser, async (req, res) => {
     if (!me.rows.length) return res.status(401).json({ error: 'Please log in.' });
     if (!me.rows[0].card) return res.status(400).json({ error: 'Link a bank card in Settings first.' });
     await db.execute({ sql: 'UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE username = ?', args: [amount, req.user] });
+    console.log(`DEMO TOPUP ${req.user} +${amount}`);
     const r = await db.execute({ sql: 'SELECT balance FROM users WHERE username = ?', args: [req.user] });
     res.json({ balance: Number(r.rows[0].balance) || 0 });
   } catch (e) { console.error('topup error:', e); res.status(500).json({ error: 'Purchase failed. Try again.' }); }
@@ -821,7 +842,7 @@ app.post('/api/profile', requireUser, async (req, res) => {
     }
     if ('card' in b) {
       const v = b.card == null ? null : String(b.card).slice(0, 40);
-      if (v !== null && !/^[•*\d\s-]+$/.test(v)) return res.status(400).json({ error: 'Invalid card label.' });   // only the masked label is kept, never real card data
+      if (v !== null && !/^•{4} •{4} •{4} \d{4}$/.test(v)) return res.status(400).json({ error: 'Invalid card label.' });   // only the masked label is kept, never real card data
       sets.push('card = ?'); args.push(v);
     }
     if ('roblox' in b) {
