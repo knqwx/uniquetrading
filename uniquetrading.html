@@ -282,7 +282,7 @@
 
         /* Главная страница контент */
         main {
-            margin-top: 110px;
+            margin-top: calc(var(--topbar-h) + 40px);
             width: 100%;
             max-width: 1200px;
             padding: 0 40px 60px 40px;
@@ -822,10 +822,10 @@
         /* Полноэкранная страница товара */
         .item-detail-page {
             position: fixed;
-            top: 70px;
+            top: var(--topbar-h);
             left: 0;
             width: 100%;
-            height: calc(100vh - 70px);
+            height: calc(100vh - var(--topbar-h));
             background-color: #1a1a1a;
             z-index: 15;
             display: none;
@@ -1030,10 +1030,10 @@
         /* Полноэкранный чат / сообщения */
         .messages-page {
             position: fixed;
-            top: 70px;
+            top: var(--topbar-h);
             left: 0;
             width: 100%;
-            height: calc(100vh - 70px);
+            height: calc(100vh - var(--topbar-h));
             background-color: #1a1a1a;
             z-index: 12;
             display: none;
@@ -1931,10 +1931,10 @@
         /* Страница баланса и вывода */
         .balance-page {
             position: fixed;
-            top: 70px;
+            top: var(--topbar-h);
             left: 0;
             width: 100%;
-            height: calc(100vh - 70px);
+            height: calc(100vh - var(--topbar-h));
             background-color: #1a1a1a;
             z-index: 15;
             display: none;
@@ -2096,10 +2096,10 @@
 
         .middlemen-page {
             position: fixed;
-            top: 70px;
+            top: var(--topbar-h);
             left: 0;
             width: 100%;
-            height: calc(100vh - 70px);
+            height: calc(100vh - var(--topbar-h));
             background-color: #1a1a1a;
             z-index: 13;
             display: none;
@@ -2704,6 +2704,56 @@
         .to-row-actions input { width: 90px; background: #262626; color: #fff; border: 1px solid #3a3a3a; border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; }
         .to-status-active { color: #ff7a7a; font-weight: 600; }
         .to-status-expired { color: #888; }
+    
+        /* ===== Chat links ===== */
+        .chat-link { color: #8c9eff; text-decoration: underline; word-break: break-all; cursor: pointer; }
+        .chat-back-bar { display: none; }
+
+        /* ===== Mobile layout ===== */
+        :root { --topbar-h: 70px; }
+        @media (max-width: 760px) {
+            :root { --topbar-h: 118px; }
+            html, body { overflow-x: hidden; }
+            .top-bar { height: var(--topbar-h); padding: 6px 10px 4px; flex-wrap: wrap; align-content: flex-start; row-gap: 2px; }
+            .site-brand { position: static; transform: none; order: 1; }
+            .site-brand img { width: 36px; height: 36px; }
+            .auth-buttons { order: 2; margin-left: auto; gap: 6px; min-width: 0; }
+            .auth-buttons .btn { padding: 8px 12px; font-size: 13px; }
+            .auth-buttons .user-balance-box, .auth-buttons .user-profile-box { font-size: 12px; padding: 6px 8px; }
+            .auth-buttons .user-name { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .nav-left { order: 3; width: 100%; overflow-x: auto; flex-wrap: nowrap; gap: 2px; scrollbar-width: none; -ms-overflow-style: none; }
+            .nav-left::-webkit-scrollbar { display: none; }
+            .nav-left > * { flex: 0 0 auto; white-space: nowrap; font-size: 14px; padding: 6px 10px; }
+            .top-links { order: 4; position: static; transform: none; width: 100%; overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; -ms-overflow-style: none; }
+            .top-links::-webkit-scrollbar { display: none; }
+            .top-link { flex: 0 0 auto; font-size: 12px; padding: 4px 8px; }
+
+            main { margin-top: calc(var(--topbar-h) + 16px); padding: 0 12px 40px 12px; }
+            .all-games-main-title { font-size: 24px; margin-bottom: 14px; }
+            .filters-panel { flex-direction: column; align-items: stretch; padding: 12px; gap: 10px; }
+            .games-tags-group { flex-wrap: nowrap; overflow-x: auto; gap: 6px; scrollbar-width: none; -ms-overflow-style: none; }
+            .games-tags-group::-webkit-scrollbar { display: none; }
+            .game-tag-btn { flex: 0 0 auto; padding: 8px 12px; font-size: 13px; }
+            .global-items-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+            .global-item-card { padding: 10px; }
+            .skeleton-card { min-height: 190px; }
+            .games-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+
+            .messages-page, .item-detail-page, .balance-page, .middlemen-page { height: calc(100dvh - var(--topbar-h)); }
+            .item-detail-page, .balance-page, .middlemen-page { padding: 16px 12px; }
+            .messages-page { padding: 0; }
+            .messages-layout { display: flex; flex-direction: column; gap: 0; max-width: none; border: none; border-radius: 0; }
+            .chats-list-col { flex: 1; min-height: 0; border-right: none; }
+            .chat-window-col { display: none; flex: 1; min-height: 0; }
+            .messages-layout.show-chat .chats-list-col { display: none; }
+            .messages-layout.show-chat .chat-window-col { display: flex; }
+            .messages-layout.show-chat .chat-back-bar { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; padding: 10px 14px; background-color: #1c1c1c; border-bottom: 1px solid #333333; color: #ff9a44; font-weight: 600; font-size: 14px; cursor: pointer; }
+            .detail-main-layout { grid-template-columns: 1fr; gap: 16px; }
+            .balance-container { padding: 18px; }
+
+            .modal-content { padding: 20px 16px; max-width: 94vw; max-height: 92vh; overflow-y: auto; }
+            input[type=text], input[type=number], input[type=password], input[type=email], input[type=search], input:not([type]), textarea, select { font-size: 16px !important; }
+        }
     </style>
 </head>
 <body>
@@ -3088,6 +3138,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     <!-- Полноэкранная страница сообщений (чатов) -->
     <div class="messages-page" id="messages-page">
         <div class="messages-layout">
+            <div class="chat-back-bar" id="chat-back-bar">&#8249; Chats</div>
             <div class="chats-list-col">
                 <div class="chats-list-header"><span>Messages</span><button class="new-group-btn" id="new-group-btn" type="button">+ New group</button></div>
                 <div class="chats-items" id="chats-items-container">
@@ -3927,6 +3978,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             return date.toLocaleDateString('en-US', options);
         }
 
+        function linkifyText(raw) {
+            return escapeHtml(raw).replace(/https?:\/\/(?:(?!&lt;|&gt;|&quot;)\S)+/gi, (m) => {
+                let url = m, tail = '';
+                const t = url.match(/[.,!?:)\]]+$/);
+                if (t) { tail = t[0]; url = url.slice(0, -tail.length); }
+                return `<a class="chat-link" href="${url}" target="_blank" rel="noopener noreferrer nofollow">${url}</a>${tail}`;
+            });
+        }
         function escapeHtml(str) {
             if (!str) return '';
             return String(str)
@@ -5096,6 +5155,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             middlemenNavBtn.classList.remove('active'); marketplaceNavBtn.classList.remove('active'); tradingNavBtn.classList.remove('active');
 
             messagesPage.classList.add('active');
+            document.querySelector('.messages-layout').classList.toggle('show-chat', !!targetUsername);
             await purgeOldChats();
             await renderChatsList(targetUsername ? tKey(targetUsername, item && item.id) : null);
             startChatPolling();
@@ -5359,7 +5419,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const attrs = `data-timestamp="${m.timestamp}" data-sender="${escapeHtml(m.sender)}" title="${escapeHtml(getExactDate(m.timestamp))}"`;
             const time = `<span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))}</span>`;
             if (m.imageId) {
-                const cap = m.caption ? `<span class="msg-text-content chat-caption">${escapeHtml(m.caption)}</span>` : `<span class="msg-text-content" style="display:none;">${escapeHtml(m.text || '')}</span>`;
+                const cap = m.caption ? `<span class="msg-text-content chat-caption">${linkifyText(m.caption)}</span>` : `<span class="msg-text-content" style="display:none;">${escapeHtml(m.text || '')}</span>`;
                 return `<div class="${base} has-image" ${attrs} data-noedit="1">${ref}<img class="chat-img" data-image-id="${escapeHtml(String(m.imageId))}" alt="Picture">${cap}${time}</div>`;
             }
             if (m.offer && Array.isArray(m.offer.items)) {
@@ -5383,7 +5443,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const warn = o.mm ? '<div class="offer-mm-warn">This trade will require a middleman to complete</div>' : '';
                 return `<div class="${base} has-offer" ${attrs} data-noedit="1">${ref}<div class="offer-card-title">Offer <small>&middot; ${escapeHtml(o.game || '')} &middot; ${o.items.length} item${o.items.length === 1 ? '' : 's'}</small></div><div class="offer-chips">${offerChipsHtml(o.game || '', o.items)}</div>${warn}${status}${btns}<span class="msg-text-content" style="display:none;">${escapeHtml(m.text || '')}</span>${time}</div>`;
             }
-            return `<div class="${base}" ${attrs}>${ref}<span class="msg-text-content">${escapeHtml(m.text)}</span>${time}</div>`;
+            return `<div class="${base}" ${attrs}>${ref}<span class="msg-text-content">${linkifyText(m.text)}</span>${time}</div>`;
         }
         async function loadChatImages(root) {
             const imgs = root.querySelectorAll('img[data-image-id]');
@@ -5451,7 +5511,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const d = document.createElement('div');
                 d.className = 'message-bubble outgoing msg-sending';
                 d.setAttribute('data-pending-id', p.id);
-                d.innerHTML = `<span class="msg-text-content">${escapeHtml(p.text)}</span><span class="msg-time">Sending...</span>`;
+                d.innerHTML = `<span class="msg-text-content">${linkifyText(p.text)}</span><span class="msg-time">Sending...</span>`;
                 container.appendChild(d);
             });
             container.scrollTop = container.scrollHeight;
@@ -6807,8 +6867,12 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             }
         }, 8000);
 
-        homeLink.addEventListener('click', switchToHome);
-        homeBrandLink.addEventListener('click', switchToHome);
+        function onListingTab(mode) {   // already on this tab: do nothing
+            return currentViewMode === 'home' && listingMode === mode && mainContentArea.style.display !== 'none'
+                && !messagesPage.classList.contains('active') && !itemDetailPage.classList.contains('active') && !balancePage.classList.contains('active');
+        }
+        homeLink.addEventListener('click', () => { if (onListingTab('all')) return; switchToHome(); });
+        homeBrandLink.addEventListener('click', () => { if (onListingTab('all')) return; switchToHome(); });
         middlemenNavBtn.addEventListener('click', switchToMiddlemen);
 
         function switchToListing(mode) {
@@ -6821,8 +6885,26 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             pageMainTitle.textContent = mode === 'marketplace' ? 'Marketplace' : 'Trading';
             renderGlobalItems();
         }
-        marketplaceNavBtn.addEventListener('click', () => switchToListing('marketplace'));
-        tradingNavBtn.addEventListener('click', () => switchToListing('trading'));
+        marketplaceNavBtn.addEventListener('click', () => { if (onListingTab('marketplace')) return; switchToListing('marketplace'); });
+        tradingNavBtn.addEventListener('click', () => { if (onListingTab('trading')) return; switchToListing('trading'); });
+
+        // Links in chats: short warning before leaving the site
+        document.addEventListener('click', async (e) => {
+            const a = e.target.closest && e.target.closest('a.chat-link');
+            if (!a) return;
+            e.preventDefault(); e.stopPropagation();
+            const href = a.href;
+            if (!/^https?:\/\//i.test(href)) return;
+            let host = href; try { host = new URL(href).hostname; } catch (err) {}
+            const ok = await askDealConfirm('Open ' + host + '?', 'This link could be a scam or try to steal your account. Only open it if you trust it.', 'Open link', true);
+            if (ok) window.open(href, '_blank', 'noopener,noreferrer');
+        }, true);
+
+        // Mobile: chat list <-> conversation
+        document.getElementById('chat-back-bar').addEventListener('click', () => document.querySelector('.messages-layout').classList.remove('show-chat'));
+        document.getElementById('chats-items-container').addEventListener('click', (e) => {
+            if (e.target.closest('.chat-item')) document.querySelector('.messages-layout').classList.add('show-chat');
+        });
 
         // Live-updating times on listing cards (no reload needed)
         function refreshCardTimes() {
@@ -8504,7 +8586,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const bubbles = msgs.map(m => `
                 <div class="message-bubble ${m.sender === currentUser ? 'outgoing' : 'incoming'}" title="${escapeHtml(getExactDate(m.timestamp))}">
                     <div class="grp-sender" data-user="${escapeHtml(m.sender)}">${escapeHtml(nameOf(m.sender))}</div>
-                    <span class="msg-text-content">${escapeHtml(m.text)}</span><span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))}</span>
+                    <span class="msg-text-content">${linkifyText(m.text)}</span><span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))}</span>
                 </div>`).join('');
 
             chatWindowCol.innerHTML = `
