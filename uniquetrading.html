@@ -3933,7 +3933,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         function normUser(u) {
             return {
                 customId: u.customId, username: u.username, displayName: u.displayName, email: u.email || '', password: '',
-                avatar: u.avatar || null, balance: u.balance !== undefined && u.balance !== null ? u.balance : 0,
+                avatar: u.avatar ? (u.avatar.charAt(0) === '/' ? API_BASE + u.avatar : u.avatar) : null, balance: u.balance !== undefined && u.balance !== null ? u.balance : 0,
                 lastUsernameChange: u.lastUsernameChange || null, lastDisplayNameChange: u.lastDisplayNameChange || null,
                 items: u.items || [], lastItemTime: u.lastItemTime || 0, roblox: u.roblox || '', lastIp: u.lastIp || '',
                 messages: u.messages || [], card: u.card || null, isMiddleman: !!u.isMiddleman,
@@ -3942,11 +3942,18 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 appeal: u.appeal || '', appealAt: Number(u.appealAt) || 0, appealStatus: u.appealStatus || ''
             };
         }
-        async function getAllUsersFromDB() {
+        // /api/users is light (no listings, pictures are URLs). Pass withItems = true only on screens that need everybody's listings.
+        async function getAllUsersFromDB(withItems = false) {
             try {
-                const [a, b] = await Promise.all([srv('/api/users'), srv('/api/profile')]);
+                const [a, b, l] = await Promise.all([srv('/api/users'), srv('/api/profile'), withItems ? srv('/api/listings') : Promise.resolve(null)]);
                 if (!a.ok) return [];
-                const list = (a.data.users || []).map(u => (b.ok && b.data.user && u.username === b.data.user.username) ? normUser(b.data.user) : normUser(u));
+                const itemsOf = {};
+                if (l && l.ok) (l.data.listings || []).forEach(x => { itemsOf[x.username] = x.items || []; });
+                const list = (a.data.users || []).map(u => {
+                    if (b.ok && b.data.user && u.username === b.data.user.username) return normUser(b.data.user);   // my own row already has everything
+                    if (withItems) u.items = itemsOf[u.username] || [];
+                    return normUser(u);
+                });
                 rememberPresence(list);
                 return list;
             } catch (e) { console.error('Error fetching users:', e); return []; }
@@ -4643,7 +4650,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         async function renderGlobalItems() {
             if (!itemsLoadedOnce || lastRenderedMode !== listingMode) showItemSkeletons(15);   // first load and every tab switch
-            let allUsers = await getAllUsersFromDB();
+            let allUsers = await getAllUsersFromDB(true);
             let allItems = [];
 
             allUsers.forEach(u => {
@@ -5331,7 +5338,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const chatsContainer = document.createElement('div'); // built off-screen, then merged so unchanged rows never re-render
             const chatWindowCol = document.getElementById('chat-window-col');
 
-            let allUsers = await getAllUsersFromDB();
+            let allUsers = await getAllUsersFromDB(true);      // the chat window shows the live listing, so it needs listings too
             let me = allUsers.find(u => u.username === currentUser);
             if (!me) return;
 
@@ -8760,7 +8767,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             openInfoPage(gamesPage, gamesNavBtn, 'games');
             const counts = {};
             try {
-                (await getAllUsersFromDB()).forEach(u => {
+                (await getAllUsersFromDB(true)).forEach(u => {
                     if (isBanned(u)) return;
                     (u.items || []).forEach(it => { const g = it.game || 'Murder Mystery 2'; counts[g] = (counts[g] || 0) + 1; });
                 });
