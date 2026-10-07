@@ -31,6 +31,7 @@ process.on('unhandledRejection', (e) => console.error('unhandledRejection:', e))
 process.on('uncaughtException', (e) => console.error('uncaughtException:', e));
 app.disable('x-powered-by');
 app.set('trust proxy', 1);                 // Render sits behind a proxy: req.ip is the real visitor IP
+app.use('/api/chat/image', express.json({ limit: '1mb' }));   // photos are ~100-300 KB as base64; everything else stays at 50 KB
 app.use(express.json({ limit: '50kb' }));
 app.use(cookieParser());
 // CORS: only your own site may call the API from a browser (extra origins: ALLOWED_ORIGINS=https://a.com,https://b.com)
@@ -100,6 +101,7 @@ async function init() {
   await run(`ALTER TABLE users ADD COLUMN lastIp TEXT`);
   await run(`ALTER TABLE users ADD COLUMN joinedAt INTEGER`);
   await run(`ALTER TABLE users ADD COLUMN lastWithdrawAt INTEGER DEFAULT 0`);
+  await run(`CREATE TABLE IF NOT EXISTS admin_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, admin TEXT, action TEXT, target TEXT, detail TEXT, amount REAL DEFAULT 0, createdAt INTEGER)`);
   // every IP an account has signed up / logged in / browsed from (used for the "same IP" and VPN flags)
   await run(`CREATE TABLE IF NOT EXISTS user_ips (username TEXT, ip TEXT, firstSeen INTEGER, lastSeen INTEGER, PRIMARY KEY (username, ip))`);
   // cached VPN / proxy / datacenter lookup per IP
@@ -142,6 +144,7 @@ function limited(key, max, windowMs) {
   rateQueue.push([key, now]);
   return b.length > max;
 }
+const failCount = (key, windowMs) => { const now = Date.now(); return (buckets.get(key) || []).filter(t => now - t < windowMs).length; };
 setInterval(() => { const now = Date.now(); for (const [k, v] of buckets) if (!v.some(t => now - t < DAY)) buckets.delete(k); }, 10 * 60 * 1000);
 
 // ---------- rules (the same ones the form shows, now enforced on the server) ----------
@@ -263,11 +266,15 @@ async function startSession(res, username) {
 function readSids(req) {
   return String((req && req.cookies && req.cookies.sids) || '').split(',').filter(x => /^[a-f0-9]{64}$/.test(x)).slice(0, 10);
 }
+const BANNED_OK = new Set(['/api/appeal', '/api/logout', '/api/heartbeat']);
 export async function requireUser(req, res, next) {      // use this on every future endpoint
   try {
-    const r = await db.execute({ sql: 'SELECT username FROM sessions WHERE id = ? AND expiresAt > ?', args: [String(req.cookies.sid || ''), Date.now()] });
+    const r = await db.execute({ sql: 'SELECT s.username, u.bannedUntil FROM sessions s LEFT JOIN users u ON u.username = s.username WHERE s.id = ? AND s.expiresAt > ?', args: [String(req.cookies.sid || ''), Date.now()] });
     if (!r.rows.length) return res.status(401).json({ error: 'Please log in.' });
     req.user = String(r.rows[0].username);
+    // a banned account may still read and send its appeal, but cannot do anything else (no chat, pictures, deals, renames...)
+    const bannedUntil = Number(r.rows[0].bannedUntil) || 0;
+    if ((bannedUntil === -1 || bannedUntil > Date.now()) && req.method !== 'GET' && !BANNED_OK.has(req.path)) return res.status(403).json({ error: 'Your account is banned.', banned: true });
     trackIp(req.user, ipOf(req));
     next();
   } catch (e) { res.status(500).json({ error: 'Server error' }); }
@@ -401,6 +408,8 @@ app.post('/api/login', async (req, res) => {
     const password = String(req.body.password || '');
     if (!id || !password) return fail('Please fill in all fields.', 400);
 
+    const acctKey = 'loginfail:' + id.toLowerCase();
+    if (failCount(acctKey, 15 * 60 * 1000) >= 10) return fail('Too many wrong passwords for this account. Try again in a few minutes.', 429);
     const rs = await db.execute({ sql: 'SELECT * FROM users WHERE username = ? OR lower(email) = lower(?)', args: [id, id] });
     if (!rs.rows.length) return fail('Account with this username or email does not exist.');
     const u = rs.rows[0];
@@ -412,7 +421,7 @@ app.post('/api/login', async (req, res) => {
       ok = true;
       await db.execute({ sql: "UPDATE users SET passwordHash = ?, password = '' WHERE username = ?", args: [await bcrypt.hash(password, 12), u.username] });   // plaintext is wiped as soon as the hash exists
     }
-    if (!ok) return fail('Incorrect password. Please try again.');
+    if (!ok) { limited(acctKey, 1e9, 15 * 60 * 1000); return fail('Incorrect password. Please try again.'); }
 
     if (String(u.customId || '') !== 'knqw') {
       const ban = await activeIpBan(ip);
@@ -455,6 +464,7 @@ app.post('/api/logout', async (req, res) => {
 // Stage 2: password change, wallet, deals, admin money tools
 // Every route below needs a logged-in session; money logic runs ONLY here.
 // ======================================================================
+const ADMIN_MAX_ADJUST = Number(process.env.ADMIN_MAX_ADJUST) || 10000, ADMIN_DAILY_CAP = Number(process.env.ADMIN_DAILY_CAP) || 100000;   // set these in Render to change the limits
 const SELLER_SHARE = 0.9;
 const MIN_DEAL = 0.01, MAX_DEAL = 1000000;
 const MIN_TOPUP = 1, MAX_TOPUP = 10000;
@@ -468,6 +478,7 @@ async function requireAdmin(req, res, next) {
     next();
   } catch (e) { res.status(500).json({ error: 'Server error' }); }
 }
+const audit = (admin, action, target, detail, amount) => db.execute({ sql: 'INSERT INTO admin_audit (admin, action, target, detail, amount, createdAt) VALUES (?, ?, ?, ?, ?, ?)', args: [admin, action, target || '', String(detail || '').slice(0, 300), Number(amount) || 0, Date.now()] }).catch(e => console.error('audit failed:', e.message));
 class Abort extends Error { constructor(msg, code = 409) { super(msg); this.code = code; } }
 // run fn(tx) in a write transaction; throw Abort(...) to roll back and answer with that message
 async function inTx(res, fn) {
@@ -574,15 +585,32 @@ app.post('/api/admin/adjust', requireUser, requireAdmin, async (req, res) => {
     const target = String(req.body.username || '');
     const delta = parseMoney(req.body.delta);
     if (!target) return res.status(400).json({ error: 'Select a user first.' });
-    if (!Number.isFinite(delta) || delta === 0 || Math.abs(delta) > 1000000) return res.status(400).json({ error: 'Enter a valid amount.' });
+    if (!Number.isFinite(delta) || delta === 0 || Math.abs(delta) > ADMIN_MAX_ADJUST) return res.status(400).json({ error: `Enter a valid amount (at most $${ADMIN_MAX_ADJUST} at a time).` });
+    // money changes need the admin password again, so a stolen session alone cannot create money
+    if (limited('adminpw:' + req.user, 10, 15 * 60 * 1000)) return res.status(429).json({ error: 'Too many attempts. Try again later.' });
+    const me = await db.execute({ sql: 'SELECT password, passwordHash FROM users WHERE username = ?', args: [req.user] });
+    const pw = String(req.body.password || '');
+    let pwOk = false;
+    if (pw && me.rows.length) {
+      if (me.rows[0].passwordHash) pwOk = await bcrypt.compare(pw, String(me.rows[0].passwordHash));
+      if (!pwOk && me.rows[0].password && safeEqual(me.rows[0].password, pw)) pwOk = true;
+    }
+    if (!pwOk) return res.status(403).json({ error: 'Enter your admin password to change a balance.' });
+    const today = await db.execute({ sql: "SELECT COALESCE(SUM(ABS(amount)), 0) AS t FROM admin_audit WHERE action = 'adjust' AND createdAt > ?", args: [Date.now() - DAY] });
+    if (Number(today.rows[0].t) + Math.abs(delta) > ADMIN_DAILY_CAP) return res.status(429).json({ error: `Daily admin balance limit reached ($${ADMIN_DAILY_CAP}).` });
     const rs = await db.execute({ sql: 'UPDATE users SET balance = MAX(0, COALESCE(balance, 0) + ?) WHERE username = ?', args: [delta, target] });
     if (!rs.rowsAffected) return res.status(404).json({ error: 'User not found.' });
     const r = await db.execute({ sql: 'SELECT balance FROM users WHERE username = ?', args: [target] });
     console.log(`ADMIN ${req.user} adjusted ${target} by ${delta}`);
+    audit(req.user, 'adjust', target, `balance ${delta > 0 ? '+' : ''}${delta}`, delta);
     res.json({ balance: Number(r.rows[0].balance) || 0 });
   } catch (e) { console.error('adjust error:', e); res.status(500).json({ error: 'Failed to update balance.' }); }
 });
 
+app.get('/api/admin/audit', requireUser, requireAdmin, async (req, res) => {
+  const rs = await db.execute('SELECT admin, action, target, detail, amount, createdAt FROM admin_audit ORDER BY id DESC LIMIT 200');
+  res.json({ rows: rs.rows.map(r => ({ admin: r.admin, action: r.action, target: r.target, detail: r.detail, amount: Number(r.amount) || 0, createdAt: Number(r.createdAt) })) });
+});
 app.get('/api/admin/users', requireUser, requireAdmin, async (req, res) => {
   const rs = await db.execute('SELECT customId, username, displayName, balance, heldBalance, bannedUntil FROM users ORDER BY username');
   res.json({ users: rs.rows.map(r => ({
@@ -693,10 +721,11 @@ app.post('/api/deals/:id/complete', requireUser, async (req, res) => {
     if (!d || d.buyer !== req.user) throw new Abort('This deal can no longer be confirmed.');
     const claim = await tx.execute({ sql: "UPDATE deals SET status = 'completed', updatedAt = ? WHERE id = ? AND status IN ('paid', 'not_received')", args: [Date.now(), id] });
     if (!claim.rowsAffected) throw new Abort('This deal can no longer be confirmed.');
-    await tx.execute({
+    const rel = await tx.execute({
       sql: 'UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?), balance = COALESCE(balance, 0) + ? WHERE username = ?',
       args: [d.sellerAmount, d.sellerAmount, d.seller]
     });
+    if (!rel.rowsAffected) throw new Abort("The seller's account no longer exists. Nothing was changed - ask the admin to resolve this deal.");   // rolled back: the money is never destroyed
     return true;
   });
   if (out) res.json({ ok: true });
@@ -721,11 +750,20 @@ app.post('/api/deals/:id/report', requireUser, async (req, res) => {
   try {
     const id = dealId(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
     if (moneyLimit(req, res, 'deal-act', 60, 60 * 1000)) return;
-    let snap = Array.isArray(req.body.snapshot) ? req.body.snapshot.slice(-500) : [];
-    snap = snap.map(m => ({
-      sender: String(m && m.sender || '').slice(0, 64), receiver: String(m && m.receiver || '').slice(0, 64),
-      text: String(m && m.text || '').slice(0, 2000), timestamp: Number(m && m.timestamp) || 0
-    }));
+    // the evidence is rebuilt here from the stored chat: whatever the browser sends as "snapshot" is ignored, so it cannot be forged
+    const dl = await loadDeal(db, id);
+    if (!dl || dl.status !== 'not_received' || (dl.buyer !== req.user && dl.seller !== req.user)) return res.status(409).json({ error: 'This deal was already updated.' });
+    const seen = new Set(); let snap = [];
+    for (const n of [dl.buyer, dl.seller]) {
+      const row = await db.execute({ sql: 'SELECT messages FROM users WHERE username = ?', args: [n] });
+      parseJson(row.rows[0] && row.rows[0].messages, []).forEach(m => {
+        if (!m || !((m.sender === dl.buyer && m.receiver === dl.seller) || (m.sender === dl.seller && m.receiver === dl.buyer))) return;
+        if (String(m.itemId || '') !== String(dl.itemId || '')) return;
+        const k = m.sender + '|' + m.timestamp; if (seen.has(k)) return; seen.add(k);
+        snap.push({ sender: String(m.sender), receiver: String(m.receiver), text: String(m.text || '').slice(0, 2000), timestamp: Number(m.timestamp) || 0 });
+      });
+    }
+    snap.sort((a, b) => a.timestamp - b.timestamp); snap = snap.slice(-500);
     const now = Date.now();
     const rs = await db.execute({
       sql: "UPDATE deals SET status = 'reported', reportedAt = ?, updatedAt = ?, chatSnapshot = ?, reportedBy = ? WHERE id = ? AND status = 'not_received' AND (buyer = ? OR seller = ?)",
@@ -776,6 +814,7 @@ app.post('/api/admin/deals/:id/resolve', requireUser, requireAdmin, async (req, 
       if (!rel.rowsAffected) throw new Abort('The seller account no longer exists.');
     }
     console.log(`ADMIN ${req.user} resolved deal ${id} as ${finalStatus}`);
+    audit(req.user, 'resolve', d.buyer + ' / ' + d.seller, `deal ${id} ${finalStatus}`, d.amount);
     return { status: finalStatus, amount: d.amount, sellerAmount: d.sellerAmount, buyer: d.buyer, seller: d.seller };
   });
   if (out) res.json(out);
@@ -1200,12 +1239,17 @@ app.get('/api/admin/chat', requireUser, requireAdmin, async (req, res) => {
 app.post('/api/admin/delete-user', requireUser, requireAdmin, async (req, res) => {
   const name = String(req.body.username || '');
   if (!name) return res.status(400).json({ error: 'Bad request.' });
+  // never delete an account while money is held for it or from it: the admin has to resolve those deals first
+  const held = await db.execute({ sql: "SELECT COUNT(*) AS c FROM deals WHERE (buyer = ? OR seller = ?) AND status IN ('paid','not_received','reported')", args: [name, name] });
+  if (Number(held.rows[0].c)) return res.status(409).json({ error: 'This account has money held in unfinished deals. Resolve them in Money first.' });
+  await db.execute({ sql: "UPDATE deals SET status = 'cancelled', updatedAt = ? WHERE (buyer = ? OR seller = ?) AND status = 'requested'", args: [Date.now(), name, name] });
   const r = await db.execute({ sql: "DELETE FROM users WHERE username = ? AND COALESCE(customId, '') != 'knqw'", args: [name] });
   if (!r.rowsAffected) return res.status(404).json({ error: 'Account not found.' });
   await db.execute({ sql: 'DELETE FROM sessions WHERE username = ?', args: [name] });
   try { await db.execute({ sql: 'DELETE FROM tickets WHERE creator = ? OR partner = ?', args: [name, name] }); } catch (e) {}
   try { await db.execute({ sql: 'DELETE FROM user_ips WHERE username = ?', args: [name] }); } catch (e) {}
   console.log(`ADMIN ${req.user} deleted account ${name}`);
+  audit(req.user, 'delete-user', name, '', 0);
   res.json({ ok: true });
 });
 
@@ -1518,9 +1562,10 @@ app.post('/api/admin/timeouts/remove', requireUser, requireAdmin, wrap(async (re
 app.post('/api/admin/timeouts/add', requireUser, requireAdmin, wrap(async (req, res) => {
   const name = String(req.body.username || ''), mins = Math.floor(Number(req.body.minutes));
   if (!name || !(mins > 0) || mins > 525600) return bad(res, 'Enter the minutes to add.');
+  if (!(await userExists(name))) return bad(res, 'Account not found.', 404);
   const cur = (await db.execute({ sql: 'SELECT until FROM spam_timeouts WHERE username = ?', args: [name] })).rows[0];
   const base = Math.max(Date.now(), cur ? Number(cur.until) || 0 : 0);
-  await db.execute({ sql: 'UPDATE spam_timeouts SET until = ?, lastOffense = ? WHERE username = ?', args: [base + mins * 60000, Date.now(), name] });
+  await db.execute({ sql: 'INSERT INTO spam_timeouts (username, level, until, lastOffense) VALUES (?, 0, ?, ?) ON CONFLICT(username) DO UPDATE SET until = excluded.until, lastOffense = excluded.lastOffense', args: [name, base + mins * 60000, Date.now()] });
   res.json({ ok: true });
 }));
 
@@ -1549,12 +1594,14 @@ app.post('/api/admin/ban', requireUser, requireAdmin, wrap(async (req, res) => {
   }
   await db.execute({ sql: 'DELETE FROM sessions WHERE username = ?', args: [name] });     // banned people are logged out everywhere
   console.log(`ADMIN ${req.user} banned ${name} until ${until}`);
+  audit(req.user, 'ban', name, `until ${until}: ${reason}`, 0);
   res.json({ ok: true });
 }));
 app.post('/api/admin/unban', requireUser, requireAdmin, wrap(async (req, res) => {
   const name = String(req.body.username || '');
   await db.execute({ sql: 'UPDATE users SET bannedUntil = 0, bannedAt = 0, banReason = NULL, appeal = NULL, appealAt = 0, appealStatus = NULL WHERE username = ?', args: [name] });
   await db.execute({ sql: 'DELETE FROM ip_bans WHERE username = ?', args: [name] });
+  audit(req.user, 'unban', name, '', 0);
   res.json({ ok: true });
 }));
 app.get('/api/admin/appeals', requireUser, requireAdmin, wrap(async (req, res) => {
@@ -1637,7 +1684,7 @@ app.get('/api/listings/sig', requireUser, wrap(async (req, res) => {
   res.json({ sig: rs.rows.map(r => `${r.username}:${r.l}:${r.t}:${r.b}`).join('|') });
 }));
 const PERM_DELETE_MS = 30 * DAY;      // permanently banned accounts disappear 30 days later
-setInterval(() => db.execute({ sql: "DELETE FROM users WHERE bannedUntil = -1 AND bannedAt > 0 AND bannedAt <= ? AND COALESCE(customId, '') != 'knqw'", args: [Date.now() - PERM_DELETE_MS] }).catch(() => {}), 60 * 60 * 1000);
+setInterval(() => db.execute({ sql: "DELETE FROM users WHERE bannedUntil = -1 AND bannedAt > 0 AND bannedAt <= ? AND COALESCE(customId, '') != 'knqw' AND COALESCE(heldBalance, 0) = 0 AND NOT EXISTS (SELECT 1 FROM deals WHERE (buyer = users.username OR seller = users.username) AND status IN ('paid','not_received','reported'))", args: [Date.now() - PERM_DELETE_MS] }).catch(() => {}), 60 * 60 * 1000);
 
 // ---------- the site itself ----------
 app.get('/', (req, res) => res.redirect('/uniquetrading.html'));
@@ -1645,6 +1692,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // last resort: any error that reaches here becomes a clean JSON 500 (and is written to the Render log)
 app.use((err, req, res, next) => {
+  if (err && (err.type === 'entity.too.large' || err.status === 413)) return res.status(413).json({ error: 'That upload is too large.' });
   console.error('ERROR on', req.method, req.path, '->', err && (err.stack || err.message || err));
   if (res.headersSent) return next(err);
   res.status(500).json({ error: 'Server error. Try again.' });
