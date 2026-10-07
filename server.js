@@ -110,6 +110,16 @@ async function init() {
   await run(`CREATE TRIGGER IF NOT EXISTS users_set_joined AFTER INSERT ON users WHEN NEW.joinedAt IS NULL BEGIN UPDATE users SET joinedAt = CAST(strftime('%s','now') AS INTEGER) * 1000 WHERE id = NEW.id; END`);
   await run(`UPDATE users SET joinedAt = ${Date.now()} WHERE joinedAt IS NULL`);
   await run(`DELETE FROM sessions WHERE expiresAt < ${Date.now()}`);
+  // withdrawal requests are saved here (the admin sees them in Money -> Withdrawal requests)
+  await run(`CREATE TABLE IF NOT EXISTS withdrawals (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, amount REAL, method TEXT, status TEXT DEFAULT 'pending', createdAt INTEGER, handledBy TEXT, handledAt INTEGER)`);
+  await run(`CREATE INDEX IF NOT EXISTS withdrawals_created ON withdrawals (createdAt)`);
+  // usernames are unique regardless of capitalization ("Alice" and "alice" are the same name)
+  try {
+    await db.execute('CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower ON users (lower(username))');
+  } catch (e) {
+    const dup = await db.execute('SELECT lower(username) AS n, GROUP_CONCAT(username) AS names FROM users GROUP BY lower(username) HAVING COUNT(*) > 1');
+    console.error('!! Could not enforce case-insensitive usernames: these accounts differ only by capitalization and one of each pair must be renamed or deleted:', dup.rows.map(r => r.names).join(' | ') || e.message);
+  }
 }
 await init();
 setInterval(() => db.execute({ sql: 'DELETE FROM sessions WHERE expiresAt < ?', args: [Date.now()] }).catch(() => {}), 60 * 60 * 1000);
@@ -318,7 +328,7 @@ app.get('/api/check-username', async (req, res) => {
 
   if (err) return res.json({ ok: false, message: err });
 
-  const r = await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ? LIMIT 1', args: [name] });
+  const r = await db.execute({ sql: 'SELECT 1 FROM users WHERE lower(username) = lower(?) LIMIT 1', args: [name] });
 
   res.json(r.rows.length ? { ok: false, message: 'This username is already taken.' } : { ok: true, message: 'Username is available.' });
 
@@ -331,8 +341,8 @@ app.get('/api/check-email', async (req, res) => {
   const email = String(req.query.email || '').trim().toLowerCase();
   const err = await checkEmail(email);
   if (err) return res.json({ ok: false, message: err });
-  const r = await db.execute({ sql: 'SELECT 1 FROM users WHERE lower(email) = ? LIMIT 1', args: [email] });
-  res.json(r.rows.length ? { ok: false, message: 'This email is already registered.' } : { ok: true, message: 'Email is available.' });
+  // only the format / domain is checked here: whether an email already has an account is never revealed
+  res.json({ ok: true, message: 'Email looks good.' });
 });
 
 app.post('/api/signup', async (req, res) => {
@@ -372,8 +382,9 @@ app.post('/api/signup', async (req, res) => {
       return fail(`Only one account can be created per day. Please try again in ${h > 0 ? h + 'h ' : ''}${m}m.`, 429);
     }
 
-    if ((await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ? LIMIT 1', args: [username] })).rows.length) return fail('This username is already taken.');
-    if ((await db.execute({ sql: 'SELECT 1 FROM users WHERE lower(email) = ? LIMIT 1', args: [email] })).rows.length) return fail('This email is already registered.');
+    if ((await db.execute({ sql: 'SELECT 1 FROM users WHERE lower(username) = lower(?) LIMIT 1', args: [username] })).rows.length) return fail('This username is already taken.');
+    // neutral message: does not confirm that an account with this email exists
+    if ((await db.execute({ sql: 'SELECT 1 FROM users WHERE lower(email) = ? LIMIT 1', args: [email] })).rows.length) return fail('We could not create an account with these details. Check them and try again, or log in if you already have an account.');
 
     const cnt = await db.execute('SELECT COUNT(*) AS cnt FROM users');
     const customId = String(Number(cnt.rows[0].cnt || 0) + 1);
@@ -399,6 +410,7 @@ app.post('/api/signup', async (req, res) => {
   }
 });
 
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 12);
 app.post('/api/login', async (req, res) => {
   const fail = (message, code = 401) => res.status(code).json({ error: message });
   try {
@@ -409,9 +421,15 @@ app.post('/api/login', async (req, res) => {
     if (!id || !password) return fail('Please fill in all fields.', 400);
 
     const acctKey = 'loginfail:' + id.toLowerCase();
-    if (failCount(acctKey, 15 * 60 * 1000) >= 10) return fail('Too many wrong passwords for this account. Try again in a few minutes.', 429);
-    const rs = await db.execute({ sql: 'SELECT * FROM users WHERE username = ? OR lower(email) = lower(?)', args: [id, id] });
-    if (!rs.rows.length) return fail('Account with this username or email does not exist.');
+    // failures are counted for every name, existing or not, so the lock-out message cannot be used to find real accounts
+    if (failCount(acctKey, 15 * 60 * 1000) >= 10) return fail('Too many failed attempts. Try again in a few minutes.', 429);
+    const BAD_LOGIN = 'Incorrect username/email or password.';
+    const rs = await db.execute({ sql: 'SELECT * FROM users WHERE lower(username) = lower(?) OR lower(email) = lower(?) ORDER BY (lower(username) = lower(?)) DESC LIMIT 1', args: [id, id, id] });
+    if (!rs.rows.length) {
+      await bcrypt.compare(password, DUMMY_HASH);      // same work as a real check, so response time does not give the answer away
+      limited(acctKey, 1e9, 15 * 60 * 1000);
+      return fail(BAD_LOGIN);
+    }
     const u = rs.rows[0];
 
     let ok = false;
@@ -421,7 +439,7 @@ app.post('/api/login', async (req, res) => {
       ok = true;
       await db.execute({ sql: "UPDATE users SET passwordHash = ?, password = '' WHERE username = ?", args: [await bcrypt.hash(password, 12), u.username] });   // plaintext is wiped as soon as the hash exists
     }
-    if (!ok) { limited(acctKey, 1e9, 15 * 60 * 1000); return fail('Incorrect password. Please try again.'); }
+    if (!ok) { limited(acctKey, 1e9, 15 * 60 * 1000); return fail(BAD_LOGIN); }
 
     if (String(u.customId || '') !== 'knqw') {
       const ban = await activeIpBan(ip);
@@ -532,13 +550,15 @@ app.get('/api/wallet', requireUser, async (req, res) => {
   res.json({ balance: Number(r.rows[0].balance) || 0, held: Number(r.rows[0].heldBalance) || 0, nextWithdrawAt: last ? last + WITHDRAW_COOLDOWN : 0 });
 });
 
-// Withdrawals: one per hour per account, enforced here (not in the page). Like before, this only records the request: no money is moved or deducted yet.
+// Withdrawals: one per hour per account, enforced here (not in the page). The request is saved in the withdrawals table; no money is moved or deducted yet.
 const WITHDRAW_COOLDOWN = 60 * 60 * 1000;
 app.post('/api/wallet/withdraw', requireUser, async (req, res) => {
   try {
     if (moneyLimit(req, res, 'withdraw', 20, 60 * 60 * 1000)) return;
     const amount = parseMoney(req.body.amount);
     if (!(amount > 0) || amount > 1000000) return res.status(400).json({ error: 'Please enter a valid withdrawal amount.' });
+    const method = String(req.body.method || 'card');
+    if (!['card', 'crypto'].includes(method)) return res.status(400).json({ error: 'Please choose a payout method.' });
     const rs = await db.execute({ sql: 'SELECT balance, lastWithdrawAt, bannedUntil FROM users WHERE username = ?', args: [req.user] });
     if (!rs.rows.length) return res.status(401).json({ error: 'Please log in.' });
     const u = rs.rows[0];
@@ -552,9 +572,30 @@ app.post('/api/wallet/withdraw', requireUser, async (req, res) => {
       const wait = (Number(u.lastWithdrawAt) || 0) + WITHDRAW_COOLDOWN - now;
       return res.status(429).json({ error: `You can only withdraw once per hour. Try again in ${Math.max(1, Math.ceil(wait / 60000))} min.`, nextWithdrawAt: now + Math.max(0, wait) });
     }
-    console.log(`WITHDRAW request ${req.user} ${amount}`);
+    try {
+      await db.execute({ sql: "INSERT INTO withdrawals (username, amount, method, status, createdAt) VALUES (?, ?, ?, 'pending', ?)", args: [req.user, amount, method, now] });
+    } catch (e) {
+      // the request could not be saved: give the hourly slot back so the user can simply try again
+      await db.execute({ sql: 'UPDATE users SET lastWithdrawAt = ? WHERE username = ?', args: [Number(u.lastWithdrawAt) || 0, req.user] }).catch(() => {});
+      throw e;
+    }
+    console.log(`WITHDRAW request ${req.user} ${amount} ${method}`);
     res.json({ ok: true, nextWithdrawAt: now + WITHDRAW_COOLDOWN });
   } catch (e) { console.error('withdraw error:', e); res.status(500).json({ error: 'Withdrawal failed. Try again.' }); }
+});
+
+// admin only: saved withdrawal requests (newest first) and marking them paid / rejected
+app.get('/api/admin/withdrawals', requireUser, requireAdmin, async (req, res) => {
+  const rs = await db.execute('SELECT w.id, w.username, w.amount, w.method, w.status, w.createdAt, w.handledBy, w.handledAt, u.balance FROM withdrawals w LEFT JOIN users u ON u.username = w.username ORDER BY w.id DESC LIMIT 200');
+  res.json({ rows: rs.rows.map(r => ({ id: Number(r.id), username: r.username, amount: Number(r.amount) || 0, method: r.method || '', status: r.status || 'pending', createdAt: Number(r.createdAt) || 0, handledBy: r.handledBy || '', handledAt: Number(r.handledAt) || 0, balance: Number(r.balance) || 0 })) });
+});
+app.post('/api/admin/withdrawals/:id/status', requireUser, requireAdmin, async (req, res) => {
+  const status = String(req.body.status || '');
+  if (!['paid', 'rejected'].includes(status)) return res.status(400).json({ error: 'Invalid status.' });
+  const upd = await db.execute({ sql: "UPDATE withdrawals SET status = ?, handledBy = ?, handledAt = ? WHERE id = ? AND status = 'pending'", args: [status, req.user, Date.now(), Number(req.params.id) || 0] });
+  if (!upd.rowsAffected) return res.status(409).json({ error: 'This request was already handled.' });
+  audit(req.user, 'withdrawal-' + status, '#' + req.params.id, '', 0);
+  res.json({ ok: true });
 });
 
 // Top-up is a DEMO (free money). It only works while PAYMENT_DEMO_MODE=1 is set in Render. Remove that variable before real launch.
@@ -834,22 +875,22 @@ const banPart = (r) => ({
   bannedUntil: Number(r.bannedUntil) || 0, bannedAt: Number(r.bannedAt) || 0, banReason: r.banReason || '',
   appeal: r.appeal || '', appealAt: Number(r.appealAt) || 0, appealStatus: r.appealStatus || ''
 });
-// what everybody may see about everybody
+// what everybody may see about everybody. Ban reason, appeal text and ban dates are NOT here: only the owner (privateUser) and the admin see them.
 const publicUser = (r) => ({
   customId: r.customId, username: r.username, displayName: r.displayName || r.username, avatar: r.avatar || null,
   items: parseJson(r.items, []), roblox: r.roblox || '', isMiddleman: Number(r.isMiddleman) === 1,
-  lastSeen: Number(r.lastSeen) || 0, joinedAt: Number(r.joinedAt) || 0, ...banPart(r)
+  lastSeen: Number(r.lastSeen) || 0, joinedAt: Number(r.joinedAt) || 0, bannedUntil: Number(r.bannedUntil) || 0
 });
 // what only the owner sees (never the password or its hash)
 const privateUser = (r) => ({
-  ...publicUser(r), email: r.email || '', card: r.card || null, balance: Number(r.balance) || 0,
+  ...publicUser(r), ...banPart(r), email: r.email || '', card: r.card || null, balance: Number(r.balance) || 0,
   heldBalance: Number(r.heldBalance) || 0, lastUsernameChange: r.lastUsernameChange || null,
   lastDisplayNameChange: r.lastDisplayNameChange || null, lastItemTime: Number(r.lastItemTime) || 0,
   messages: parseJson(r.messages, [])
 });
 // extra columns for the admin panel (no password, no hash)
 const adminUser = (r) => ({
-  ...publicUser(r), email: r.email || '', balance: Number(r.balance) || 0, heldBalance: Number(r.heldBalance) || 0,
+  ...publicUser(r), ...banPart(r), email: r.email || '', balance: Number(r.balance) || 0, heldBalance: Number(r.heldBalance) || 0,
   lastIp: r.lastIp || '', lastItemTime: Number(r.lastItemTime) || 0
 });
 
@@ -860,10 +901,10 @@ const lightUser = (r) => ({
   customId: r.customId, username: r.username, displayName: r.displayName || r.username,
   avatar: Number(r.hasAvatar) ? '/api/avatar/' + encodeURIComponent(r.username) : null,
   roblox: r.roblox || '', isMiddleman: Number(r.isMiddleman) === 1,
-  lastSeen: Number(r.lastSeen) || 0, joinedAt: Number(r.joinedAt) || 0, ...banPart(r)
+  lastSeen: Number(r.lastSeen) || 0, joinedAt: Number(r.joinedAt) || 0, bannedUntil: Number(r.bannedUntil) || 0
 });
 const lightAdminUser = (r) => ({
-  ...lightUser(r), email: r.email || '', balance: Number(r.balance) || 0, heldBalance: Number(r.heldBalance) || 0,
+  ...lightUser(r), ...banPart(r), email: r.email || '', balance: Number(r.balance) || 0, heldBalance: Number(r.heldBalance) || 0,
   lastIp: r.lastIp || '', lastItemTime: Number(r.lastItemTime) || 0
 });
 app.get('/api/users', requireUser, async (req, res) => {
@@ -963,7 +1004,7 @@ app.post('/api/profile/rename', requireUser, async (req, res) => {
     const err = checkUsername(nu); if (err) return res.status(400).json({ error: err });
     if (nu === req.user) return res.json({ username: nu });
     const out = await inTx(res, async (tx) => {
-      if ((await tx.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [nu] })).rows.length) throw new Abort('Username is already taken');
+      if ((await tx.execute({ sql: 'SELECT 1 FROM users WHERE lower(username) = lower(?) AND username != ?', args: [nu, req.user] })).rows.length) throw new Abort('Username is already taken');
       await tx.execute({ sql: 'UPDATE users SET username = ?, lastUsernameChange = ? WHERE username = ?', args: [nu, Date.now(), req.user] });
       await tx.execute({ sql: 'UPDATE sessions SET username = ? WHERE username = ?', args: [nu, req.user] });
       await tx.execute({ sql: 'UPDATE deals SET buyer = ? WHERE buyer = ?', args: [nu, req.user] });
