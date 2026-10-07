@@ -437,6 +437,9 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
     }
 
     const urlParams = new URLSearchParams(window.location.search);
+    // popup mode = opened by "Add Account" in the main site: log the new account in, go back to the account that was already open, close
+    const POPUP_MODE = urlParams.get('popup') === '1' && !!window.opener;
+    const BACK_USER = urlParams.get('back') || '';
     if (urlParams.get('mode') === 'signup') setMode(false);
     // "Switch account" sends people here with the username filled in
     const prefill = urlParams.get('u');
@@ -553,7 +556,7 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
     // ===== Submit =====
     function rememberAccount(username) {
         try {
-            localStorage.setItem('currentUser', username);
+            if (!POPUP_MODE) localStorage.setItem('currentUser', username);   // popup: the open tab keeps its own account
             localStorage.setItem('ut_age_ok', '1');
             const saved = JSON.parse(localStorage.getItem('savedAccounts')) || [];
             if (!saved.includes(username)) { saved.push(username); localStorage.setItem('savedAccounts', JSON.stringify(saved)); }
@@ -598,6 +601,19 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
                 return;
             }
             rememberAccount(result.data.username);
+            if (POPUP_MODE) {
+                // the login above switched this browser's session to the new account: switch it back to the one that was open
+                let restored = true;
+                if (BACK_USER && BACK_USER !== result.data.username) {
+                    const sw = await api('/api/switch', { username: BACK_USER });
+                    restored = sw.ok;
+                }
+                try { window.opener.postMessage({ type: 'ut-account-added', username: result.data.username, restored }, location.origin); } catch (e) {}
+                document.body.innerHTML = '<div style="font-family:Inter,sans-serif;color:#fff;background:#0d0d0d;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;">' +
+                    '<div><div style="font-size:20px;font-weight:700;margin-bottom:8px;">Account added</div><div style="color:#999;">You can close this window.</div></div></div>';
+                setTimeout(() => window.close(), 600);
+                return;
+            }
             window.location.href = 'uniquetrading.html';
         } finally {
             busy = false;
