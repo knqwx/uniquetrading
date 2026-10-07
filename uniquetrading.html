@@ -3105,6 +3105,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     <div class="user-picker-selected" id="admin-user-selected">No user selected</div>
                 </div>
                 <div class="setting-group">
+                    <label class="setting-label">Your admin password (needed for every balance change)</label>
+                    <input type="password" class="setting-input" id="admin-adjust-password" autocomplete="current-password" placeholder="Password">
+                </div>
+                <div class="setting-group">
                     <label class="setting-label">Amount ($)</label>
                     <div class="admin-row">
                         <input type="number" step="0.01" min="0" class="setting-input" id="admin-amount-input" placeholder="0.00">
@@ -5000,15 +5004,17 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const amount = Math.round(parseFloat(adminAmountInput.value) * 100) / 100;
             if (!target) { showToast('Search and select a user first.'); return; }
             if (!amount || isNaN(amount) || amount <= 0) { showToast('Enter a valid amount.'); return; }
+            const adminPwInput = document.getElementById('admin-adjust-password');
+            if (!adminPwInput.value) { showToast('Enter your admin password first.'); adminPwInput.focus(); return; }
 
             adminAddBtn.disabled = adminSubBtn.disabled = true;
             try {
-                const ar = await srv('/api/admin/adjust', 'POST', { username: target, delta: sign * amount });
+                const ar = await srv('/api/admin/adjust', 'POST', { username: target, delta: sign * amount, password: adminPwInput.value });
                 if (!ar.ok) { srvFail(ar); return; }
                 const newBalance = Number(ar.data.balance) || 0;
                 if (target === currentUser) showMyBalance(newBalance);
                 await loadAdminUserList(target);
-                adminAmountInput.value = '';
+                adminAmountInput.value = ''; adminPwInput.value = '';
                 showToast(`${sign > 0 ? 'Added' : 'Subtracted'} ${fmtMoney(amount)} ${sign > 0 ? 'to' : 'from'} ${target}. New balance: ${fmtMoney(newBalance)}`);
             } catch (e) {
                 console.error(e);
