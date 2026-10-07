@@ -3743,6 +3743,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 <div class="money-board" id="money-board"></div>
             </div>
             <div class="mm-panel money-panel">
+                <div class="mm-panel-title">Withdrawal requests <span id="withdrawals-count"></span> <button class="mm-ticket-btn" id="withdrawals-refresh" type="button" style="margin-left:10px;">Refresh</button></div>
+                <div class="mm-ticket-list" id="withdrawals-list" style="max-height: none;"></div>
+            </div>
+            <div class="mm-panel money-panel">
                 <div class="mm-panel-title">Held transactions <span id="money-tx-count"></span></div>
                 <div class="money-filters">
                     <input type="text" class="setting-input" id="money-tx-search" placeholder="Search buyer, seller, item or #id...">
@@ -4809,7 +4813,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 return;
             }
             btn.disabled = true;
-            const r = await srv('/api/wallet/withdraw', 'POST', { amount });
+            const r = await srv('/api/wallet/withdraw', 'POST', { amount, method: document.getElementById('withdraw-method-select').value });
             btn.disabled = false;
             if (!r.ok) { showToast(r.data.error || 'Withdrawal failed. Try again.'); refreshWithdrawHint(); return; }
             showToast(`Withdrawal of ${fmtMoney(amount)} requested successfully!`);
@@ -7561,8 +7565,26 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             switchModal.classList.remove('active');
         });
 
+        // "Add Account" opens the login page in a small window. The popup logs the new account in, switches the browser back
+        // to the account that was already open, and closes: nobody is kicked out of this tab.
+        let addAccountWin = null;
         addAccountBtn.addEventListener('click', () => {
-            window.location.href = 'login.html';
+            if (addAccountWin && !addAccountWin.closed) { addAccountWin.focus(); return; }
+            const w = 480, h = 760;
+            const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - w) / 2));
+            const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - h) / 2));
+            addAccountWin = window.open('login.html?popup=1&back=' + encodeURIComponent(currentUser || ''), 'ut_add_account',
+                `popup=yes,width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+            if (!addAccountWin) showToast('Please allow pop-ups for this site to add an account.');
+        });
+        window.addEventListener('message', (e) => {
+            if (e.origin !== location.origin || !e.data || e.data.type !== 'ut-account-added') return;
+            if (e.data.restored === false) {                      // the old session could not be restored: ask for its password once
+                window.location.href = 'login.html?u=' + encodeURIComponent(currentUser || '');
+                return;
+            }
+            showToast(e.data.username ? `${e.data.username} was added` : 'Account added');
+            if (switchModal.classList.contains('active')) renderSwitchAccountsList();
         });
 
         async function renderDbTable() {
@@ -7961,6 +7983,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     if (!br.ok) return; // network hiccup: never log anyone out because of it
                     if (br.data.deleted) { showDeletedScreen(); return; }
                     const row = br.data.user;
+                    if (row.username !== currentUser) return;   // answer for another account (e.g. while the Add Account window signs in): ignore it
                     me = { username: row.username, customId: row.customId, ...banFields(row) };
                     if (isBanned(me)) {
                         document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
@@ -8148,8 +8171,44 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
         function dealStatusPillClass(st) { return st === 'paid' ? 'ok' : (st === 'reported' ? 'banned' : 'warn'); }
 
+        async function renderWithdrawals() {
+            const list = document.getElementById('withdrawals-list');
+            if (!list) return;
+            const r = await srv('/api/admin/withdrawals');
+            if (!r.ok) return;
+            const rows = r.data.rows || [];
+            const pending = rows.filter(x => x.status === 'pending').length;
+            document.getElementById('withdrawals-count').textContent = pending ? `(${pending} pending)` : '';
+            if (!rows.length) { list.innerHTML = '<div class="reports-empty">No withdrawal requests.</div>'; return; }
+            list.innerHTML = rows.map(x => {
+                const u = escapeHtml(x.username);
+                const state = x.status === 'pending' ? '' : `<span class="mm-ticket-status" style="color:${x.status === 'paid' ? '#2ecc71' : '#ff4d4d'};">${x.status === 'paid' ? 'Paid' : 'Rejected'} by ${escapeHtml(x.handledBy)} ${escapeHtml(getTimeAgo(x.handledAt))}</span>`;
+                return `
+                <div class="mm-ticket">
+                    <div class="mm-ticket-top">
+                        <div class="mm-ticket-users">@${u} <span style="color:#ff7300;font-weight:700;">${escapeHtml(fmtMoney(x.amount))}</span> <span style="color:#777;font-weight:500;">${x.method === 'crypto' ? 'Crypto (USDT)' : 'Bank card'}</span></div>
+                        <div class="mm-ticket-time" title="${escapeHtml(getExactDate(x.createdAt))}">${escapeHtml(getTimeAgo(x.createdAt))}</div>
+                    </div>
+                    <div class="mm-ticket-desc">Balance now: ${escapeHtml(fmtMoney(x.balance))}</div>
+                    <div class="mm-ticket-actions">
+                        ${x.status === 'pending' ? `<button class="mm-ticket-btn primary" data-wd-paid="${x.id}" type="button">Mark paid</button><button class="mm-ticket-btn danger" data-wd-rej="${x.id}" type="button">Reject</button>` : state}
+                    </div>
+                </div>`;
+            }).join('');
+            const act = (attr, status) => list.querySelectorAll(`[${attr}]`).forEach(b => b.addEventListener('click', async () => {
+                b.disabled = true;
+                const res = await srv(`/api/admin/withdrawals/${b.getAttribute(attr)}/status`, 'POST', { status });
+                if (!res.ok) srvFail(res);
+                renderWithdrawals();
+            }));
+            act('data-wd-paid', 'paid');
+            act('data-wd-rej', 'rejected');
+        }
+        document.getElementById('withdrawals-refresh').addEventListener('click', () => renderWithdrawals());
+
         async function loadMoney() {
             if (!(await isKnqw())) return;
+            renderWithdrawals().catch(e => console.error(e));
             try {
                 const [u, d] = await Promise.all([srv('/api/admin/users'), srv('/api/admin/deals?status=held')]);
                 if (!u.ok || !d.ok) return;
