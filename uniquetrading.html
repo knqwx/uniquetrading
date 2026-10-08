@@ -2636,7 +2636,7 @@
         .item-picker-cats { display: flex; flex-direction: column; gap: 4px; width: 170px; flex-shrink: 0; overflow-y: auto; max-height: 60vh; padding-right: 4px; }
         .item-picker-cat { background: none; border: none; color: #888888; text-align: left; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 9px 12px; border-radius: 8px; cursor: pointer; transition: color 0.2s, background-color 0.2s; }
         .item-picker-cat:hover { color: #ffffff; background-color: #262626; }
-        .item-picker-cat.active { color: #ffffff; background-color: #262626; box-shadow: inset 3px 0 0 #ff7300; }
+        .item-picker-cat.active { color: #ffffff; background-color: #3a3a3a; box-shadow: inset 3px 0 0 #ff7300; }
         .item-picker-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
         .item-picker-cat-title { color: #ff9a44; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
         .item-picker-list { flex: 1; overflow-y: auto; max-height: 42vh; min-height: 120px; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px; }
@@ -3005,6 +3005,17 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 <div class="games-tags-group" id="tags-group">
                     <button class="game-tag-btn active" data-tag="All">All items</button>
                     <button class="game-tag-btn" data-tag="Murder Mystery 2">Murder Mystery 2</button>
+                    <button class="game-tag-btn" data-tag="Steal a brainrot">Steal a brainrot</button>
+                    <button class="game-tag-btn" data-tag="Blade Ball">Blade Ball</button>
+                    <button class="game-tag-btn" data-tag="Adopt Me">Adopt Me</button>
+                    <button class="game-tag-btn" data-tag="Pet Simulator 99">Pet Simulator 99</button>
+                    <button class="game-tag-btn" data-tag="Steal an Egg">Steal an Egg</button>
+                    <button class="game-tag-btn" data-tag="Grow a Garden">Grow a Garden</button>
+                    <button class="game-tag-btn" data-tag="Farming and Friends">Farming and Friends</button>
+                    <button class="game-tag-btn" data-tag="Grow a Garden 2">Grow a Garden 2</button>
+                    <button class="game-tag-btn" data-tag="Blox Fruits">Blox Fruits</button>
+                    <button class="game-tag-btn" data-tag="Fisch">Fisch</button>
+                    <button class="game-tag-btn" data-tag="Bee Swarm Simulator">Bee Swarm Simulator</button>
                 </div>
                 <div class="sort-select-wrapper">
                     <span class="sort-label">Sort by:</span>
@@ -3350,6 +3361,50 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     <img src="thumbnails/MM2.webp" class="game-card-thumb" alt="Murder Mystery 2">
                     <span class="game-card-name">Murder Mystery 2</span>
                 </div>
+                <div class="game-card-item" data-game="Steal a brainrot" title="Steal a brainrot">
+                    <img src="thumbnails/SAB.webp" class="game-card-thumb" alt="Steal a brainrot">
+                    <span class="game-card-name">Steal a brainrot</span>
+                </div>
+                <div class="game-card-item" data-game="Blade Ball" title="Blade Ball">
+                    <img src="thumbnails/BladeBall.webp" class="game-card-thumb" alt="Blade Ball">
+                    <span class="game-card-name">Blade Ball</span>
+                </div>
+                <div class="game-card-item" data-game="Adopt Me" title="Adopt Me">
+                    <img src="thumbnails/AdoptMe.webp" class="game-card-thumb" alt="Adopt Me">
+                    <span class="game-card-name">Adopt Me</span>
+                </div>
+                <div class="game-card-item" data-game="Pet Simulator 99" title="Pet Simulator 99">
+                    <img src="thumbnails/PS99.webp" class="game-card-thumb" alt="Pet Simulator 99">
+                    <span class="game-card-name">Pet Simulator 99</span>
+                </div>
+                <div class="game-card-item" data-game="Steal an Egg" title="Steal an Egg">
+                    <img src="thumbnails/StealAnEgg.webp" class="game-card-thumb" alt="Steal an Egg">
+                    <span class="game-card-name">Steal an Egg</span>
+                </div>
+                <div class="game-card-item" data-game="Grow a Garden" title="Grow a Garden">
+                    <img src="thumbnails/GrowAGarden.webp" class="game-card-thumb" alt="Grow a Garden">
+                    <span class="game-card-name">Grow a Garden</span>
+                </div>
+                <div class="game-card-item" data-game="Farming and Friends" title="Farming and Friends">
+                    <img src="thumbnails/FarmingAndFriends.webp" class="game-card-thumb" alt="Farming and Friends">
+                    <span class="game-card-name">Farming and Friends</span>
+                </div>
+                <div class="game-card-item" data-game="Grow a Garden 2" title="Grow a Garden 2">
+                    <img src="thumbnails/GrowAGarden2.webp" class="game-card-thumb" alt="Grow a Garden 2">
+                    <span class="game-card-name">Grow a Garden 2</span>
+                </div>
+                <div class="game-card-item" data-game="Blox Fruits" title="Blox Fruits">
+                    <img src="thumbnails/BloxFruits.webp" class="game-card-thumb" alt="Blox Fruits">
+                    <span class="game-card-name">Blox Fruits</span>
+                </div>
+                <div class="game-card-item" data-game="Fisch" title="Fisch">
+                    <img src="thumbnails/Fisch.webp" class="game-card-thumb" alt="Fisch">
+                    <span class="game-card-name">Fisch</span>
+                </div>
+                <div class="game-card-item" data-game="Bee Swarm Simulator" title="Bee Swarm Simulator">
+                    <img src="thumbnails/BeeSwarm.webp" class="game-card-thumb" alt="Bee Swarm Simulator">
+                    <span class="game-card-name">Bee Swarm Simulator</span>
+                </div>
             </div>
         </div>
     </div>
@@ -3411,6 +3466,39 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     <label class="checkbox-label">
                         <input type="checkbox" class="game-checkbox" value="mm2" checked> Murder Mystery 2
                     </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="sab" checked> Steal a brainrot
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="bladeball" checked> Blade Ball
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="adoptme" checked> Adopt Me
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="ps99" checked> Pet Simulator 99
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="stealanegg" checked> Steal an Egg
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="gag" checked> Grow a Garden
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="faf" checked> Farming and Friends
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="gag2" checked> Grow a Garden 2
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="bloxfruits" checked> Blox Fruits
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="fisch" checked> Fisch
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="game-checkbox" value="bss" checked> Bee Swarm Simulator
+                    </label>
                 </div>
 
                 <button class="save-settings-btn" id="save-item-btn">List Item</button>
@@ -3444,7 +3532,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         <div class="item-picker-cat-title" id="offer-cat-title"></div>
                         <div class="item-picker-custom">
                             <input type="text" class="setting-input" id="offer-custom-input" maxlength="80" placeholder="Search items, or type a custom name" autocomplete="off">
-                            <button type="button" class="item-pick-btn use" id="offer-custom-btn" title="Add what you typed as a custom item">Add custom</button>
                         </div>
                         <div class="item-picker-list" id="offer-list"></div>
                     </div>
@@ -3503,39 +3590,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     <div class="modal-overlay" id="switch-modal">
         <div class="modal-content accounts-modal-content">
             <button class="close-modal" id="close-switch-modal-btn">&times;</button>
-            <div class="accounts-title">Manage accounts</div>
+            <div class="accounts-title">Switch Account</div>
             <div class="accounts-list-container" id="accounts-list"></div>
             <button class="add-account-modal-btn" id="add-account-btn">+ Add Account</button>
-        </div>
-    </div>
-
-    <!-- Add account: login only, no sign up -->
-    <div class="modal-overlay" id="add-account-modal" style="z-index: 9000;">
-        <div class="modal-content" style="width: 380px; text-align: left;">
-            <button class="close-modal" id="close-add-account-modal-btn">&times;</button>
-            <div class="accounts-title">Add account</div>
-            <div id="add-acc-error" style="display:none;color:#ff4d4d;font-size:12px;background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.2);border-radius:6px;padding:8px;margin-bottom:12px;"></div>
-            <div class="setting-group">
-                <label class="setting-label">Username or email</label>
-                <input type="text" class="setting-input" id="add-acc-id" autocomplete="off" placeholder="Enter your username or email">
-            </div>
-            <div class="setting-group">
-                <label class="setting-label">Password</label>
-                <input type="password" class="setting-input" id="add-acc-pw" autocomplete="current-password" placeholder="Enter your password">
-            </div>
-            <button class="save-settings-btn" id="add-acc-submit" type="button">Log in</button>
-        </div>
-    </div>
-
-    <!-- Generic "are you sure?" window (log out, remove saved account) -->
-    <div class="modal-overlay" id="ask-modal" style="z-index: 100000;">
-        <div class="modal-content">
-            <div class="confirm-title" id="ask-title"></div>
-            <div class="confirm-text" id="ask-text"></div>
-            <div class="confirm-actions">
-                <button class="btn-confirm-delete" id="ask-yes-btn" type="button"></button>
-                <button class="btn-cancel-delete" id="ask-no-btn" type="button">Cancel</button>
-            </div>
         </div>
     </div>
 
@@ -3683,10 +3740,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     <label class="money-check"><input type="checkbox" id="money-hide-zero"><span>Hide $0</span></label>
                 </div>
                 <div class="money-board" id="money-board"></div>
-            </div>
-            <div class="mm-panel money-panel">
-                <div class="mm-panel-title">Withdrawal requests <span id="withdrawals-count"></span> <button class="mm-ticket-btn" id="withdrawals-refresh" type="button" style="margin-left:10px;">Refresh</button></div>
-                <div class="mm-ticket-list" id="withdrawals-list" style="max-height: none;"></div>
             </div>
             <div class="mm-panel money-panel">
                 <div class="mm-panel-title">Held transactions <span id="money-tx-count"></span></div>
@@ -4150,24 +4203,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         } catch (e) {
             currentUser = localStorage.getItem('currentUser');       // offline / server unreachable
         }
-        // Shows the "are you sure?" window; resolves true on the confirm button, false on Cancel / outside click / Esc
-        function askConfirm(title, text, yesLabel) {
-            return new Promise(resolve => {
-                const m = document.getElementById('ask-modal');
-                const yes = document.getElementById('ask-yes-btn'), no = document.getElementById('ask-no-btn');
-                document.getElementById('ask-title').textContent = title;
-                document.getElementById('ask-text').textContent = text;
-                yes.textContent = yesLabel;
-                const done = (v) => { m.classList.remove('active'); yes.onclick = no.onclick = m.onclick = null; document.removeEventListener('keydown', onKey); resolve(v); };
-                const onKey = (e) => { if (e.key === 'Escape') done(false); };
-                yes.onclick = () => done(true);
-                no.onclick = () => done(false);
-                m.onclick = (e) => { if (e.target === m) done(false); };
-                document.addEventListener('keydown', onKey);
-                m.classList.add('active');
-                no.focus();
-            });
-        }
         async function logoutAndReload() {
             try { await fetch(API_BASE + '/api/logout', { method: 'POST', credentials: 'include' }); } catch (e) {}
             try { localStorage.removeItem('currentUser'); } catch (e) {}
@@ -4289,7 +4324,18 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         let userToDelete = null;
         let uploadedItemPhotoData = null;
-        const GAMES = [{ key: "mm2", name: "Murder Mystery 2", thumb: "MM2" }];
+        const GAMES = [{ key: "mm2", name: "Murder Mystery 2", thumb: "MM2" },
+            { key: "sab", name: "Steal a brainrot", thumb: "SAB" },
+            { key: "bladeball", name: "Blade Ball", thumb: "BladeBall" },
+            { key: "adoptme", name: "Adopt Me", thumb: "AdoptMe" },
+            { key: "ps99", name: "Pet Simulator 99", thumb: "PS99" },
+            { key: "stealanegg", name: "Steal an Egg", thumb: "StealAnEgg" },
+            { key: "gag", name: "Grow a Garden", thumb: "GrowAGarden" },
+            { key: "faf", name: "Farming and Friends", thumb: "FarmingAndFriends" },
+            { key: "gag2", name: "Grow a Garden 2", thumb: "GrowAGarden2" },
+            { key: "bloxfruits", name: "Blox Fruits", thumb: "BloxFruits" },
+            { key: "fisch", name: "Fisch", thumb: "Fisch" },
+            { key: "bss", name: "Bee Swarm Simulator", thumb: "BeeSwarm" }];
         function getGameThumb(gameName) {
             const g = GAMES.find(x => x.name === gameName) || GAMES[0];
             return 'thumbnails/' + g.thumb + '.webp';
@@ -4356,7 +4402,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const ITEM_IMG_DIR = 'MM2items/';
         function itemImageFile(name) { return String(name).replace(/[^A-Za-z0-9]/g, '') + '.webp'; }
         // Only the exact file name is used, e.g. "Traveler's Axe" -> TravelersAxe.webp
-        function itemImageCandidates(name) {
+        const ITEM_IMG_OVERRIDES = { 'Sunset': 'SunsetKnife.webp', 'Battleaxe II': 'BattleaxeII.webp', 'Chroma Laser': 'ChromaLaser.webp' };
+        function itemImageCandidates(name, cat) {
+            const n = String(name || '').trim();
+            if (cat === 'Vintages' && n === 'Laser') return [ITEM_IMG_DIR + 'LaserVintage.webp'];
+            if (ITEM_IMG_OVERRIDES[n]) return [ITEM_IMG_DIR + ITEM_IMG_OVERRIDES[n]];
             return [ITEM_IMG_DIR + itemImageFile(name)];
         }
         // every Murder Mystery 2 item (all categories, Ancients included) uses an image from MM2items/
@@ -4418,7 +4468,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const _list = (item.items && item.items.length) ? item.items : [item.name];
             const _anc = _list.find(n => isAncientItem(item.game, n));
             if (_anc) {
-                const c = itemImageCandidates(_anc);
+                const c = itemImageCandidates(_anc, item.cat);
                 return `src="${escapeHtml(c[0])}" data-alts="${escapeHtml(c.slice(1).join('|'))}" data-fb="${escapeHtml(fb)}" onerror="itemImgFallback(this)"`;
             }
             return `src="${fb}"`;
@@ -4461,7 +4511,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             listEl.classList.toggle('cards', isMM2Game(selectedGameForListing));
             listEl.innerHTML = list.length
                 ? list.map(n => isMM2Game(selectedGameForListing)
-                    ? `<button type="button" class="item-picker-card item-picker-item" data-name="${escapeHtml(n)}"><img class="card-img" src="${escapeHtml(itemImageCandidates(n)[0])}" data-alts="${escapeHtml(itemImageCandidates(n).slice(1).join('|'))}" alt="${escapeHtml(n)}" loading="lazy" onerror="itemImgFallback(this)"><span>${escapeHtml(n)}</span></button>`
+                    ? `<button type="button" class="item-picker-card item-picker-item" data-name="${escapeHtml(n)}"><img class="card-img" src="${escapeHtml(itemImageCandidates(n, pickerActiveCat)[0])}" data-alts="${escapeHtml(itemImageCandidates(n, pickerActiveCat).slice(1).join('|'))}" alt="${escapeHtml(n)}" loading="lazy" onerror="itemImgFallback(this)"><span>${escapeHtml(n)}</span></button>`
                     : `<button type="button" class="item-picker-item" data-name="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')
                 : '<div class="item-picker-empty">No items added to this category yet. You can type the item name below.</div>';
             listEl.querySelectorAll('.item-picker-item').forEach(b => b.addEventListener('click', () => chooseListingItem(b.dataset.name)));
@@ -4551,7 +4601,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         <div class="profile-dropdown" id="profile-dropdown-menu">
                             <button class="dropdown-item" id="dropdown-profile-btn">Profile</button>
                             <button class="dropdown-item" id="dropdown-settings-btn">Settings</button>
-                            <button class="dropdown-item" id="dropdown-switch-btn">Manage accounts</button>
+                            <button class="dropdown-item" id="dropdown-switch-btn">Switch Account</button>
+                            <button class="dropdown-item" id="dropdown-logout-btn" style="color: #ff4d4d;">Log out</button>
                         </div>
                     `;
 
@@ -4595,6 +4646,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         switchModal.classList.add('active');
                     });
 
+                    document.getElementById('dropdown-logout-btn').addEventListener('click', () => {
+                        logoutAndReload();
+                    });
                 } else {
                     document.documentElement.classList.remove('has-session');
                 }
@@ -4758,7 +4812,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 return;
             }
             btn.disabled = true;
-            const r = await srv('/api/wallet/withdraw', 'POST', { amount, method: document.getElementById('withdraw-method-select').value });
+            const r = await srv('/api/wallet/withdraw', 'POST', { amount });
             btn.disabled = false;
             if (!r.ok) { showToast(r.data.error || 'Withdrawal failed. Try again.'); refreshWithdrawHint(); return; }
             showToast(`Withdrawal of ${fmtMoney(amount)} requested successfully!`);
@@ -5662,9 +5716,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     const c = cnt[n] || 0;
                     const sel = c ? ` selected" data-count="${c}` : '';
                     return isMM2Game(st.game)
-                        ? `<button type="button" class="item-picker-card item-picker-item${sel}" data-name="${escapeHtml(n)}"><img class="card-img" ${itemImgAttrs({ game: st.game, name: n })} alt="${escapeHtml(n)}" loading="lazy"><span>${escapeHtml(n)}</span></button>`
+                        ? `<button type="button" class="item-picker-card item-picker-item${sel}" data-name="${escapeHtml(n)}"><img class="card-img" ${itemImgAttrs({ game: st.game, name: n, cat: q ? '' : st.cat })} alt="${escapeHtml(n)}" loading="lazy"><span>${escapeHtml(n)}</span></button>`
                         : `<button type="button" class="item-picker-item${sel}" data-name="${escapeHtml(n)}">${escapeHtml(n)}</button>`;
-                }).join('') || `<div class="item-picker-empty">${q ? 'No items match. Press "Add custom" to use what you typed.' : 'No items added to this category yet. You can type a custom name in the box above.'}</div>`;
+                }).join('') || `<div class="item-picker-empty">${q ? 'No items match. Press Enter to use what you typed.' : 'No items added to this category yet. You can type a custom name in the box above.'}</div>`;
                 listEl.querySelectorAll('[data-name]').forEach(b => b.addEventListener('click', () => addDlgItem(b.dataset.name)));
             } else {
                 catsEl.style.display = 'none'; listEl.style.display = 'none'; titleEl.style.display = 'none';
@@ -5695,7 +5749,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             inp.value = '';
             addDlgItem(v);
         };
-        document.getElementById('offer-custom-btn').addEventListener('click', dlgAddCustom);
         document.getElementById('offer-custom-input').addEventListener('input', () => { if (itemsDlg) renderItemsDialog(); });
         document.getElementById('offer-custom-input').addEventListener('keydown', (e) => {
             if (e.key !== 'Enter') return;
@@ -7445,37 +7498,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             renderGlobalItems();
         });
 
-        const apiPost = async (path, body) => {
-            try {
-                const r = await fetch(API_BASE + path, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
-                let data = {}; try { data = await r.json(); } catch (e) {}
-                return { ok: r.ok, status: r.status, data };
-            } catch (e) { return { ok: false, status: 0, data: { error: 'Cannot reach the server. Check your connection and try again.' } }; }
-        };
-        const getSavedAccounts = () => { try { const a = JSON.parse(localStorage.getItem('savedAccounts')); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
-        const setSavedAccounts = (list) => { try { localStorage.setItem('savedAccounts', JSON.stringify(list)); } catch (e) {} };
-
-        async function removeAccount(username, isCurrent) {
-            if (isCurrent) {
-                if (!(await askConfirm('Remove account', `Remove ${username} from this device? You will be logged out of it. You can add it again later by logging in.`, 'Remove'))) return;
-                setSavedAccounts(getSavedAccounts().filter(a => a !== username));
-                logoutAndReload();
-                return;
-            }
-            if (!(await askConfirm('Remove account', `Remove ${username} from this device? You can add it again later by logging in.`, 'Remove'))) return;
-            // end that account's session too, then go back to the account that is open
-            const sw = await apiPost('/api/switch', { username });
-            if (sw.ok) {
-                await apiPost('/api/logout');
-                const back = await apiPost('/api/switch', { username: currentUser });
-                if (!back.ok) { setSavedAccounts(getSavedAccounts().filter(a => a !== username)); window.location.href = 'login.html?u=' + encodeURIComponent(currentUser || ''); return; }
-            }
-            setSavedAccounts(getSavedAccounts().filter(a => a !== username));
-            renderSwitchAccountsList();
-        }
-
         async function renderSwitchAccountsList() {
-            let savedAccounts = getSavedAccounts();
+            let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
             let allUsers = await getAllUsersFromDB();
 
             accountsList.innerHTML = '';
@@ -7502,26 +7526,32 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         ${avatarInner}
                         <div class="account-details">
                             <div class="acc-name">${escapeHtml(uObj ? (uObj.displayName || uObj.username) : username)}</div>
-                            <div class="acc-email">${isCurrent ? 'Current account' : escapeHtml(uObj ? uObj.email : '')}</div>
+                            <div class="acc-email">${escapeHtml(uObj ? uObj.email : '')}</div>
                         </div>
                     </div>
-                    <button class="remove-saved-acc" title="Remove">&times;</button>
+                    ${!isCurrent ? `<button class="remove-saved-acc" title="Remove">&times;</button>` : ''}
                 `;
 
-                item.addEventListener('click', async (e) => {
+                item.addEventListener('click', (e) => {
                     if (e.target.classList.contains('remove-saved-acc')) {
                         e.stopPropagation();
-                        removeAccount(username, isCurrent);
+                        let filtered = savedAccounts.filter(acc => acc !== username);
+                        localStorage.setItem('savedAccounts', JSON.stringify(filtered));
+                        renderSwitchAccountsList();
                         return;
                     }
                     if (!isCurrent) {
-                        const sr = await apiPost('/api/switch', { username });
-                        if (sr.ok) {
-                            try { localStorage.setItem('currentUser', username); } catch (e) {}
-                            location.reload();
-                            return;
-                        }
-                        window.location.href = 'login.html?u=' + encodeURIComponent(username);   // no saved session: ask for the password once
+                        (async () => {
+                            try {
+                                const sr = await fetch(API_BASE + '/api/switch', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) });
+                                if (sr.ok) {
+                                    try { localStorage.setItem('currentUser', username); } catch (e) {}
+                                    location.reload();
+                                    return;
+                                }
+                            } catch (e) {}
+                            window.location.href = 'login.html?u=' + encodeURIComponent(username);   // no saved session: ask for the password once
+                        })();
                     }
                 });
 
@@ -7533,42 +7563,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             switchModal.classList.remove('active');
         });
 
-        // "Add account": a small login-only window (no sign up). It logs the new account in, then switches the session back
-        // to the account that was already open, so nobody is kicked out of this tab.
-        const addAccModal = document.getElementById('add-account-modal');
-        const addAccId = document.getElementById('add-acc-id'), addAccPw = document.getElementById('add-acc-pw');
-        const addAccErr = document.getElementById('add-acc-error'), addAccSubmit = document.getElementById('add-acc-submit');
-        const closeAddAcc = () => { addAccModal.classList.remove('active'); addAccPw.value = ''; };
-        const showAddAccErr = (m) => { addAccErr.textContent = m; addAccErr.style.display = 'block'; };
         addAccountBtn.addEventListener('click', () => {
-            addAccId.value = ''; addAccPw.value = ''; addAccErr.style.display = 'none';
-            addAccModal.classList.add('active');
-            setTimeout(() => addAccId.focus(), 30);
-        });
-        document.getElementById('close-add-account-modal-btn').addEventListener('click', closeAddAcc);
-        addAccModal.addEventListener('click', (e) => { if (e.target === addAccModal) closeAddAcc(); });
-        [addAccId, addAccPw].forEach(el => el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addAccSubmit.click(); } }));
-        let addAccBusy = false;
-        addAccSubmit.addEventListener('click', async () => {
-            if (addAccBusy) return;
-            const id = addAccId.value.trim(), pw = addAccPw.value;
-            addAccErr.style.display = 'none';
-            if (!id || !pw) { showAddAccErr('Please fill in all fields.'); return; }
-            addAccBusy = true; addAccSubmit.disabled = true;
-            try {
-                const r = await apiPost('/api/login', { id, password: pw });
-                if (!r.ok || !r.data.username) { showAddAccErr((r.data && r.data.error) || 'Could not log in.'); return; }
-                const added = r.data.username;
-                const saved = getSavedAccounts();
-                if (!saved.includes(added)) { saved.push(added); setSavedAccounts(saved); }
-                if (added !== currentUser) {
-                    const back = await apiPost('/api/switch', { username: currentUser });
-                    if (!back.ok) { window.location.href = 'login.html?u=' + encodeURIComponent(currentUser || ''); return; }
-                }
-                closeAddAcc();
-                showToast(`${added} was added`);
-                renderSwitchAccountsList();
-            } finally { addAccBusy = false; addAccSubmit.disabled = false; }
+            window.location.href = 'login.html';
         });
 
         async function renderDbTable() {
@@ -7967,7 +7963,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     if (!br.ok) return; // network hiccup: never log anyone out because of it
                     if (br.data.deleted) { showDeletedScreen(); return; }
                     const row = br.data.user;
-                    if (row.username !== currentUser) return;   // answer for another account (e.g. while the Add Account window signs in): ignore it
                     me = { username: row.username, customId: row.customId, ...banFields(row) };
                     if (isBanned(me)) {
                         document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
@@ -8155,44 +8150,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
         function dealStatusPillClass(st) { return st === 'paid' ? 'ok' : (st === 'reported' ? 'banned' : 'warn'); }
 
-        async function renderWithdrawals() {
-            const list = document.getElementById('withdrawals-list');
-            if (!list) return;
-            const r = await srv('/api/admin/withdrawals');
-            if (!r.ok) return;
-            const rows = r.data.rows || [];
-            const pending = rows.filter(x => x.status === 'pending').length;
-            document.getElementById('withdrawals-count').textContent = pending ? `(${pending} pending)` : '';
-            if (!rows.length) { list.innerHTML = '<div class="reports-empty">No withdrawal requests.</div>'; return; }
-            list.innerHTML = rows.map(x => {
-                const u = escapeHtml(x.username);
-                const state = x.status === 'pending' ? '' : `<span class="mm-ticket-status" style="color:${x.status === 'paid' ? '#2ecc71' : '#ff4d4d'};">${x.status === 'paid' ? 'Paid' : 'Rejected'} by ${escapeHtml(x.handledBy)} ${escapeHtml(getTimeAgo(x.handledAt))}</span>`;
-                return `
-                <div class="mm-ticket">
-                    <div class="mm-ticket-top">
-                        <div class="mm-ticket-users">@${u} <span style="color:#ff7300;font-weight:700;">${escapeHtml(fmtMoney(x.amount))}</span> <span style="color:#777;font-weight:500;">${x.method === 'crypto' ? 'Crypto (USDT)' : 'Bank card'}</span></div>
-                        <div class="mm-ticket-time" title="${escapeHtml(getExactDate(x.createdAt))}">${escapeHtml(getTimeAgo(x.createdAt))}</div>
-                    </div>
-                    <div class="mm-ticket-desc">Balance now: ${escapeHtml(fmtMoney(x.balance))}</div>
-                    <div class="mm-ticket-actions">
-                        ${x.status === 'pending' ? `<button class="mm-ticket-btn primary" data-wd-paid="${x.id}" type="button">Mark paid</button><button class="mm-ticket-btn danger" data-wd-rej="${x.id}" type="button">Reject</button>` : state}
-                    </div>
-                </div>`;
-            }).join('');
-            const act = (attr, status) => list.querySelectorAll(`[${attr}]`).forEach(b => b.addEventListener('click', async () => {
-                b.disabled = true;
-                const res = await srv(`/api/admin/withdrawals/${b.getAttribute(attr)}/status`, 'POST', { status });
-                if (!res.ok) srvFail(res);
-                renderWithdrawals();
-            }));
-            act('data-wd-paid', 'paid');
-            act('data-wd-rej', 'rejected');
-        }
-        document.getElementById('withdrawals-refresh').addEventListener('click', () => renderWithdrawals());
-
         async function loadMoney() {
             if (!(await isKnqw())) return;
-            renderWithdrawals().catch(e => console.error(e));
             try {
                 const [u, d] = await Promise.all([srv('/api/admin/users'), srv('/api/admin/deals?status=held')]);
                 if (!u.ok || !d.ok) return;
