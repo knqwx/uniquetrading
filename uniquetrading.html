@@ -3503,9 +3503,27 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     <div class="modal-overlay" id="switch-modal">
         <div class="modal-content accounts-modal-content">
             <button class="close-modal" id="close-switch-modal-btn">&times;</button>
-            <div class="accounts-title">Switch Account</div>
+            <div class="accounts-title">Manage accounts</div>
             <div class="accounts-list-container" id="accounts-list"></div>
             <button class="add-account-modal-btn" id="add-account-btn">+ Add Account</button>
+        </div>
+    </div>
+
+    <!-- Add account: login only, no sign up -->
+    <div class="modal-overlay" id="add-account-modal" style="z-index: 9000;">
+        <div class="modal-content" style="width: 380px; text-align: left;">
+            <button class="close-modal" id="close-add-account-modal-btn">&times;</button>
+            <div class="accounts-title">Add account</div>
+            <div id="add-acc-error" style="display:none;color:#ff4d4d;font-size:12px;background:rgba(255,77,77,0.1);border:1px solid rgba(255,77,77,0.2);border-radius:6px;padding:8px;margin-bottom:12px;"></div>
+            <div class="setting-group">
+                <label class="setting-label">Username or email</label>
+                <input type="text" class="setting-input" id="add-acc-id" autocomplete="off" placeholder="Enter your username or email">
+            </div>
+            <div class="setting-group">
+                <label class="setting-label">Password</label>
+                <input type="password" class="setting-input" id="add-acc-pw" autocomplete="current-password" placeholder="Enter your password">
+            </div>
+            <button class="save-settings-btn" id="add-acc-submit" type="button">Log in</button>
         </div>
     </div>
 
@@ -4533,8 +4551,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         <div class="profile-dropdown" id="profile-dropdown-menu">
                             <button class="dropdown-item" id="dropdown-profile-btn">Profile</button>
                             <button class="dropdown-item" id="dropdown-settings-btn">Settings</button>
-                            <button class="dropdown-item" id="dropdown-switch-btn">Switch Account</button>
-                            <button class="dropdown-item" id="dropdown-logout-btn" style="color: #ff4d4d;">Log out</button>
+                            <button class="dropdown-item" id="dropdown-switch-btn">Manage accounts</button>
                         </div>
                     `;
 
@@ -4578,9 +4595,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         switchModal.classList.add('active');
                     });
 
-                    document.getElementById('dropdown-logout-btn').addEventListener('click', async () => {
-                        if (await askConfirm('Log out', 'Are you sure you want to log out of this account?', 'Log out')) logoutAndReload();
-                    });
                 } else {
                     document.documentElement.classList.remove('has-session');
                 }
@@ -7431,8 +7445,37 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             renderGlobalItems();
         });
 
+        const apiPost = async (path, body) => {
+            try {
+                const r = await fetch(API_BASE + path, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+                let data = {}; try { data = await r.json(); } catch (e) {}
+                return { ok: r.ok, status: r.status, data };
+            } catch (e) { return { ok: false, status: 0, data: { error: 'Cannot reach the server. Check your connection and try again.' } }; }
+        };
+        const getSavedAccounts = () => { try { const a = JSON.parse(localStorage.getItem('savedAccounts')); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
+        const setSavedAccounts = (list) => { try { localStorage.setItem('savedAccounts', JSON.stringify(list)); } catch (e) {} };
+
+        async function removeAccount(username, isCurrent) {
+            if (isCurrent) {
+                if (!(await askConfirm('Remove account', `Remove ${username} from this device? You will be logged out of it. You can add it again later by logging in.`, 'Remove'))) return;
+                setSavedAccounts(getSavedAccounts().filter(a => a !== username));
+                logoutAndReload();
+                return;
+            }
+            if (!(await askConfirm('Remove account', `Remove ${username} from this device? You can add it again later by logging in.`, 'Remove'))) return;
+            // end that account's session too, then go back to the account that is open
+            const sw = await apiPost('/api/switch', { username });
+            if (sw.ok) {
+                await apiPost('/api/logout');
+                const back = await apiPost('/api/switch', { username: currentUser });
+                if (!back.ok) { setSavedAccounts(getSavedAccounts().filter(a => a !== username)); window.location.href = 'login.html?u=' + encodeURIComponent(currentUser || ''); return; }
+            }
+            setSavedAccounts(getSavedAccounts().filter(a => a !== username));
+            renderSwitchAccountsList();
+        }
+
         async function renderSwitchAccountsList() {
-            let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
+            let savedAccounts = getSavedAccounts();
             let allUsers = await getAllUsersFromDB();
 
             accountsList.innerHTML = '';
@@ -7459,33 +7502,26 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         ${avatarInner}
                         <div class="account-details">
                             <div class="acc-name">${escapeHtml(uObj ? (uObj.displayName || uObj.username) : username)}</div>
-                            <div class="acc-email">${escapeHtml(uObj ? uObj.email : '')}</div>
+                            <div class="acc-email">${isCurrent ? 'Current account' : escapeHtml(uObj ? uObj.email : '')}</div>
                         </div>
                     </div>
-                    ${!isCurrent ? `<button class="remove-saved-acc" title="Remove">&times;</button>` : ''}
+                    <button class="remove-saved-acc" title="Remove">&times;</button>
                 `;
 
                 item.addEventListener('click', async (e) => {
                     if (e.target.classList.contains('remove-saved-acc')) {
                         e.stopPropagation();
-                        if (!(await askConfirm('Remove account', `Remove ${username} from this device? You can add it again later by logging in.`, 'Remove'))) return;
-                        let filtered = (JSON.parse(localStorage.getItem('savedAccounts')) || []).filter(acc => acc !== username);
-                        localStorage.setItem('savedAccounts', JSON.stringify(filtered));
-                        renderSwitchAccountsList();
+                        removeAccount(username, isCurrent);
                         return;
                     }
                     if (!isCurrent) {
-                        (async () => {
-                            try {
-                                const sr = await fetch(API_BASE + '/api/switch', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) });
-                                if (sr.ok) {
-                                    try { localStorage.setItem('currentUser', username); } catch (e) {}
-                                    location.reload();
-                                    return;
-                                }
-                            } catch (e) {}
-                            window.location.href = 'login.html?u=' + encodeURIComponent(username);   // no saved session: ask for the password once
-                        })();
+                        const sr = await apiPost('/api/switch', { username });
+                        if (sr.ok) {
+                            try { localStorage.setItem('currentUser', username); } catch (e) {}
+                            location.reload();
+                            return;
+                        }
+                        window.location.href = 'login.html?u=' + encodeURIComponent(username);   // no saved session: ask for the password once
                     }
                 });
 
@@ -7497,26 +7533,42 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             switchModal.classList.remove('active');
         });
 
-        // "Add Account" opens the login page in a small window. The popup logs the new account in, switches the browser back
-        // to the account that was already open, and closes: nobody is kicked out of this tab.
-        let addAccountWin = null;
+        // "Add account": a small login-only window (no sign up). It logs the new account in, then switches the session back
+        // to the account that was already open, so nobody is kicked out of this tab.
+        const addAccModal = document.getElementById('add-account-modal');
+        const addAccId = document.getElementById('add-acc-id'), addAccPw = document.getElementById('add-acc-pw');
+        const addAccErr = document.getElementById('add-acc-error'), addAccSubmit = document.getElementById('add-acc-submit');
+        const closeAddAcc = () => { addAccModal.classList.remove('active'); addAccPw.value = ''; };
+        const showAddAccErr = (m) => { addAccErr.textContent = m; addAccErr.style.display = 'block'; };
         addAccountBtn.addEventListener('click', () => {
-            if (addAccountWin && !addAccountWin.closed) { addAccountWin.focus(); return; }
-            const w = 480, h = 760;
-            const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - w) / 2));
-            const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - h) / 2));
-            addAccountWin = window.open('login.html?popup=1&back=' + encodeURIComponent(currentUser || ''), 'ut_add_account',
-                `popup=yes,width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
-            if (!addAccountWin) showToast('Please allow pop-ups for this site to add an account.');
+            addAccId.value = ''; addAccPw.value = ''; addAccErr.style.display = 'none';
+            addAccModal.classList.add('active');
+            setTimeout(() => addAccId.focus(), 30);
         });
-        window.addEventListener('message', (e) => {
-            if (e.origin !== location.origin || !e.data || e.data.type !== 'ut-account-added') return;
-            if (e.data.restored === false) {                      // the old session could not be restored: ask for its password once
-                window.location.href = 'login.html?u=' + encodeURIComponent(currentUser || '');
-                return;
-            }
-            showToast(e.data.username ? `${e.data.username} was added` : 'Account added');
-            if (switchModal.classList.contains('active')) renderSwitchAccountsList();
+        document.getElementById('close-add-account-modal-btn').addEventListener('click', closeAddAcc);
+        addAccModal.addEventListener('click', (e) => { if (e.target === addAccModal) closeAddAcc(); });
+        [addAccId, addAccPw].forEach(el => el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addAccSubmit.click(); } }));
+        let addAccBusy = false;
+        addAccSubmit.addEventListener('click', async () => {
+            if (addAccBusy) return;
+            const id = addAccId.value.trim(), pw = addAccPw.value;
+            addAccErr.style.display = 'none';
+            if (!id || !pw) { showAddAccErr('Please fill in all fields.'); return; }
+            addAccBusy = true; addAccSubmit.disabled = true;
+            try {
+                const r = await apiPost('/api/login', { id, password: pw });
+                if (!r.ok || !r.data.username) { showAddAccErr((r.data && r.data.error) || 'Could not log in.'); return; }
+                const added = r.data.username;
+                const saved = getSavedAccounts();
+                if (!saved.includes(added)) { saved.push(added); setSavedAccounts(saved); }
+                if (added !== currentUser) {
+                    const back = await apiPost('/api/switch', { username: currentUser });
+                    if (!back.ok) { window.location.href = 'login.html?u=' + encodeURIComponent(currentUser || ''); return; }
+                }
+                closeAddAcc();
+                showToast(`${added} was added`);
+                renderSwitchAccountsList();
+            } finally { addAccBusy = false; addAccSubmit.disabled = false; }
         });
 
         async function renderDbTable() {
