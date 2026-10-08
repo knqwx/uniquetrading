@@ -38,6 +38,11 @@
         .acc-name { color: #fff; font: 500 14px 'Inter', sans-serif; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .acc-x { background: none; border: none; color: #888; font-size: 22px; cursor: pointer; padding: 0 4px; }
         .acc-x:hover { color: #ff4d4d; }
+        #acc-dialog button { flex: 1; padding: 10px; border-radius: 8px; border: none; font: 600 13px 'Inter', sans-serif; cursor: pointer; }
+        #acc-dialog .acc-go { background: #ff7300; color: #fff; }
+        #acc-dialog .acc-yes { background: #ff4d4d; color: #fff; }
+        #acc-dialog .acc-no { background: #383838; color: #fff; }
+        #acc-dialog button:disabled { opacity: 0.6; cursor: default; }
         .acc-confirm { cursor: default; flex-wrap: wrap; border-color: #ff4d4d; }
         .acc-confirm:hover { border-color: #ff4d4d; }
         .acc-confirm-text { color: #fff; font: 500 13px 'Inter', sans-serif; flex: 1 1 100%; }
@@ -260,6 +265,19 @@
     </style>
 </head>
 <body>
+
+    <div class="acc-overlay" id="acc-dialog" style="z-index: 60;">
+        <div class="acc-menu" style="width: 320px;">
+            <h3 id="acc-dlg-title"></h3>
+            <div id="acc-dlg-text" style="color:#b0b0b0;font:400 13px 'Inter',sans-serif;text-align:center;margin-bottom:16px;"></div>
+            <input type="password" id="acc-dlg-pw" placeholder="Password" autocomplete="current-password" style="display:none;width:100%;box-sizing:border-box;padding:10px;margin-bottom:10px;background:#1f1f1f;border:1px solid #3a3a3a;border-radius:8px;color:#fff;font:400 14px 'Inter',sans-serif;">
+            <div id="acc-dlg-err" style="display:none;color:#ff4d4d;font:400 12px 'Inter',sans-serif;text-align:center;margin-bottom:10px;"></div>
+            <div style="display:flex;gap:10px;">
+                <button type="button" id="acc-dlg-yes" class="acc-yes"></button>
+                <button type="button" id="acc-dlg-no" class="acc-no">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <div class="acc-overlay" id="acc-overlay">
         <div class="acc-menu">
@@ -484,6 +502,49 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
     const chooseBtn = $('choose-acc-btn'), accOverlay = $('acc-overlay'), accList = $('acc-list');
     const getSaved = () => { try { const a = JSON.parse(localStorage.getItem('savedAccounts')); return Array.isArray(a) ? a.filter(x => typeof x === 'string' && x) : []; } catch (e) { return []; } };
     function refreshChooseBtn() { chooseBtn.style.display = (!POPUP_MODE && getSaved().length) ? 'block' : 'none'; }
+    // small windows on top of the menu: "remove this account?" and "enter the password for this account"
+    const dlg = $('acc-dialog'), dlgTitle = $('acc-dlg-title'), dlgText = $('acc-dlg-text'), dlgPw = $('acc-dlg-pw'), dlgErr = $('acc-dlg-err'), dlgYes = $('acc-dlg-yes'), dlgNo = $('acc-dlg-no');
+    function closeDialog() { dlg.classList.remove('active'); dlgYes.onclick = dlgNo.onclick = null; dlgPw.onkeydown = null; dlgPw.value = ''; }
+    dlgNo.addEventListener('click', () => closeDialog());
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) closeDialog(); });
+    function confirmRemove(name) {
+        dlgTitle.textContent = 'Remove account';
+        dlgText.textContent = 'Remove ' + name + ' from this device? You can add it again later by logging in.';
+        dlgPw.style.display = 'none'; dlgErr.style.display = 'none';
+        dlgYes.textContent = 'Remove'; dlgYes.className = 'acc-yes';
+        dlgYes.onclick = () => {
+            try {
+                localStorage.setItem('savedAccounts', JSON.stringify(getSaved().filter(a => a !== name)));
+                if (localStorage.getItem('currentUser') === name) localStorage.removeItem('currentUser');
+            } catch (er) {}
+            closeDialog(); renderAccMenu(); refreshChooseBtn();
+        };
+        dlg.classList.add('active');
+    }
+    // no live session for this account on this browser: ask for the password only, then log in right away
+    function askPassword(name) {
+        dlgTitle.textContent = 'Log in as ' + name;
+        dlgText.textContent = 'Enter the password for this account.';
+        dlgPw.style.display = 'block'; dlgErr.style.display = 'none'; dlgPw.value = '';
+        dlgYes.textContent = 'Log in'; dlgYes.className = 'acc-go';
+        const go = async () => {
+            if (!dlgPw.value) { dlgErr.textContent = 'Enter your password.'; dlgErr.style.display = 'block'; return; }
+            dlgYes.disabled = true;
+            const r = await api('/api/login', { id: name, password: dlgPw.value });
+            dlgYes.disabled = false;
+            if (r.ok && r.data && r.data.username) {
+                rememberAccount(r.data.username);
+                window.location.href = 'uniquetrading.html';
+                return;
+            }
+            dlgErr.textContent = (r.data && r.data.error) || 'Could not log in.'; dlgErr.style.display = 'block';
+            dlgPw.select();
+        };
+        dlgYes.onclick = go;
+        dlgPw.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+        dlg.classList.add('active');
+        setTimeout(() => dlgPw.focus(), 30);
+    }
     function renderAccMenu() {
         const saved = getSaved();
         accList.innerHTML = '';
@@ -495,35 +556,15 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
             const nm = document.createElement('div'); nm.className = 'acc-name'; nm.textContent = name;
             const x = document.createElement('button'); x.type = 'button'; x.className = 'acc-x'; x.title = 'Remove'; x.innerHTML = '&times;';
             row.append(av, nm, x);
-            x.addEventListener('click', (e) => {
-                e.stopPropagation();
-                row.className = 'acc-row acc-confirm';
-                row.innerHTML = '';
-                const t = document.createElement('div'); t.className = 'acc-confirm-text'; t.textContent = 'Remove ' + name + ' from this device?';
-                const yes = document.createElement('button'); yes.type = 'button'; yes.className = 'acc-yes'; yes.textContent = 'Remove';
-                const no = document.createElement('button'); no.type = 'button'; no.className = 'acc-no'; no.textContent = 'Cancel';
-                row.append(t, yes, no);
-                no.addEventListener('click', (ev) => { ev.stopPropagation(); renderAccMenu(); });
-                yes.addEventListener('click', (ev) => {
-                    ev.stopPropagation();
-                    try {
-                        localStorage.setItem('savedAccounts', JSON.stringify(getSaved().filter(a => a !== name)));
-                        if (localStorage.getItem('currentUser') === name) localStorage.removeItem('currentUser');
-                    } catch (er) {}
-                    renderAccMenu(); refreshChooseBtn();
-                });
-            });
+            x.addEventListener('click', (e) => { e.stopPropagation(); confirmRemove(name); });
             row.addEventListener('click', async () => {
-                if (row.classList.contains('acc-confirm')) return;
-                const sw = await api('/api/switch', { username: name });   // this browser still has a session for it?
+                const sw = await api('/api/switch', { username: name });   // this browser still has a session for it: log in at once
                 if (sw.ok) {
                     try { localStorage.setItem('currentUser', name); } catch (er) {}
                     window.location.href = 'uniquetrading.html';
                     return;
                 }
-                accOverlay.classList.remove('active');                     // no live session: fill in the name, ask for the password
-                if (!isLoginMode) setMode(true);
-                mainInput.value = name; passwordInput.focus();
+                askPassword(name);
             });
             accList.appendChild(row);
         });
