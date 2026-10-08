@@ -3509,6 +3509,18 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         </div>
     </div>
 
+    <!-- Generic "are you sure?" window (log out, remove saved account) -->
+    <div class="modal-overlay" id="ask-modal" style="z-index: 100000;">
+        <div class="modal-content">
+            <div class="confirm-title" id="ask-title"></div>
+            <div class="confirm-text" id="ask-text"></div>
+            <div class="confirm-actions">
+                <button class="btn-confirm-delete" id="ask-yes-btn" type="button"></button>
+                <button class="btn-cancel-delete" id="ask-no-btn" type="button">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Модальное окно подтверждения удаления -->
     <div class="modal-overlay" id="confirm-modal">
         <div class="modal-content">
@@ -4120,6 +4132,24 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         } catch (e) {
             currentUser = localStorage.getItem('currentUser');       // offline / server unreachable
         }
+        // Shows the "are you sure?" window; resolves true on the confirm button, false on Cancel / outside click / Esc
+        function askConfirm(title, text, yesLabel) {
+            return new Promise(resolve => {
+                const m = document.getElementById('ask-modal');
+                const yes = document.getElementById('ask-yes-btn'), no = document.getElementById('ask-no-btn');
+                document.getElementById('ask-title').textContent = title;
+                document.getElementById('ask-text').textContent = text;
+                yes.textContent = yesLabel;
+                const done = (v) => { m.classList.remove('active'); yes.onclick = no.onclick = m.onclick = null; document.removeEventListener('keydown', onKey); resolve(v); };
+                const onKey = (e) => { if (e.key === 'Escape') done(false); };
+                yes.onclick = () => done(true);
+                no.onclick = () => done(false);
+                m.onclick = (e) => { if (e.target === m) done(false); };
+                document.addEventListener('keydown', onKey);
+                m.classList.add('active');
+                no.focus();
+            });
+        }
         async function logoutAndReload() {
             try { await fetch(API_BASE + '/api/logout', { method: 'POST', credentials: 'include' }); } catch (e) {}
             try { localStorage.removeItem('currentUser'); } catch (e) {}
@@ -4548,8 +4578,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         switchModal.classList.add('active');
                     });
 
-                    document.getElementById('dropdown-logout-btn').addEventListener('click', () => {
-                        logoutAndReload();
+                    document.getElementById('dropdown-logout-btn').addEventListener('click', async () => {
+                        if (await askConfirm('Log out', 'Are you sure you want to log out of this account?', 'Log out')) logoutAndReload();
                     });
                 } else {
                     document.documentElement.classList.remove('has-session');
@@ -7435,10 +7465,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     ${!isCurrent ? `<button class="remove-saved-acc" title="Remove">&times;</button>` : ''}
                 `;
 
-                item.addEventListener('click', (e) => {
+                item.addEventListener('click', async (e) => {
                     if (e.target.classList.contains('remove-saved-acc')) {
                         e.stopPropagation();
-                        let filtered = savedAccounts.filter(acc => acc !== username);
+                        if (!(await askConfirm('Remove account', `Remove ${username} from this device? You can add it again later by logging in.`, 'Remove'))) return;
+                        let filtered = (JSON.parse(localStorage.getItem('savedAccounts')) || []).filter(acc => acc !== username);
                         localStorage.setItem('savedAccounts', JSON.stringify(filtered));
                         renderSwitchAccountsList();
                         return;
