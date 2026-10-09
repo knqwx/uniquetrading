@@ -2635,6 +2635,9 @@
         .item-picker-body { display: flex; gap: 16px; min-height: 0; flex: 1; }
         .item-picker-cats { display: flex; flex-direction: column; gap: 4px; width: 170px; flex-shrink: 0; overflow-y: auto; max-height: 60vh; padding-right: 4px; }
         .item-picker-cat { background: none; border: none; color: #888888; text-align: left; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; padding: 9px 12px; border-radius: 8px; cursor: pointer; transition: color 0.2s, background-color 0.2s; }
+        .item-picker-cat { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .item-picker-cat .cat-count { font-size: 11px; font-weight: 700; color: #aaaaaa; background: #2a2a2a; border-radius: 10px; padding: 1px 7px; }
+        .item-picker-cat.active .cat-count { color: #ff9a44; }
         .item-picker-cat:hover { color: #ffffff; background-color: #262626; }
         .item-picker-cat.active { color: #ffffff; background-color: #141414; box-shadow: inset 3px 0 0 #ff7300; }
         .item-picker-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -5591,7 +5594,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
         function showItemsStep() {
             const groups = GAME_ITEMS[itemsDlg.game];
-            if (!itemsDlg.cat || !groups || !groups[itemsDlg.cat]) itemsDlg.cat = groups ? Object.keys(groups)[0] : '';
+            if (!itemsDlg.cat || !groups || (itemsDlg.cat !== 'All' && !groups[itemsDlg.cat])) itemsDlg.cat = groups ? 'All' : '';
             document.getElementById('offer-title').textContent = `Select item (${itemsDlg.game})`;
             document.getElementById('offer-step-game').style.display = 'none';
             document.getElementById('offer-step-items').style.display = '';
@@ -5622,21 +5625,21 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const titleEl = document.getElementById('offer-cat-title');
             if (groups) {
                 catsEl.style.display = ''; listEl.style.display = ''; titleEl.style.display = '';
-                catsEl.innerHTML = Object.keys(groups).map(c => `<button type="button" class="item-picker-cat ${c === st.cat ? 'active' : ''}" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
+                const allItemsList = [...new Set(Object.keys(groups).flatMap(c => groups[c]))];
+                const tabList = (c) => c === 'All' ? allItemsList : (groups[c] || []);
+                catsEl.innerHTML = ['All', ...Object.keys(groups)].map(c => `<button type="button" class="item-picker-cat ${c === st.cat ? 'active' : ''}" data-cat="${escapeHtml(c)}"><span>${escapeHtml(c)}</span><span class="cat-count">${tabList(c).length}</span></button>`).join('');
                 catsEl.querySelectorAll('.item-picker-cat').forEach(b => b.addEventListener('click', () => { st.cat = b.dataset.cat; document.getElementById('offer-custom-input').value = ''; renderItemsDialog(); }));
                 const q = document.getElementById('offer-custom-input').value.trim().toLowerCase();
-                titleEl.textContent = q ? 'Search results' : st.cat;
+                titleEl.textContent = q ? `${st.cat} - search results` : st.cat;
                 listEl.classList.toggle('cards', isMM2Game(st.game));
-                const list = q
-                    ? [...new Set(Object.keys(groups).flatMap(c => groups[c]))].filter(n => n.toLowerCase().includes(q))
-                    : (groups[st.cat] || []);
+                const list = tabList(st.cat).filter(n => !q || n.toLowerCase().includes(q));
                 const cnt = {};
                 st.items.forEach(n => { cnt[n] = (cnt[n] || 0) + 1; });
                 listEl.innerHTML = list.map(n => {
                     const c = cnt[n] || 0;
                     const sel = c ? ` selected" data-count="${c}` : '';
                     return isMM2Game(st.game)
-                        ? `<button type="button" class="item-picker-card item-picker-item${sel}" data-name="${escapeHtml(n)}"><img class="card-img" ${itemImgAttrs({ game: st.game, name: n, cat: q ? '' : st.cat })} alt="${escapeHtml(n)}" loading="lazy"><span>${escapeHtml(n)}</span></button>`
+                        ? `<button type="button" class="item-picker-card item-picker-item${sel}" data-name="${escapeHtml(n)}"><img class="card-img" ${itemImgAttrs({ game: st.game, name: n, cat: st.cat === 'All' ? '' : st.cat })} alt="${escapeHtml(n)}" loading="lazy"><span>${escapeHtml(n)}</span></button>`
                         : `<button type="button" class="item-picker-item${sel}" data-name="${escapeHtml(n)}">${escapeHtml(n)}</button>`;
                 }).join('') || `<div class="item-picker-empty">${q ? 'No items match. Press Enter to use what you typed.' : 'No items added to this category yet. You can type a custom name in the box above.'}</div>`;
                 listEl.querySelectorAll('[data-name]').forEach(b => b.addEventListener('click', () => addDlgItem(b.dataset.name)));
