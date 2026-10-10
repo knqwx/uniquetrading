@@ -2682,7 +2682,6 @@
         .faq-item summary::after { content: '+'; color: #ff7300; font-size: 20px; line-height: 1; }
         .faq-item[open] summary::after { content: '\2212'; }
         .faq-item .faq-a { padding: 0 16px 14px; color: #cccccc; font-size: 14px; line-height: 1.6; }
-        #faq-modal .info-modal-text, #about-modal .info-modal-text { white-space: normal; }
         .report-item-btn { width: 100%; background: transparent; color: #ff6b6b; border: 1px solid #5a2a2a; border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif; cursor: pointer; margin-bottom: 18px; transition: background 0.2s; }
         .report-item-btn:hover { background: rgba(255,77,77,0.12); }
         .report-item-modal { width: 460px; max-width: 94vw; text-align: left; }
@@ -2789,6 +2788,12 @@
         .flag-row .flag-pill { margin: 0 6px 0 0; }
         .flags-hint { color: #777777; font-size: 12px; line-height: 1.45; margin: 0 0 12px; }
         @media (max-width: 700px) { .admin-tab { padding: 8px 12px; font-size: 13px; } }
+
+.header-right{display:flex;align-items:center;gap:12px;}
+.more-container{display:flex;flex-direction:column;gap:20px;}
+.more-text{white-space:pre-wrap;}
+.more-text.more-normal{white-space:normal;}
+@media (max-width:760px){.header-right{order:2;margin-left:auto;gap:6px;}}
 </style>
 </head>
 <body>
@@ -2798,9 +2803,7 @@
         <a class="site-brand" id="home-brand-link" title="Home">
             <img src="unique.png" alt="Unique Trading">
         </a>
-        <nav class="top-links" aria-label="Info">
-            <a class="top-link discord-link" id="discord-link" href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" title="Join our Discord" aria-label="Join our Discord"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg></a>
-        </nav>
+        
         <div class="nav-left">
             <a class="nav-home active" id="home-link">Home</a>
             <button class="nav-marketplace" id="marketplace-nav-btn">Marketplace</button>
@@ -2809,7 +2812,9 @@
             <button class="nav-games" id="games-nav-btn">Games</button>
             <button class="nav-scams" id="more-nav-btn">More</button>
         </div>
-        <div class="auth-buttons" id="auth-container">
+        <div class="header-right">
+            <a class="top-link discord-link" id="discord-link" href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" title="Join our Discord" aria-label="Join our Discord"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg></a>
+            <div class="auth-buttons" id="auth-container">
             <a href="login.html" class="btn btn-login">Log in</a>
             <a href="login.html?mode=signup" class="btn btn-signup">Sign up</a>
             <!-- shown instead of Log in / Sign up while the page loads for a logged-in user (no icons) -->
@@ -2818,6 +2823,7 @@
                 <div class="user-balance-box"><span>Messages</span></div>
                 <div class="user-profile-box"><span class="user-name" id="ph-name"></span></div>
             </div>
+        </div>
         </div>
     </header>
     <script>
@@ -2834,41 +2840,8 @@
 
 
     <!-- About -->
-    <div class="modal-overlay" id="about-modal" style="z-index: 270;">
-        <div class="modal-content info-modal">
-            <button class="close-modal" data-close-info="about-modal">&times;</button>
-            <div class="info-modal-title">About Unique Trading</div>
-            <div class="info-modal-text">
-                <p style="margin:0 0 12px;">Unique Trading is a marketplace where players buy, sell and trade in-game items safely. Every deal can be backed by a middleman, payments are held until the buyer confirms delivery, and every profile has vouches and a star rating so you can see who you are dealing with.</p>
-                <p style="margin:0;">Need help, want to suggest something, or found a scammer? Join our Discord community.</p>
-                <div class="about-links">
-                    <a class="about-discord" href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer">Join our Discord</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- FAQ -->
-    <div class="modal-overlay" id="faq-modal" style="z-index: 270;">
-        <div class="modal-content info-modal">
-            <button class="close-modal" data-close-info="faq-modal">&times;</button>
-            <div class="info-modal-title">FAQ</div>
-            <div class="info-modal-text">
-                <div class="faq-list">
-                    <details class="faq-item"><summary>How do I buy an item?</summary><div class="faq-a">Open a listing and press "Contact Seller" (or "Make an Offer" for trades). The seller can then send you a payment request inside the chat.</div></details>
-                    <details class="faq-item"><summary>How does payment work?</summary><div class="faq-a">When you pay, the money is held by the site. The seller only receives it after you confirm that you received your items. The seller gets 90% of the price.</div></details>
-                    <details class="faq-item"><summary>What is a middleman?</summary><div class="faq-a">A middleman is a trusted member who holds the items during a trade so neither side can scam the other. A middleman is required when you trade across different games or with more than 4 Murder Mystery 2 items. Create a ticket on the Middlemen page to get one.</div></details>
-                    <details class="faq-item"><summary>I did not receive my items. What now?</summary><div class="faq-a">Press "No" when asked to confirm delivery, then press "Report". Support reviews the whole chat and the money stays on hold until it is resolved.</div></details>
-                    <details class="faq-item"><summary>How do I report a listing?</summary><div class="faq-a">Open the listing and press "Report item". Choose a reason, add details and send it. Our team will review it.</div></details>
-                    <details class="faq-item"><summary>What does "Looking for specific trade" mean?</summary><div class="faq-a">The seller picks the exact items they want in return and they are shown on the listing under "Looking for".</div></details>
-                    <details class="faq-item"><summary>I was banned. Can I appeal?</summary><div class="faq-a">Yes. When you log in while banned you can send an appeal. It will be reviewed by the admin.</div></details>
-                    <details class="faq-item"><summary>Where can I get more help?</summary><div class="faq-a">Join our Discord: <a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a></div></details>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Report item -->
+        <!-- FAQ -->
+        <!-- Report item -->
     <div class="modal-overlay" id="report-item-modal" style="z-index: 270;">
         <div class="modal-content report-item-modal">
             <button class="close-modal" id="report-item-close">&times;</button>
@@ -2893,102 +2866,7 @@
     </div>
 
     <!-- Help / Copyright / Terms of Service: put your text inside the .info-modal-text blocks -->
-    <div class="modal-overlay" id="help-modal" style="z-index: 270;">
-        <div class="modal-content info-modal">
-            <button class="close-modal" data-close-info="help-modal">&times;</button>
-            <div class="info-modal-title">Help</div>
-            <div class="info-modal-text" id="help-text"><b>Getting started</b>
-Create an account, then browse Marketplace and Trading listings. Open a listing and press Contact Seller (or Make an Offer for trades) to chat with the seller.
-
-<b>Buying safely</b>
-Pay only through the platform. The money is held until you confirm that you received your items. If you did not receive them, press No and then Report so staff can review the chat.
-
-<b>Selling</b>
-Open your profile and list an item. You can list one item every 10 minutes. Pictures must be 500 KB or smaller. You receive 90% of the sale price after the buyer confirms delivery.
-
-<b>Middlemen</b>
-For bigger or cross-game trades, create a ticket on the Middlemen page. A middleman claims your ticket and helps both sides trade safely. You can leave a vouch or rating on their profile afterwards.
-
-<b>Reporting</b>
-Use Report item on a listing, Report user on a profile, or Report on a middleman card. Describe what happened and staff will review it. Please only send honest reports.
-
-<b>Timeouts</b>
-Sending many messages very quickly gives you a timeout: 15 seconds, then 3 minutes, then 1 hour, then 1 day. Slow down and wait for it to end.
-
-<b>Rules and limits</b>
-You must be 13 or older. One account per person, and one new account per day. Read the Terms of Service for the full rules.
-
-<b>Need more help?</b>
-Join our Discord: <a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a></div>
-        </div>
-    </div>
-    <div class="modal-overlay" id="copyright-modal" style="z-index: 270;">
-        <div class="modal-content info-modal">
-            <button class="close-modal" data-close-info="copyright-modal">&times;</button>
-            <div class="info-modal-title">Copyright</div>
-            <div class="info-modal-text" id="copyright-text"><b>&copy; 2026 Unique Trading. All rights reserved.</b>
-
-<b>Our content</b>
-The Unique Trading name, logo, design and code belong to Unique Trading. Please do not copy or reuse them without permission.
-
-<b>Games, items and trademarks</b>
-Unique Trading is not affiliated with, endorsed by or sponsored by Roblox Corporation or any other game developer or publisher. Game names, item names, logos and images belong to their respective owners and are shown only to identify items. We claim no ownership over them.
-
-<b>Content you post</b>
-You keep ownership of what you post (listings, messages, pictures). By posting it, you allow Unique Trading to store and display it on the platform. Only post pictures and text that you have the right to share.
-
-<b>Reporting copyright problems</b>
-If you believe something on Unique Trading infringes your copyright or trademark, contact us on Discord (<a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a>) and include: what the content is, where it appears (listing or profile name), proof that you own the rights, and how we can reach you. We review reports quickly and remove content that infringes. Accounts that repeatedly infringe may be banned.</div>
-        </div>
-    </div>
-    <div class="modal-overlay" id="terms-modal" style="z-index: 270;">
-        <div class="modal-content info-modal">
-            <button class="close-modal" data-close-info="terms-modal">&times;</button>
-            <div class="info-modal-title">Terms of Service</div>
-            <div class="info-modal-text" id="terms-text"><b>Last updated: October 4, 2026</b>
-
-<b>1. Acceptance</b>
-By using Unique Trading you agree to these Terms of Service. If you do not agree, do not use the platform.
-
-<b>2. Minimum age</b>
-You must be at least 13 years old to use Unique Trading. If you are under the age of majority where you live, you must have permission from a parent or guardian. We may remove any account that belongs to someone under 13.
-
-<b>3. Not affiliated with Roblox or any game developer</b>
-Unique Trading is an independent community marketplace. It is not affiliated with, endorsed by or sponsored by Roblox Corporation or any other game developer or publisher. All game names, item names, logos and images belong to their respective owners and are used only to identify items.
-
-<b>4. Accounts</b>
-Give accurate information and keep your password safe. You are responsible for everything that happens on your account. One person may have one account. Only one account can be created per day. Do not use extra accounts to avoid a ban, a timeout or a rate limit.
-
-<b>5. Listings</b>
-Only list items you really own and describe them honestly. Items are listed at most once every 10 minutes. Pictures must be 500 KB or smaller and must not contain inappropriate, hateful or illegal content. Fake, misleading or duplicate listings may be removed.
-
-<b>6. Payments and deals</b>
-When a buyer pays, the money is held by the platform until the buyer confirms that the items were received. The seller receives 90% of the price, and 10% is kept as a platform fee. If the items were not received, the deal can be reported and our staff reviews the whole chat while the money stays on hold. Staff decisions on reported deals are final.
-
-<b>7. Middlemen</b>
-Middlemen are trusted members who help complete trades. Their vouches and ratings are shown on their profiles. A middleman is required when a trade involves different games or more than 4 Murder Mystery 2 items. Middlemen can be reported like any other user. Always keep trades inside the platform chat and ticket system. We cannot help with losses from trades made outside the platform.
-
-<b>8. Rules</b>
-You must not: scam or try to scam other users, harass or threaten others, spam, impersonate other people or staff, share illegal content, abuse bugs, or try to break or bypass the platform.
-
-<b>9. Spam and rate limits</b>
-Sending messages too quickly causes an automatic timeout. The first timeout lasts 15 seconds, the next 3 minutes, then 1 hour, then 1 day. Staff can remove or extend timeouts. Other limits (such as listing items and creating accounts) may also apply.
-
-<b>10. Reports and moderation</b>
-You can report items, users, middlemen and deals. Staff may remove listings, hold money, time out or ban accounts (temporarily or permanently) to protect the community. Banned users can send an appeal. Permanently banned accounts are deleted after 30 days.
-
-<b>11. No guarantees</b>
-The platform is provided as is. Trading virtual items carries risk and virtual items have no guaranteed real-world value. Unique Trading is not responsible for losses caused by other users, game updates, game bans or changes made by the game developers.
-
-<b>12. Changes</b>
-We may update these Terms at any time. Using the platform after a change means you accept the new Terms.
-
-<b>13. Contact</b>
-Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a></div>
-        </div>
-    </div>
-
-    <!-- Admin shortcuts (knqw), middle-left of the screen -->
+                <!-- Admin shortcuts (knqw), middle-left of the screen -->
     <div class="side-admin-nav" id="side-admin-nav">
         <button class="side-admin-btn" id="admin-nav-btn" style="display: none;">Admin</button>
     </div>
@@ -3126,25 +3004,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     <!-- Prevent scams page (edit the tips below as you like) -->
     <!-- More page -->
     <div class="middlemen-page" id="more-page">
-        <div class="middlemen-container">
-            <div class="mm-panel">
-                <div class="mm-panel-title">More</div>
-                <div class="more-list">
-                    <button type="button" class="more-item" id="more-scams"><span class="more-item-title">Prevent scams</span><span class="more-item-sub">Tips to keep your trades safe</span></button>
-                    <button type="button" class="more-item" id="more-about"><span class="more-item-title">About</span><span class="more-item-sub">What Unique Trading is</span></button>
-                    <button type="button" class="more-item" id="more-faq"><span class="more-item-title">FAQ</span><span class="more-item-sub">Answers to common questions</span></button>
-                    <button type="button" class="more-item" id="more-help"><span class="more-item-title">Help</span><span class="more-item-sub">Getting started, buying, selling and rules</span></button>
-                    <button type="button" class="more-item" id="more-copyright"><span class="more-item-title">Copyright</span><span class="more-item-sub">Ownership and reporting problems</span></button>
-                    <button type="button" class="more-item" id="more-terms"><span class="more-item-title">Terms of Service</span><span class="more-item-sub">The full rules of the platform</span></button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="middlemen-page" id="scams-page">
-        <div class="middlemen-container">
-            <div class="mm-panel">
-                <button class="detail-back-btn" id="scams-back-btn" type="button" style="margin-bottom: 16px;">&larr; Back to More</button>
+        <div class="middlemen-container more-container">
+            <div class="mm-panel more-panel">
                 <div class="mm-panel-title">Prevent scams</div>
                 <div class="scam-list">
                     <div class="scam-tip"><div class="scam-tip-title">Use the payment flow in the chat</div><div class="scam-tip-text">Pay only through the "Ask for payment" button inside the deal chat. The money is held until the buyer confirms they received the items. Never send money or items outside of the site.</div></div>
@@ -3155,8 +3016,119 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     <div class="scam-tip"><div class="scam-tip-title">Report scammers</div><div class="scam-tip-text">If you did not receive your items, press "No" and then "Report". Support reviews the whole chat and the money stays on hold meanwhile.</div></div>
                 </div>
             </div>
+            <div class="mm-panel more-panel">
+                <div class="mm-panel-title">About Unique Trading</div>
+                <div class="info-modal-text more-text more-normal">
+                <p style="margin:0 0 12px;">Unique Trading is a marketplace where players buy, sell and trade in-game items safely. Every deal can be backed by a middleman, payments are held until the buyer confirms delivery, and every profile has vouches and a star rating so you can see who you are dealing with.</p>
+                <p style="margin:0;">Need help, want to suggest something, or found a scammer? Join our Discord community.</p>
+                <div class="about-links">
+                    <a class="about-discord" href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer">Join our Discord</a>
+                </div>
+            </div>
+            </div>
+            <div class="mm-panel more-panel">
+                <div class="mm-panel-title">FAQ</div>
+                <div class="info-modal-text more-text more-normal">
+                <div class="faq-list">
+                    <details class="faq-item"><summary>How do I buy an item?</summary><div class="faq-a">Open a listing and press "Contact Seller" (or "Make an Offer" for trades). The seller can then send you a payment request inside the chat.</div></details>
+                    <details class="faq-item"><summary>How does payment work?</summary><div class="faq-a">When you pay, the money is held by the site. The seller only receives it after you confirm that you received your items. The seller gets 90% of the price.</div></details>
+                    <details class="faq-item"><summary>What is a middleman?</summary><div class="faq-a">A middleman is a trusted member who holds the items during a trade so neither side can scam the other. A middleman is required when you trade across different games or with more than 4 Murder Mystery 2 items. Create a ticket on the Middlemen page to get one.</div></details>
+                    <details class="faq-item"><summary>I did not receive my items. What now?</summary><div class="faq-a">Press "No" when asked to confirm delivery, then press "Report". Support reviews the whole chat and the money stays on hold until it is resolved.</div></details>
+                    <details class="faq-item"><summary>How do I report a listing?</summary><div class="faq-a">Open the listing and press "Report item". Choose a reason, add details and send it. Our team will review it.</div></details>
+                    <details class="faq-item"><summary>What does "Looking for specific trade" mean?</summary><div class="faq-a">The seller picks the exact items they want in return and they are shown on the listing under "Looking for".</div></details>
+                    <details class="faq-item"><summary>I was banned. Can I appeal?</summary><div class="faq-a">Yes. When you log in while banned you can send an appeal. It will be reviewed by the admin.</div></details>
+                    <details class="faq-item"><summary>Where can I get more help?</summary><div class="faq-a">Join our Discord: <a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a></div></details>
+                </div>
+            </div>
+            </div>
+            <div class="mm-panel more-panel">
+                <div class="mm-panel-title">Help</div>
+                <div class="info-modal-text more-text" id="help-text"><b>Getting started</b>
+Create an account, then browse Marketplace and Trading listings. Open a listing and press Contact Seller (or Make an Offer for trades) to chat with the seller.
+
+<b>Buying safely</b>
+Pay only through the platform. The money is held until you confirm that you received your items. If you did not receive them, press No and then Report so staff can review the chat.
+
+<b>Selling</b>
+Open your profile and list an item. You can list one item every 10 minutes. Pictures must be 500 KB or smaller. You receive 90% of the sale price after the buyer confirms delivery.
+
+<b>Middlemen</b>
+For bigger or cross-game trades, create a ticket on the Middlemen page. A middleman claims your ticket and helps both sides trade safely. You can leave a vouch or rating on their profile afterwards.
+
+<b>Reporting</b>
+Use Report item on a listing, Report user on a profile, or Report on a middleman card. Describe what happened and staff will review it. Please only send honest reports.
+
+<b>Timeouts</b>
+Sending many messages very quickly gives you a timeout: 15 seconds, then 3 minutes, then 1 hour, then 1 day. Slow down and wait for it to end.
+
+<b>Rules and limits</b>
+You must be 13 or older. One account per person, and one new account per day. Read the Terms of Service for the full rules.
+
+<b>Need more help?</b>
+Join our Discord: <a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a></div>
+            </div>
+            <div class="mm-panel more-panel">
+                <div class="mm-panel-title">Copyright</div>
+                <div class="info-modal-text more-text" id="copyright-text"><b>&copy; 2026 Unique Trading. All rights reserved.</b>
+
+<b>Our content</b>
+The Unique Trading name, logo, design and code belong to Unique Trading. Please do not copy or reuse them without permission.
+
+<b>Games, items and trademarks</b>
+Unique Trading is not affiliated with, endorsed by or sponsored by Roblox Corporation or any other game developer or publisher. Game names, item names, logos and images belong to their respective owners and are shown only to identify items. We claim no ownership over them.
+
+<b>Content you post</b>
+You keep ownership of what you post (listings, messages, pictures). By posting it, you allow Unique Trading to store and display it on the platform. Only post pictures and text that you have the right to share.
+
+<b>Reporting copyright problems</b>
+If you believe something on Unique Trading infringes your copyright or trademark, contact us on Discord (<a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a>) and include: what the content is, where it appears (listing or profile name), proof that you own the rights, and how we can reach you. We review reports quickly and remove content that infringes. Accounts that repeatedly infringe may be banned.</div>
+            </div>
+            <div class="mm-panel more-panel">
+                <div class="mm-panel-title">Terms of Service</div>
+                <div class="info-modal-text more-text" id="terms-text"><b>Last updated: October 4, 2026</b>
+
+<b>1. Acceptance</b>
+By using Unique Trading you agree to these Terms of Service. If you do not agree, do not use the platform.
+
+<b>2. Minimum age</b>
+You must be at least 13 years old to use Unique Trading. If you are under the age of majority where you live, you must have permission from a parent or guardian. We may remove any account that belongs to someone under 13.
+
+<b>3. Not affiliated with Roblox or any game developer</b>
+Unique Trading is an independent community marketplace. It is not affiliated with, endorsed by or sponsored by Roblox Corporation or any other game developer or publisher. All game names, item names, logos and images belong to their respective owners and are used only to identify items.
+
+<b>4. Accounts</b>
+Give accurate information and keep your password safe. You are responsible for everything that happens on your account. One person may have one account. Only one account can be created per day. Do not use extra accounts to avoid a ban, a timeout or a rate limit.
+
+<b>5. Listings</b>
+Only list items you really own and describe them honestly. Items are listed at most once every 10 minutes. Pictures must be 500 KB or smaller and must not contain inappropriate, hateful or illegal content. Fake, misleading or duplicate listings may be removed.
+
+<b>6. Payments and deals</b>
+When a buyer pays, the money is held by the platform until the buyer confirms that the items were received. The seller receives 90% of the price, and 10% is kept as a platform fee. If the items were not received, the deal can be reported and our staff reviews the whole chat while the money stays on hold. Staff decisions on reported deals are final.
+
+<b>7. Middlemen</b>
+Middlemen are trusted members who help complete trades. Their vouches and ratings are shown on their profiles. A middleman is required when a trade involves different games or more than 4 Murder Mystery 2 items. Middlemen can be reported like any other user. Always keep trades inside the platform chat and ticket system. We cannot help with losses from trades made outside the platform.
+
+<b>8. Rules</b>
+You must not: scam or try to scam other users, harass or threaten others, spam, impersonate other people or staff, share illegal content, abuse bugs, or try to break or bypass the platform.
+
+<b>9. Spam and rate limits</b>
+Sending messages too quickly causes an automatic timeout. The first timeout lasts 15 seconds, the next 3 minutes, then 1 hour, then 1 day. Staff can remove or extend timeouts. Other limits (such as listing items and creating accounts) may also apply.
+
+<b>10. Reports and moderation</b>
+You can report items, users, middlemen and deals. Staff may remove listings, hold money, time out or ban accounts (temporarily or permanently) to protect the community. Banned users can send an appeal. Permanently banned accounts are deleted after 30 days.
+
+<b>11. No guarantees</b>
+The platform is provided as is. Trading virtual items carries risk and virtual items have no guaranteed real-world value. Unique Trading is not responsible for losses caused by other users, game updates, game bans or changes made by the game developers.
+
+<b>12. Changes</b>
+We may update these Terms at any time. Using the platform after a change means you accept the new Terms.
+
+<b>13. Contact</b>
+Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" style="color:#8c9eff;">discord.gg/q95aZVCn5</a></div>
+            </div>
         </div>
     </div>
+
 
     <!-- Страница Middlemen -->
     <div class="middlemen-page" id="middlemen-page">
@@ -8756,13 +8728,12 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         // ===== Games + Prevent scams pages =====
         const gamesPage = document.getElementById('games-page');
-        const scamsPage = document.getElementById('scams-page');
         const gamesNavBtn = document.getElementById('games-nav-btn');
         const scamsNavBtn = document.getElementById('more-nav-btn');
         const morePage = document.getElementById('more-page');
 
         function closeInfoPages() {
-            gamesPage.classList.remove('active'); scamsPage.classList.remove('active'); morePage.classList.remove('active');
+            gamesPage.classList.remove('active'); morePage.classList.remove('active');
             gamesNavBtn.classList.remove('active'); scamsNavBtn.classList.remove('active');
         }
         function openInfoPage(page, btn, mode) {
@@ -8804,11 +8775,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
         gamesNavBtn.addEventListener('click', openGamesPage);
         scamsNavBtn.addEventListener('click', () => openInfoPage(morePage, scamsNavBtn, 'more'));
-        document.getElementById('more-scams').addEventListener('click', () => openInfoPage(scamsPage, scamsNavBtn, 'scams'));
-        document.getElementById('scams-back-btn').addEventListener('click', () => openInfoPage(morePage, scamsNavBtn, 'more'));
-        [['more-about', 'about-modal'], ['more-faq', 'faq-modal'], ['more-help', 'help-modal'], ['more-copyright', 'copyright-modal'], ['more-terms', 'terms-modal']].forEach(([b, m]) => {
-            document.getElementById(b).addEventListener('click', () => document.getElementById(m).classList.add('active'));
-        });
         // any other main navigation closes these pages
         document.querySelector('header').addEventListener('click', e => {
             if (e.target.closest('#home-link, #home-brand-link, .nav-left button:not(#games-nav-btn):not(#more-nav-btn), #header-balance-box, #header-messages-btn')) closeInfoPages();
@@ -9081,12 +9047,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             fill(mList, 'mm-reports-count', 'middleman', 'No reported middlemen.');
         }
 
-        // ===== Info modals (opened from the More page) =====
-        document.querySelectorAll('[data-close-info]').forEach(b => b.addEventListener('click', () => document.getElementById(b.dataset.closeInfo).classList.remove('active')));
-        ['about-modal', 'faq-modal', 'help-modal', 'copyright-modal', 'terms-modal'].forEach(id => {
-            const el = document.getElementById(id);
-            el.addEventListener('click', e => { if (e.target === el) el.classList.remove('active'); });
-        });
     </script>
 </body>
 </html>
