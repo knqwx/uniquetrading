@@ -516,7 +516,7 @@
         }
         .search-clear:hover { color: #fff; background: #333; }
         .search-field.has-value .search-clear { display: block; }
-        .listing-search-row { margin-bottom: 16px; max-width: 520px; }
+        .listing-search-row { flex: 0 0 100%; width: 100%; margin: 0; }
         .db-search-field { width: 280px; max-width: 45%; margin-right: 40px; }
         .db-no-results td { text-align: center; color: #777 !important; padding: 28px 15px !important; }
 
@@ -2576,6 +2576,11 @@
         .games-card-body { padding: 10px 12px 12px; }
         .games-card-name { color: #ffffff; font-size: 14px; font-weight: 600; }
         .games-card-count { color: #888888; font-size: 12px; margin-top: 3px; }
+        .more-list { display: flex; flex-direction: column; gap: 10px; }
+        .more-item { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; background-color: #1f1f1f; border: 1px solid #333333; border-radius: 12px; padding: 14px 16px; cursor: pointer; font-family: 'Inter', sans-serif; transition: border-color 0.2s, background-color 0.2s; }
+        .more-item:hover { border-color: #ff7300; background-color: #262626; }
+        .more-item-title { color: #ffffff; font-size: 15px; font-weight: 600; }
+        .more-item-sub { color: #888888; font-size: 13px; }
         .scam-list { display: flex; flex-direction: column; gap: 12px; }
         .scam-tip { background-color: #1f1f1f; border: 1px solid #333333; border-left: 3px solid #ff7300; border-radius: 10px; padding: 14px 16px; }
         .scam-tip-title { color: #ffffff; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
@@ -2794,11 +2799,6 @@
             <img src="unique.png" alt="Unique Trading">
         </a>
         <nav class="top-links" aria-label="Info">
-            <button class="top-link" id="about-btn" type="button">About</button>
-            <button class="top-link" id="faq-btn" type="button">FAQ</button>
-            <button class="top-link" id="help-btn" type="button">Help</button>
-            <button class="top-link" id="copyright-btn" type="button">Copyright</button>
-            <button class="top-link" id="terms-btn" type="button"><span class="long">Terms of Service</span><span class="short">Terms</span></button>
             <a class="top-link discord-link" id="discord-link" href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" title="Join our Discord" aria-label="Join our Discord"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg></a>
         </nav>
         <div class="nav-left">
@@ -2807,7 +2807,7 @@
             <button class="nav-trading" id="trading-nav-btn">Trading</button>
             <button class="nav-middlemen" id="middlemen-nav-btn">Middlemen</button>
             <button class="nav-games" id="games-nav-btn">Games</button>
-            <button class="nav-scams" id="scams-nav-btn">Prevent scams</button>
+            <button class="nav-scams" id="more-nav-btn">More</button>
         </div>
         <div class="auth-buttons" id="auth-container">
             <a href="login.html" class="btn btn-login">Log in</a>
@@ -2997,14 +2997,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     <main id="main-content-area">
         <div class="main-header-section">
             <h1 class="all-games-main-title" id="page-main-title">Live Listings</h1>
-            <div class="listing-search-row" id="listing-search-row" style="display: none;">
-                <div class="search-field" id="listing-search-field">
-                    <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                    <input type="text" id="listing-search-input" placeholder="Search items by name..." autocomplete="off">
-                    <button type="button" class="search-clear" id="listing-search-clear" title="Clear">&times;</button>
-                </div>
-            </div>
             <div class="filters-panel" id="filters-panel" style="display: none;">
+                <div class="listing-search-row" id="listing-search-row" style="display: none;">
+                    <div class="search-field" id="listing-search-field">
+                        <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        <input type="text" id="listing-search-input" placeholder="Search items by name..." autocomplete="off">
+                        <button type="button" class="search-clear" id="listing-search-clear" title="Clear">&times;</button>
+                    </div>
+                </div>
                 <div class="games-tags-group" id="tags-group">
                     <button class="game-tag-btn active" data-tag="All">All items</button>
                     <button class="game-tag-btn" data-tag="Murder Mystery 2">Murder Mystery 2</button>
@@ -3124,9 +3124,27 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     </div>
 
     <!-- Prevent scams page (edit the tips below as you like) -->
+    <!-- More page -->
+    <div class="middlemen-page" id="more-page">
+        <div class="middlemen-container">
+            <div class="mm-panel">
+                <div class="mm-panel-title">More</div>
+                <div class="more-list">
+                    <button type="button" class="more-item" id="more-scams"><span class="more-item-title">Prevent scams</span><span class="more-item-sub">Tips to keep your trades safe</span></button>
+                    <button type="button" class="more-item" id="more-about"><span class="more-item-title">About</span><span class="more-item-sub">What Unique Trading is</span></button>
+                    <button type="button" class="more-item" id="more-faq"><span class="more-item-title">FAQ</span><span class="more-item-sub">Answers to common questions</span></button>
+                    <button type="button" class="more-item" id="more-help"><span class="more-item-title">Help</span><span class="more-item-sub">Getting started, buying, selling and rules</span></button>
+                    <button type="button" class="more-item" id="more-copyright"><span class="more-item-title">Copyright</span><span class="more-item-sub">Ownership and reporting problems</span></button>
+                    <button type="button" class="more-item" id="more-terms"><span class="more-item-title">Terms of Service</span><span class="more-item-sub">The full rules of the platform</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="middlemen-page" id="scams-page">
         <div class="middlemen-container">
             <div class="mm-panel">
+                <button class="detail-back-btn" id="scams-back-btn" type="button" style="margin-bottom: 16px;">&larr; Back to More</button>
                 <div class="mm-panel-title">Prevent scams</div>
                 <div class="scam-list">
                     <div class="scam-tip"><div class="scam-tip-title">Use the payment flow in the chat</div><div class="scam-tip-text">Pay only through the "Ask for payment" button inside the deal chat. The money is held until the buyer confirms they received the items. Never send money or items outside of the site.</div></div>
@@ -6625,11 +6643,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (id === 'trading-nav-btn') return onListingTab('trading');
             if (id === 'middlemen-nav-btn') return currentViewMode === 'middlemen' && open(middlemenPage);
             if (id === 'games-nav-btn') return currentViewMode === 'games' && open(gamesPage);
-            if (id === 'scams-nav-btn') return currentViewMode === 'scams' && open(scamsPage);
+            if (id === 'more-nav-btn') return currentViewMode === 'more' && open(morePage);
             return false;
         }
         document.querySelector('header').addEventListener('click', e => {
-            const tab = e.target.closest('#home-link, #home-brand-link, #marketplace-nav-btn, #trading-nav-btn, #middlemen-nav-btn, #games-nav-btn, #scams-nav-btn');
+            const tab = e.target.closest('#home-link, #home-brand-link, #marketplace-nav-btn, #trading-nav-btn, #middlemen-nav-btn, #games-nav-btn, #more-nav-btn');
             if (tab && isOnTab(tab.id)) { e.preventDefault(); e.stopImmediatePropagation(); return; }
             if (e.target.closest('#home-link, #home-brand-link, .nav-left button, #header-balance-box, #header-messages-btn')) closeAdminPage();
         }, true);
@@ -8740,10 +8758,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const gamesPage = document.getElementById('games-page');
         const scamsPage = document.getElementById('scams-page');
         const gamesNavBtn = document.getElementById('games-nav-btn');
-        const scamsNavBtn = document.getElementById('scams-nav-btn');
+        const scamsNavBtn = document.getElementById('more-nav-btn');
+        const morePage = document.getElementById('more-page');
 
         function closeInfoPages() {
-            gamesPage.classList.remove('active'); scamsPage.classList.remove('active');
+            gamesPage.classList.remove('active'); scamsPage.classList.remove('active'); morePage.classList.remove('active');
             gamesNavBtn.classList.remove('active'); scamsNavBtn.classList.remove('active');
         }
         function openInfoPage(page, btn, mode) {
@@ -8784,10 +8803,15 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             }));
         }
         gamesNavBtn.addEventListener('click', openGamesPage);
-        scamsNavBtn.addEventListener('click', () => openInfoPage(scamsPage, scamsNavBtn, 'scams'));
+        scamsNavBtn.addEventListener('click', () => openInfoPage(morePage, scamsNavBtn, 'more'));
+        document.getElementById('more-scams').addEventListener('click', () => openInfoPage(scamsPage, scamsNavBtn, 'scams'));
+        document.getElementById('scams-back-btn').addEventListener('click', () => openInfoPage(morePage, scamsNavBtn, 'more'));
+        [['more-about', 'about-modal'], ['more-faq', 'faq-modal'], ['more-help', 'help-modal'], ['more-copyright', 'copyright-modal'], ['more-terms', 'terms-modal']].forEach(([b, m]) => {
+            document.getElementById(b).addEventListener('click', () => document.getElementById(m).classList.add('active'));
+        });
         // any other main navigation closes these pages
         document.querySelector('header').addEventListener('click', e => {
-            if (e.target.closest('#home-link, #home-brand-link, .nav-left button:not(#games-nav-btn):not(#scams-nav-btn), #header-balance-box, #header-messages-btn')) closeInfoPages();
+            if (e.target.closest('#home-link, #home-brand-link, .nav-left button:not(#games-nav-btn):not(#more-nav-btn), #header-balance-box, #header-messages-btn')) closeInfoPages();
         }, true);
 
         // ===== IP bans (time or forever) =====
@@ -9057,10 +9081,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             fill(mList, 'mm-reports-count', 'middleman', 'No reported middlemen.');
         }
 
-        // ===== Help / Copyright / Terms =====
-        [['about-btn', 'about-modal'], ['faq-btn', 'faq-modal'], ['help-btn', 'help-modal'], ['copyright-btn', 'copyright-modal'], ['terms-btn', 'terms-modal']].forEach(([b, m]) => {
-            document.getElementById(b).addEventListener('click', () => document.getElementById(m).classList.add('active'));
-        });
+        // ===== Info modals (opened from the More page) =====
         document.querySelectorAll('[data-close-info]').forEach(b => b.addEventListener('click', () => document.getElementById(b.dataset.closeInfo).classList.remove('active')));
         ['about-modal', 'faq-modal', 'help-modal', 'copyright-modal', 'terms-modal'].forEach(id => {
             const el = document.getElementById(id);
