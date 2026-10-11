@@ -101,6 +101,7 @@ async function init() {
   await run(`ALTER TABLE users ADD COLUMN lastIp TEXT`);
   await run(`ALTER TABLE users ADD COLUMN joinedAt INTEGER`);
   await run(`ALTER TABLE users ADD COLUMN lastWithdrawAt INTEGER DEFAULT 0`);
+  await run(`ALTER TABLE users ADD COLUMN mustChangePassword INTEGER DEFAULT 0`);   // set when the admin resets a password
   await run(`CREATE TABLE IF NOT EXISTS admin_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, admin TEXT, action TEXT, target TEXT, detail TEXT, amount REAL DEFAULT 0, createdAt INTEGER)`);
   // every IP an account has signed up / logged in / browsed from (used for the "same IP" and VPN flags)
   await run(`CREATE TABLE IF NOT EXISTS user_ips (username TEXT, ip TEXT, firstSeen INTEGER, lastSeen INTEGER, PRIMARY KEY (username, ip))`);
@@ -277,14 +278,17 @@ function readSids(req) {
   return String((req && req.cookies && req.cookies.sids) || '').split(',').filter(x => /^[a-f0-9]{64}$/.test(x)).slice(0, 10);
 }
 const BANNED_OK = new Set(['/api/appeal', '/api/logout', '/api/heartbeat']);
+const MUST_CHANGE_OK = new Set(['/api/change-password', '/api/logout', '/api/heartbeat']);
 export async function requireUser(req, res, next) {      // use this on every future endpoint
   try {
-    const r = await db.execute({ sql: 'SELECT s.username, u.bannedUntil FROM sessions s LEFT JOIN users u ON u.username = s.username WHERE s.id = ? AND s.expiresAt > ?', args: [String(req.cookies.sid || ''), Date.now()] });
+    const r = await db.execute({ sql: 'SELECT s.username, u.bannedUntil, u.mustChangePassword FROM sessions s LEFT JOIN users u ON u.username = s.username WHERE s.id = ? AND s.expiresAt > ?', args: [String(req.cookies.sid || ''), Date.now()] });
     if (!r.rows.length) return res.status(401).json({ error: 'Please log in.' });
     req.user = String(r.rows[0].username);
     // a banned account may still read and send its appeal, but cannot do anything else (no chat, pictures, deals, renames...)
     const bannedUntil = Number(r.rows[0].bannedUntil) || 0;
     if ((bannedUntil === -1 || bannedUntil > Date.now()) && req.method !== 'GET' && !BANNED_OK.has(req.path)) return res.status(403).json({ error: 'Your account is banned.', banned: true });
+    // after an admin reset the temporary password only works for choosing a new one
+    if (Number(r.rows[0].mustChangePassword) === 1 && req.method !== 'GET' && !MUST_CHANGE_OK.has(req.path)) return res.status(403).json({ error: 'Choose a new password first.', mustChangePassword: true });
     trackIp(req.user, ipOf(req));
     next();
   } catch (e) { res.status(500).json({ error: 'Server error' }); }
@@ -534,9 +538,10 @@ app.post('/api/change-password', requireUser, async (req, res) => {
     if (!ok) return res.status(403).json({ error: 'Current password is incorrect.' });
     const bad = passwordProblems(next, String(u.username), String(u.email || ''));
     if (bad.length) return res.status(400).json({ error: 'Your new password is too weak. It needs: ' + bad.join(', ') + '.' });
+    if (next === cur) return res.status(400).json({ error: 'Choose a password different from the current one.' });
     const hash = await bcrypt.hash(next, 12);
-    // the legacy plaintext column is wiped; every other device is logged out
-    await db.execute({ sql: "UPDATE users SET passwordHash = ?, password = '' WHERE username = ?", args: [hash, req.user] });
+    // the legacy plaintext column is wiped; every other device is logged out; a reset-password flag is cleared
+    await db.execute({ sql: "UPDATE users SET passwordHash = ?, password = '', mustChangePassword = 0 WHERE username = ?", args: [hash, req.user] });
     await db.execute({ sql: 'DELETE FROM sessions WHERE username = ? AND id != ?', args: [req.user, String(req.cookies.sid || '')] });
     res.json({ ok: true });
   } catch (e) { console.error('change-password error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
@@ -646,6 +651,47 @@ app.post('/api/admin/adjust', requireUser, requireAdmin, async (req, res) => {
     audit(req.user, 'adjust', target, `balance ${delta > 0 ? '+' : ''}${delta}`, delta);
     res.json({ balance: Number(r.rows[0].balance) || 0 });
   } catch (e) { console.error('adjust error:', e); res.status(500).json({ error: 'Failed to update balance.' }); }
+});
+
+// admin only: reset someone's password. A random temporary password is returned ONCE (only its hash is stored);
+// the user is logged out everywhere and must choose a new password before doing anything else.
+function makeTempPassword(username, email) {
+  const pick = (set) => set[crypto.randomInt(set.length)];
+  const U = 'ABCDEFGHJKLMNPQRSTUVWXYZ', L = 'abcdefghijkmnopqrstuvwxyz', N = '23456789', S = '!@#$%*?';
+  for (let tries = 0; tries < 50; tries++) {
+    const chars = [pick(U), pick(U), pick(L), pick(L), pick(L), pick(L), pick(L), pick(N), pick(N), pick(S), pick(L), pick(U), pick(N), pick(L)];
+    for (let i = chars.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [chars[i], chars[j]] = [chars[j], chars[i]]; }
+    const pw = chars.join('');
+    if (!passwordProblems(pw, username, email).length) return pw;
+  }
+  throw new Error('could not generate a temporary password');
+}
+app.post('/api/admin/reset-password', requireUser, requireAdmin, async (req, res) => {
+  try {
+    const target = String(req.body.username || '');
+    if (!target) return res.status(400).json({ error: 'Select a user first.' });
+    if (limited('adminreset:' + req.user, 10, 15 * 60 * 1000)) return res.status(429).json({ error: 'Too many attempts. Try again later.' });
+    // same rule as balance changes: the admin password is needed again, so a stolen session alone cannot take over accounts
+    const me = await db.execute({ sql: 'SELECT password, passwordHash FROM users WHERE username = ?', args: [req.user] });
+    const pw = String(req.body.password || '');
+    let pwOk = false;
+    if (pw && me.rows.length) {
+      if (me.rows[0].passwordHash) pwOk = await bcrypt.compare(pw, String(me.rows[0].passwordHash));
+      if (!pwOk && me.rows[0].password && safeEqual(me.rows[0].password, pw)) pwOk = true;
+    }
+    if (!pwOk) return res.status(403).json({ error: 'Enter your admin password to reset a password.' });
+    const t = await db.execute({ sql: 'SELECT username, email, customId FROM users WHERE username = ?', args: [target] });
+    if (!t.rows.length) return res.status(404).json({ error: 'User not found.' });
+    const name = String(t.rows[0].username);
+    if (name === req.user || String(t.rows[0].customId || '') === 'knqw') return res.status(400).json({ error: 'Change your own password in Account settings.' });
+    const temp = makeTempPassword(name, String(t.rows[0].email || ''));
+    const hash = await bcrypt.hash(temp, 12);
+    await db.execute({ sql: "UPDATE users SET passwordHash = ?, password = '', mustChangePassword = 1 WHERE username = ?", args: [hash, name] });
+    await db.execute({ sql: 'DELETE FROM sessions WHERE username = ?', args: [name] });
+    console.log(`ADMIN ${req.user} reset the password of ${name}`);
+    audit(req.user, 'reset-password', name, 'password reset (temporary password issued)', 0);
+    res.json({ ok: true, tempPassword: temp });
+  } catch (e) { console.error('reset-password error:', e); res.status(500).json({ error: 'Could not reset the password.' }); }
 });
 
 app.get('/api/admin/audit', requireUser, requireAdmin, async (req, res) => {
@@ -886,7 +932,7 @@ const privateUser = (r) => ({
   ...publicUser(r), ...banPart(r), email: r.email || '', card: r.card || null, balance: Number(r.balance) || 0,
   heldBalance: Number(r.heldBalance) || 0, lastUsernameChange: r.lastUsernameChange || null,
   lastDisplayNameChange: r.lastDisplayNameChange || null, lastItemTime: Number(r.lastItemTime) || 0,
-  messages: parseJson(r.messages, [])
+  messages: parseJson(r.messages, []), mustChangePassword: Number(r.mustChangePassword) === 1
 });
 // extra columns for the admin panel (no password, no hash)
 const adminUser = (r) => ({
