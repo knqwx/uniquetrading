@@ -2873,6 +2873,66 @@
  .item-picker-list{max-height:56vh;min-height:0;}
  .item-picker-list.cards{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));}
 }
+
+        /* ===== message menu + editing state ===== */
+        .msg-context-menu { position: fixed; max-width: calc(100vw - 16px); }
+        @media (pointer: coarse) { .message-bubble { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; } }
+        .message-bubble.editing { outline: 2px solid #ffd166; outline-offset: 3px; box-shadow: 0 0 0 4px rgba(255,209,102,0.18); }
+        .chat-editing { display: flex; align-items: center; gap: 10px; padding: 8px 20px; border-top: 1px solid #333; background: #2a2412; border-left: 4px solid #ffd166; }
+        .chat-editing-info { flex: 1; min-width: 0; }
+        .chat-editing-title { color: #ffd166; font-size: 12px; font-weight: 700; }
+        .chat-editing-preview { color: #cfcfcf; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+        .chat-editing-x { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; border: none; background: #3b3b3b; color: #fff; font-size: 18px; line-height: 1; cursor: pointer; }
+        .chat-editing-x:hover { background: #ff4d4d; }
+        .chat-input.editing { border-color: #ffd166 !important; box-shadow: 0 0 0 2px rgba(255,209,102,0.25); }
+
+        /* ===== profile window: fits phones in portrait and landscape ===== */
+        @media (max-width: 900px) {
+            .profile-modal-content { width: 96vw; max-width: 96vw; height: auto; max-height: 92vh; max-height: 92dvh; padding: 22px 18px; gap: 18px; overflow-y: auto; }
+            .profile-left-col { width: 220px; flex: 0 0 auto; padding-right: 18px; }
+            .profile-right-col { min-width: 0; }
+            .items-container { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 10px; }
+            .item-card-img { height: 100px; }
+        }
+        @media (max-width: 640px) {
+            .profile-modal-content { flex-direction: column; padding: 18px 14px 20px; gap: 14px; }
+            .profile-modal-content .close-modal { top: 8px; right: 10px; font-size: 30px; }
+            .profile-left-col { width: 100%; border-right: none; border-bottom: 1px solid #383838; padding: 0 0 14px 0; }
+            .profile-modal-content .modal-avatar { width: 84px; height: 84px; font-size: 34px; margin-bottom: 10px; }
+            .profile-modal-content .modal-username { font-size: 20px; }
+            .profile-modal-content .modal-userid { margin-bottom: 10px; }
+            .profile-rating { margin: 0 0 10px; }
+            .profile-left-buttons { flex-direction: row; flex-wrap: wrap; margin-top: 12px; gap: 8px; }
+            .profile-left-buttons .settings-btn { flex: 1 1 140px; width: auto; padding: 11px 10px; }
+            .profile-right-col { overflow: visible; flex: 0 0 auto; }
+            .items-container { overflow: visible; flex: 0 0 auto; }
+            .vouches-container { overflow: visible; flex: 0 0 auto; }
+            .vouch-list { overflow: visible; }
+            .profile-tab { flex: 1; text-align: center; padding: 9px 10px; }
+            .no-items-text { padding: 30px 0; }
+        }
+        @media (max-width: 380px) { .items-container { grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; } .item-card { padding: 8px; } .item-card-img { height: 84px; } }
+        /* phone turned sideways: little height, so use two columns and scroll the parts separately */
+        @media (orientation: landscape) and (max-height: 520px) {
+            .profile-modal-content { flex-direction: row; height: 94vh; height: 94dvh; max-height: 94dvh; width: 96vw; padding: 12px 16px; gap: 14px; overflow: hidden; }
+            .profile-modal-content .close-modal { top: 4px; right: 8px; font-size: 26px; }
+            .profile-left-col { width: 190px; flex: 0 0 190px; border-right: 1px solid #383838; border-bottom: none; padding: 0 14px 0 0; overflow-y: auto; scrollbar-width: none; }
+            .profile-left-col::-webkit-scrollbar { display: none; }
+            .profile-modal-content .modal-avatar { width: 60px; height: 60px; font-size: 24px; margin-bottom: 6px; }
+            .profile-modal-content .modal-username { font-size: 17px; margin-bottom: 2px; }
+            .profile-modal-content .modal-userid { margin-bottom: 6px; font-size: 12px; }
+            .profile-rating { margin: 0 0 6px; }
+            .profile-left-buttons { flex-direction: column; margin-top: 8px; }
+            .profile-left-buttons .settings-btn { width: 100%; flex: none; padding: 8px; font-size: 13px; }
+            .profile-right-col { overflow: hidden; flex: 1; min-height: 0; }
+            .items-container { overflow-y: auto; flex: 1; min-height: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .vouches-container { overflow: hidden; flex: 1; min-height: 0; }
+            .vouch-list { overflow-y: auto; }
+            .item-card-img { height: 70px; }
+            .your-items-header { margin-bottom: 8px; }
+            .profile-tabs { margin-bottom: 8px; }
+        }
+        @media (orientation: landscape) and (max-height: 520px) and (max-width: 640px) { .items-container { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 </style>
 </head>
 <body>
@@ -4369,6 +4429,38 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         let groupSignature = '';
         let chatPollTimer = null;
         let editingMessageTimestamp = null;
+        let editingMessageText = '';
+        // visible "you are editing" state: bar above the text box, highlighted bubble, highlighted input, Send -> Save
+        function refreshEditingUi() {
+            const on = !!editingMessageTimestamp;
+            const bar = document.getElementById('chat-editing');
+            if (bar) {
+                bar.style.display = on ? 'flex' : 'none';
+                const pv = document.getElementById('chat-editing-preview');
+                if (pv) pv.textContent = editingMessageText;
+            }
+            const inp = document.getElementById('chat-message-input');
+            if (inp) inp.classList.toggle('editing', on);
+            const sb = document.getElementById('chat-send-btn');
+            if (sb) { if (on) sb.textContent = 'Save'; else if (sb.textContent === 'Save') sb.textContent = 'Send'; }
+            document.querySelectorAll('.message-bubble.editing').forEach(b => { if (!on || Number(b.getAttribute('data-timestamp')) !== editingMessageTimestamp) b.classList.remove('editing'); });
+            if (on) document.querySelectorAll('.message-bubble[data-timestamp="' + editingMessageTimestamp + '"]').forEach(b => b.classList.add('editing'));
+        }
+        function startEditingMessage(ts, text) {
+            editingMessageTimestamp = ts;
+            editingMessageText = text;
+            const inp = document.getElementById('chat-message-input');
+            if (inp) { inp.value = text; inp.focus(); inp.selectionStart = inp.selectionEnd = inp.value.length; }
+            refreshEditingUi();
+            const b = document.querySelector('.message-bubble[data-timestamp="' + ts + '"]');
+            if (b && b.scrollIntoView) b.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+        function cancelEditingMessage(clearInput) {
+            editingMessageTimestamp = null;
+            editingMessageText = '';
+            if (clearInput) { const inp = document.getElementById('chat-message-input'); if (inp) inp.value = ''; }
+            refreshEditingUi();
+        }
         let activeUserCard = null;
 
         // ===== Chat threads: one chat per (other user + exact item). No item = general chat. =====
@@ -5966,6 +6058,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             const prevInput = document.getElementById('chat-message-input');
             const sameChat = renderedChatUser === threadKey;
+            if (!sameChat && editingMessageTimestamp) { editingMessageTimestamp = null; editingMessageText = ''; }
             const keepDraft = (sameChat && prevInput) ? prevInput.value : '';
             const hadFocus = sameChat && prevInput && document.activeElement === prevInput;
 
@@ -6016,9 +6109,29 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             const wireChatMessages = (scrollContainer) => {
             const messageBubbles = scrollContainer.querySelectorAll('.message-bubble');
+            refreshEditingUi();
             messageBubbles.forEach(bubble => {
+                // iPhones do not fire "contextmenu" on long press, so press-and-hold (0.5 s) opens the same menu there
+                let lpTimer = null, lpFired = false, lpX = 0, lpY = 0;
+                bubble.addEventListener('touchstart', (ev) => {
+                    if (ev.touches.length !== 1) { clearTimeout(lpTimer); return; }
+                    lpX = ev.touches[0].clientX; lpY = ev.touches[0].clientY; lpFired = false;
+                    clearTimeout(lpTimer);
+                    lpTimer = setTimeout(() => {
+                        lpFired = true;
+                        bubble.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: lpX, clientY: lpY }));
+                    }, 500);
+                }, { passive: true });
+                bubble.addEventListener('touchmove', (ev) => {
+                    const t = ev.touches[0];
+                    if (Math.abs(t.clientX - lpX) > 10 || Math.abs(t.clientY - lpY) > 10) clearTimeout(lpTimer);
+                }, { passive: true });
+                bubble.addEventListener('touchend', (ev) => { clearTimeout(lpTimer); if (lpFired) { lpFired = false; ev.preventDefault(); } });
+                bubble.addEventListener('touchcancel', () => clearTimeout(lpTimer));
                 bubble.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
+                    if (Date.now() - (window.__msgMenuAt || 0) < 800) return;   // Android fires both the native event and the long-press timer
+                    window.__msgMenuAt = Date.now();
                     
                     const oldMenu = document.getElementById('msg-context-menu');
                     if (oldMenu) oldMenu.remove();
@@ -6030,8 +6143,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     const menu = document.createElement('div');
                     menu.id = 'msg-context-menu';
                     menu.className = 'msg-context-menu';
-                    menu.style.top = `${e.clientY}px`;
-                    menu.style.left = `${e.clientX}px`;
+                    menu.style.top = '0px';
+                    menu.style.left = '0px';
+                    menu.style.visibility = 'hidden';
 
                     const copyBtn = document.createElement('button');
                     copyBtn.className = 'msg-ctx-btn';
@@ -6049,11 +6163,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         editBtn.className = 'msg-ctx-btn';
                         editBtn.textContent = 'Edit';
                         editBtn.onclick = () => {
-                            editingMessageTimestamp = msgTimestamp;
-                            const inputField = document.getElementById('chat-message-input');
-                            inputField.value = textContent;
-                            inputField.focus();
                             menu.remove();
+                            startEditingMessage(msgTimestamp, textContent);
                         };
                         menu.appendChild(editBtn);
                         }
@@ -6072,10 +6183,28 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
                     document.body.appendChild(menu);
 
+                    // keep the whole menu on screen: shift it left if it would pass the right edge, put it above the finger if it would pass the bottom
+                    {
+                        const vw = window.innerWidth, vh = window.innerHeight, pad = 8;
+                        const mw = menu.offsetWidth, mh = menu.offsetHeight;
+                        let x = e.clientX, y = e.clientY;
+                        if (x + mw + pad > vw) x = vw - mw - pad;
+                        if (y + mh + pad > vh) y = y - mh - 12;
+                        x = Math.max(pad, Math.min(x, vw - mw - pad));
+                        y = Math.max(pad, Math.min(y, vh - mh - pad));
+                        menu.style.left = x + 'px';
+                        menu.style.top = y + 'px';
+                        menu.style.visibility = 'visible';
+                    }
+
                     const closeMenuHandler = () => {
                         menu.remove();
                         document.removeEventListener('click', closeMenuHandler);
+                        window.removeEventListener('resize', closeMenuHandler);
+                        window.removeEventListener('orientationchange', closeMenuHandler);
                     };
+                    window.addEventListener('resize', closeMenuHandler);
+                    window.addEventListener('orientationchange', closeMenuHandler);
                     setTimeout(() => document.addEventListener('click', closeMenuHandler), 10);
                 });
             });
@@ -6133,6 +6262,13 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 ${ctxHtml}
                 ${askBtnHtml}
                 <div class="typing-indicator" id="typing-indicator"></div>
+                <div class="chat-editing" id="chat-editing" style="display:none;">
+                    <div class="chat-editing-info">
+                        <div class="chat-editing-title">&#9998; Editing message</div>
+                        <div class="chat-editing-preview" id="chat-editing-preview"></div>
+                    </div>
+                    <button type="button" class="chat-editing-x" id="chat-editing-x" title="Cancel editing">&times;</button>
+                </div>
                 <div class="chat-staged" id="chat-staged" style="display:none;">
                     <img alt="Picture to send">
                     <button type="button" class="chat-staged-x" id="chat-staged-x" title="Remove picture">&times;</button>
@@ -6155,6 +6291,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             appendPendingBubbles(scrollContainer, threadKey);
             showStagedPreview(threadKey);
             document.getElementById('chat-staged-x').addEventListener('click', () => { stagedChatImage = null; showStagedPreview(threadKey); });
+            document.getElementById('chat-editing-x').addEventListener('click', () => { cancelEditingMessage(true); });
+            refreshEditingUi();
             loadChatImages(scrollContainer).then(() => { scrollContainer.scrollTop = scrollContainer.scrollHeight; });
             document.getElementById('chat-delete-btn').addEventListener('click', () => deleteChatForMe(threadKey));
 
@@ -6189,7 +6327,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
                 if (editingMessageTimestamp) {
                     await editMessageInDB(targetUsername, editingMessageTimestamp, messageText);
-                    editingMessageTimestamp = null;
+                    cancelEditingMessage(false);
                 } else {
                     const itemRefData = ctxItem ? {
                         name: ctxItem.name,
@@ -6222,6 +6360,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             sendBtn.addEventListener('click', handleSend);
             inputField.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && editingMessageTimestamp) { e.preventDefault(); cancelEditingMessage(true); return; }
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleSend();
