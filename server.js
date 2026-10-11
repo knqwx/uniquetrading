@@ -928,14 +928,40 @@ const isAdminName = async (name) => {
   return !!r.rows.length && String(r.rows[0].customId || '') === 'knqw';
 };
 const parseJson = (s, fallback) => { try { const v = JSON.parse(s); return v == null ? fallback : v; } catch (e) { return fallback; } };
+
+// ---------- picture safety (avatars, listing photos, chat pictures) ----------
+// Pictures are stored as data: URLs and later put into <img src>. Only real png / jpeg / webp / gif data may be stored or sent out.
+const IMG_DATA_RE = /^data:image\/(png|jpe?g|webp|gif);base64,([A-Za-z0-9+/]+={0,2})$/;
+function sniffImageType(buf) {            // what the bytes really are, whatever the data: URL claims
+  if (buf.length < 12) return '';
+  if (buf[0] === 0x89 && buf.toString('latin1', 1, 4) === 'PNG' && buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a) return 'png';
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpeg';
+  const h = buf.toString('latin1', 0, 6);
+  if (h === 'GIF87a' || h === 'GIF89a') return 'gif';
+  if (buf.toString('latin1', 0, 4) === 'RIFF' && buf.toString('latin1', 8, 12) === 'WEBP') return 'webp';
+  return '';
+}
+// full check for everything that gets STORED: right shape, small enough, and the bytes are really that kind of picture. Returns the clean value or null.
+function cleanImageDataUrl(v, maxLen) {
+  if (typeof v !== 'string' || v.length > maxLen) return null;
+  const m = IMG_DATA_RE.exec(v);
+  if (!m || m[2].length % 4 !== 0) return null;
+  const real = sniffImageType(Buffer.from(m[2], 'base64'));
+  const claimed = m[1] === 'jpg' ? 'jpeg' : m[1];
+  if (!real || real !== claimed) return null;
+  return 'data:image/' + real + ';base64,' + m[2];
+}
+// cheap check for what is SENT OUT, so rows saved before these checks existed (never validated) cannot reach other people's browsers
+const safeImageOut = (v) => (typeof v === 'string' && v.length <= 1000000 && IMG_DATA_RE.test(v)) ? v : null;
+const cleanItemsOut = (items) => Array.isArray(items) ? items.filter(i => i && typeof i === 'object').map(i => (i.photo == null || i.photo === '') ? i : { ...i, photo: safeImageOut(i.photo) }) : [];
 const banPart = (r) => ({
   bannedUntil: Number(r.bannedUntil) || 0, bannedAt: Number(r.bannedAt) || 0, banReason: r.banReason || '',
   appeal: r.appeal || '', appealAt: Number(r.appealAt) || 0, appealStatus: r.appealStatus || ''
 });
 // what everybody may see about everybody. Ban reason, appeal text and ban dates are NOT here: only the owner (privateUser) and the admin see them.
 const publicUser = (r) => ({
-  customId: r.customId, username: r.username, displayName: r.displayName || r.username, avatar: r.avatar || null,
-  items: parseJson(r.items, []), roblox: r.roblox || '', isMiddleman: Number(r.isMiddleman) === 1,
+  customId: r.customId, username: r.username, displayName: r.displayName || r.username, avatar: safeImageOut(r.avatar),
+  items: cleanItemsOut(parseJson(r.items, [])), roblox: r.roblox || '', isMiddleman: Number(r.isMiddleman) === 1,
   lastSeen: Number(r.lastSeen) || 0, joinedAt: Number(r.joinedAt) || 0, bannedUntil: Number(r.bannedUntil) || 0
 });
 // what only the owner sees (never the password or its hash)
@@ -973,20 +999,23 @@ app.get('/api/users', requireUser, async (req, res) => {
 // listings of everybody (the marketplace), kept out of /api/users on purpose
 app.get('/api/listings', requireUser, async (req, res) => {
   const rs = await db.execute("SELECT username, items FROM users WHERE items IS NOT NULL AND items NOT IN ('', '[]', 'null')");
-  res.json({ listings: rs.rows.map(r => ({ username: r.username, items: parseJson(r.items, []) })) });
+  res.json({ listings: rs.rows.map(r => ({ username: r.username, items: cleanItemsOut(parseJson(r.items, [])) })) });
 });
 
 // profile picture as a real image, so it is cached by the browser instead of being repeated inside every JSON list
 app.get('/api/avatar/:name', requireUser, async (req, res) => {
   const rs = await db.execute({ sql: 'SELECT avatar FROM users WHERE username = ?', args: [String(req.params.name)] });
-  const m = rs.rows.length && /^data:(image\/(?:png|jpe?g|webp|gif));base64,([A-Za-z0-9+/=]+)$/.exec(String(rs.rows[0].avatar || ''));
-  if (!m) return res.status(404).end();
+  const m = rs.rows.length && IMG_DATA_RE.exec(String(rs.rows[0].avatar || ''));
+  if (!m || m[2].length % 4 !== 0) return res.status(404).end();
   const buf = Buffer.from(m[2], 'base64');
+  const kind = sniffImageType(buf);
+  if (!kind) return res.status(404).end();
   const etag = '"' + crypto.createHash('sha1').update(buf).digest('hex') + '"';
   res.setHeader('ETag', etag);
   res.setHeader('Cache-Control', 'private, no-cache');       // always revalidate (cheap 304), so a new picture shows up at once
   if (req.headers['if-none-match'] === etag) return res.status(304).end();
-  res.setHeader('Content-Type', m[1]);
+  res.setHeader('Content-Type', 'image/' + kind);
+  res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");   // even if opened directly, nothing in it can run
   res.send(buf);
 });
 
@@ -1024,8 +1053,8 @@ app.post('/api/profile', requireUser, async (req, res) => {
       sets.push('lastDisplayNameChange = ?'); args.push(Date.now());
     }
     if ('avatar' in b) {
-      const v = b.avatar == null ? null : String(b.avatar);
-      if (v !== null && (!/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(v) || v.length > 700000)) return res.status(400).json({ error: 'Invalid picture.' });
+      const v = (b.avatar == null || b.avatar === '') ? null : cleanImageDataUrl(b.avatar, 700000);
+      if (v === null && b.avatar != null && b.avatar !== '') return res.status(400).json({ error: 'Invalid picture. Use a real PNG, JPEG, WebP or GIF image.' });
       sets.push('avatar = ?'); args.push(v);
     }
     if ('email' in b) {
@@ -1090,8 +1119,8 @@ const LISTING_COOLDOWN = 10 * 60 * 1000;
 function cleanItem(b) {
   const tag = ['selling', 'specific', 'any'].includes(String(b.tag)) ? String(b.tag) : null;
   const stock = Number(b.stock);
-  const photo = b.photo == null || b.photo === '' ? null : String(b.photo);
-  if (photo && (!/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(photo) || photo.length > 900000)) throw new Abort('Invalid picture.', 400);
+  const photo = (b.photo == null || b.photo === '') ? null : cleanImageDataUrl(b.photo, 900000);
+  if (photo === null && b.photo != null && b.photo !== '') throw new Abort('Invalid picture. Use a real PNG, JPEG, WebP or GIF image.', 400);
   const price = b.price == null ? '' : String(b.price).slice(0, 20);
   const list = (arr) => (Array.isArray(arr) ? arr.slice(0, 60).map(x => String(x).slice(0, 80)) : []);
   const wanted = b.wanted && typeof b.wanted === 'object' ? { game: String(b.wanted.game || '').slice(0, 60), items: list(b.wanted.items) } : null;
@@ -1207,7 +1236,8 @@ app.post('/api/chat/edit', requireUser, async (req, res) => {
   if (!to || !ts || !text.trim()) return res.status(400).json({ error: 'Bad request.' });
   const out = await inTx(res, async (tx) => {
     await withBothRows(tx, req.user, to, (rows) => {
-      for (const n of Object.keys(rows)) if (rows[n]) rows[n].forEach(m => { if (m.sender === req.user && m.timestamp === ts && !m.offer) m.text = text; });
+      const at = Date.now();
+      for (const n of Object.keys(rows)) if (rows[n]) rows[n].forEach(m => { if (m.sender === req.user && m.timestamp === ts && !m.offer && !m.imageId && m.text !== text) { m.text = text; m.editedAt = at; } });
     });
     return true;
   });
@@ -1294,8 +1324,9 @@ app.get('/api/chat/clears', requireUser, async (req, res) => {
 // pictures
 app.post('/api/chat/image', requireUser, async (req, res) => {
   if (limited('img:' + req.user, 10, 60 * 1000)) return res.status(429).json({ error: 'Too many pictures. Slow down.' });
-  const to = String(req.body.receiver || ''), data = String(req.body.data || '');
-  if (!to || !/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(data) || data.length > 700000) return res.status(400).json({ error: 'Invalid picture.' });
+  const to = String(req.body.receiver || '');
+  const data = cleanImageDataUrl(req.body.data, 700000);
+  if (!to || !data) return res.status(400).json({ error: 'Invalid picture. Use a real PNG, JPEG, WebP or GIF image.' });
   if (!(await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [to] })).rows.length) return res.status(404).json({ error: 'Account not found.' });
   const ts = Date.now(), id = ts + '-' + crypto.randomBytes(4).toString('hex');
   await db.execute({ sql: 'INSERT INTO chat_images (id, sender, receiver, data, createdAt) VALUES (?, ?, ?, ?, ?)', args: [id, req.user, to, data, ts] });
@@ -1306,7 +1337,9 @@ app.get('/api/chat/image/:id', requireUser, async (req, res) => {
   if (!rs.rows.length) return res.status(404).json({ error: 'Not found' });
   const r = rs.rows[0];
   if (r.sender !== req.user && r.receiver !== req.user && !(await isAdminName(req.user))) return res.status(404).json({ error: 'Not found' });
-  res.json({ data: r.data });
+  const safe = safeImageOut(r.data);
+  if (!safe) return res.status(404).json({ error: 'Not found' });
+  res.json({ data: safe });
 });
 
 // typing dots
