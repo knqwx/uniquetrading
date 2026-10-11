@@ -502,7 +502,7 @@ const SELLER_SHARE = 0.9;
 const MIN_DEAL = 0.01, MAX_DEAL = 1000000;
 const MIN_TOPUP = 1, MAX_TOPUP = 10000;
 const round2 = (n) => Math.round(Number(n) * 100) / 100;
-const parseMoney = (v) => { const n = typeof v === 'number' ? v : parseFloat(String(v)); return Number.isFinite(n) ? round2(n) : NaN; };
+const parseMoney = (v) => { if (typeof v !== 'number' && (typeof v !== 'string' || !/^\d{1,9}(?:\.\d{1,2})?$/.test(v.trim()))) return NaN; const n = Number(v); return Number.isFinite(n) ? round2(n) : NaN; };
 
 async function requireAdmin(req, res, next) {
   try {
@@ -727,7 +727,7 @@ const mapDeal = (r) => ({
   reportedAt: Number(r.reportedAt) || 0, chatSnapshot: r.chatSnapshot || null, reportedBy: r.reportedBy || '',
   itemId: r.itemId ? String(r.itemId) : ''
 });
-const dealId = (req) => { const n = Number(req.params.id); return Number.isInteger(n) && n > 0 ? n : 0; };
+const dealId = (req) => { const raw = String(req.params.id || ''); const n = Number(raw); return /^\d{1,16}$/.test(raw) && Number.isSafeInteger(n) && n > 0 ? n : 0; };
 async function loadDeal(q, id) {
   const rs = await q.execute({ sql: 'SELECT * FROM deals WHERE id = ?', args: [id] });
   return rs.rows.length ? mapDeal(rs.rows[0]) : null;
@@ -766,12 +766,21 @@ app.get('/api/deals/:id', requireUser, async (req, res) => {
 app.post('/api/deals', requireUser, async (req, res) => {
   try {
     if (moneyLimit(req, res, 'deal-new', 30, 60 * 60 * 1000)) return;
-    const buyer = String(req.body.buyer || '');
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) return res.status(400).json({ error: 'Bad request.' });
+    const buyer = typeof req.body.buyer === 'string' ? req.body.buyer.trim() : '';
     const amount = parseMoney(req.body.amount);
-    const itemName = String(req.body.itemName || '').slice(0, 200);
-    const itemId = req.body.itemId ? String(req.body.itemId).slice(0, 64) : '';
-    if (!buyer || buyer === req.user) return res.status(400).json({ error: 'Choose another user.' });
-    if (!(amount >= MIN_DEAL) || amount > MAX_DEAL) return res.status(400).json({ error: 'Enter a valid amount.' });
+    let itemName = typeof req.body.itemName === 'string' ? req.body.itemName.trim() : '';
+    const itemId = req.body.itemId == null || req.body.itemId === '' ? '' : String(req.body.itemId);
+    if (itemId && (!/^\d{1,16}$/.test(itemId) || !Number.isSafeInteger(Number(itemId)) || Number(itemId) <= 0)) return res.status(400).json({ error: 'Invalid item ID.' });
+    if (!buyer || buyer.length > 40 || buyer === req.user) return res.status(400).json({ error: 'Choose another user.' });
+    if (!(amount >= MIN_DEAL) || amount > MAX_DEAL || !Number.isFinite(amount)) return res.status(400).json({ error: 'Enter a valid amount.' });
+    if (!itemName || itemName.length > 200) return res.status(400).json({ error: 'Enter a valid item name.' });
+    if (itemId) {
+      const listing = await findStoredListing(itemId, req.user);
+      if (!listing) return res.status(400).json({ error: 'That listing no longer exists. Refresh the page and try again.' });
+      // The server owns the item name; client-provided titles cannot misrepresent the listing.
+      itemName = String(listing.item.name || itemName).slice(0, 200);
+    }
     if (!(await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [buyer] })).rows.length) return res.status(404).json({ error: 'User not found.' });
     // a payment request is only allowed inside an existing chat: the buyer must already have written to this seller
     // (about the same item, when the request is for a specific item). Senders are set by the server, so this cannot be faked.
@@ -800,6 +809,7 @@ app.post('/api/deals/:id/pay', requireUser, async (req, res) => {
   const out = await inTx(res, async (tx) => {
     const d = await loadDeal(tx, id);
     if (!d || d.buyer !== req.user) throw new Abort('This request is no longer available.');
+    if (d.status !== 'requested' || !Number.isFinite(d.amount) || d.amount < MIN_DEAL || d.amount > MAX_DEAL || !Number.isFinite(d.sellerAmount) || Math.abs(d.sellerAmount - round2(d.amount * SELLER_SHARE)) > 0.01) throw new Abort('This request failed validation and cannot be paid.', 409);
     const claim = await tx.execute({ sql: "UPDATE deals SET status = 'paid', updatedAt = ? WHERE id = ? AND status = 'requested'", args: [Date.now(), id] });
     if (!claim.rowsAffected) throw new Abort('This request is no longer available.');
     const debit = await tx.execute({ sql: 'UPDATE users SET balance = balance - ? WHERE username = ? AND COALESCE(balance, 0) >= ?', args: [d.amount, req.user, d.amount] });
@@ -819,6 +829,7 @@ app.post('/api/deals/:id/complete', requireUser, async (req, res) => {
   const out = await inTx(res, async (tx) => {
     const d = await loadDeal(tx, id);
     if (!d || d.buyer !== req.user) throw new Abort('This deal can no longer be confirmed.');
+    if (!['paid', 'not_received'].includes(d.status) || !Number.isFinite(d.sellerAmount) || d.sellerAmount < 0 || d.sellerAmount > MAX_DEAL) throw new Abort('This deal failed validation and cannot be completed.', 409);
     const claim = await tx.execute({ sql: "UPDATE deals SET status = 'completed', updatedAt = ? WHERE id = ? AND status IN ('paid', 'not_received')", args: [Date.now(), id] });
     if (!claim.rowsAffected) throw new Abort('This deal can no longer be confirmed.');
     const rel = await tx.execute({
@@ -899,6 +910,7 @@ app.post('/api/admin/deals/:id/resolve', requireUser, requireAdmin, async (req, 
   const out = await inTx(res, async (tx) => {
     const d = await loadDeal(tx, id);
     if (!d || !['paid', 'not_received', 'reported'].includes(d.status)) throw new Abort('This transaction was already handled.');
+    if (!Number.isFinite(d.amount) || d.amount < MIN_DEAL || d.amount > MAX_DEAL || !Number.isFinite(d.sellerAmount) || Math.abs(d.sellerAmount - round2(d.amount * SELLER_SHARE)) > 0.01) throw new Abort('Deal amounts failed integrity validation. Escalate this deal for manual review.', 409);
     const finalStatus = mode === 'refund' ? 'refunded' : 'released';
     const claim = await tx.execute({ sql: 'UPDATE deals SET status = ?, updatedAt = ? WHERE id = ? AND status = ?', args: [finalStatus, Date.now(), id, d.status] });
     if (!claim.rowsAffected) throw new Abort('This transaction was already handled.');
@@ -956,6 +968,20 @@ function cleanImageDataUrl(v, maxLen) {
 // cheap check for what is SENT OUT, so rows saved before these checks existed (never validated) cannot reach other people's browsers
 const safeImageOut = (v) => (typeof v === 'string' && v.length <= 1000000 && IMG_DATA_RE.test(v)) ? v : null;
 const cleanItemsOut = (items) => Array.isArray(items) ? items.filter(i => i && typeof i === 'object').map(i => (i.photo == null || i.photo === '') ? i : { ...i, photo: safeImageOut(i.photo) }) : [];
+// Listing IDs are authoritative only when they exist in the seller's stored listings.
+async function findStoredListing(id, owner) {
+  if (!/^\d{1,16}$/.test(String(id || '')) || !Number.isSafeInteger(Number(id)) || Number(id) <= 0) return null;
+  const sql = owner
+    ? await db.execute({ sql: 'SELECT username, items FROM users WHERE username = ?', args: [owner] })
+    : await db.execute("SELECT username, items FROM users WHERE items IS NOT NULL AND items NOT IN ('', '[]', 'null')");
+  for (const row of sql.rows) {
+    const items = parseJson(row.items, []);
+    if (!Array.isArray(items)) continue;
+    const item = items.find(x => x && typeof x === 'object' && String(x.id) === String(id));
+    if (item) return { owner: row.username, item };
+  }
+  return null;
+}
 const banPart = (r) => ({
   bannedUntil: Number(r.bannedUntil) || 0, bannedAt: Number(r.bannedAt) || 0, banReason: r.banReason || '',
   appeal: r.appeal || '', appealAt: Number(r.appealAt) || 0, appealStatus: r.appealStatus || ''
@@ -1123,13 +1149,19 @@ function cleanItem(b) {
   const stock = Number(b.stock);
   const photo = (b.photo == null || b.photo === '') ? null : cleanImageDataUrl(b.photo, 900000);
   if (photo === null && b.photo != null && b.photo !== '') throw new Abort('Invalid picture. Use a real PNG, JPEG, WebP or GIF image.', 400);
-  const price = b.price == null ? '' : String(b.price).slice(0, 20);
+  const rawPrice = b.price == null ? '' : String(b.price).trim();
+  const price = rawPrice;
   const list = (arr) => (Array.isArray(arr) ? arr.slice(0, 60).map(x => String(x).slice(0, 80)) : []);
   const wanted = b.wanted && typeof b.wanted === 'object' ? { game: String(b.wanted.game || '').slice(0, 60), items: list(b.wanted.items) } : null;
   const name = String(b.name || '').trim().slice(0, 80);
   if (!name) throw new Abort('Please enter a name.', 400);
   if (!tag) throw new Abort('Invalid listing type.', 400);
-  if (tag === 'selling' && !(parseFloat(price) > 0)) throw new Abort('Please enter a price.', 400);
+  if (tag === 'selling' && (!/^\d{1,8}(?:\.\d{1,2})?$/.test(price) || !Number.isFinite(Number(price)) || Number(price) <= 0 || Number(price) > 1000000)) throw new Abort('Enter a valid price between 0.01 and 1,000,000 with at most two decimals.', 400);
+  if (tag !== 'selling' && price !== '' && (!/^\d{1,8}(?:\.\d{1,2})?$/.test(price) || Number(price) < 0 || Number(price) > 1000000)) throw new Abort('Invalid price.', 400);
+  if (typeof b.name !== 'string' || b.name.length > 160) throw new Abort('Invalid item name.', 400);
+  if (b.description != null && (typeof b.description !== 'string' || b.description.length > 2000)) throw new Abort('Invalid description.', 400);
+  if (b.items != null && !Array.isArray(b.items)) throw new Abort('Invalid item list.', 400);
+  if (b.wanted != null && (typeof b.wanted !== 'object' || Array.isArray(b.wanted) || (b.wanted.items != null && !Array.isArray(b.wanted.items)))) throw new Abort('Invalid wanted items.', 400);
   if (!Number.isInteger(stock) || stock < 0 || stock > 99999) throw new Abort('Stock must be a whole number from 0 to 99999.', 400);
   return {
     name, description: String(b.description || '').slice(0, 2000), tag, price, photo,
@@ -1147,7 +1179,8 @@ app.post('/api/items', requireUser, async (req, res) => {
     const data = cleanItem(req.body || {});
     const items = parseJson(u.items, []);
     const editId = req.body.id != null ? Number(req.body.id) : null;
-    if (editId) {
+    if (req.body.id != null && (!Number.isSafeInteger(editId) || editId <= 0)) throw new Abort('Invalid listing ID.', 400);
+    if (editId != null) {
       const i = items.findIndex(x => Number(x.id) === editId);
       if (i < 0) throw new Abort('Item not found.', 404);
       items[i] = { ...items[i], ...data };
@@ -1167,10 +1200,11 @@ app.post('/api/items', requireUser, async (req, res) => {
   if (out) res.json(out);
 });
 app.delete('/api/items/:id', requireUser, async (req, res) => {
+  const deleteId = Number(req.params.id); if (!/^\d{1,16}$/.test(String(req.params.id)) || !Number.isSafeInteger(deleteId) || deleteId <= 0) return res.status(400).json({ error: 'Invalid listing ID.' });
   const out = await inTx(res, async (tx) => {
     const rs = await tx.execute({ sql: 'SELECT items FROM users WHERE username = ?', args: [req.user] });
     const items = parseJson(rs.rows[0] && rs.rows[0].items, []);
-    const left = items.filter(x => Number(x.id) !== Number(req.params.id));
+    const left = items.filter(x => Number(x.id) !== deleteId);
     if (left.length === items.length) throw new Abort('Item not found.', 404);
     await tx.execute({ sql: 'UPDATE users SET items = ? WHERE username = ?', args: [JSON.stringify(left), req.user] });
     return true;
@@ -1197,32 +1231,43 @@ function cleanItemRef(r) {
   return { name: String(r.name || '').slice(0, 80), price: String(r.price || '').slice(0, 30), game: String(r.game || '').slice(0, 60), seller: String(r.seller || '').slice(0, 40) };
 }
 function cleanOffer(o) {
-  if (!o || typeof o !== 'object') return null;
-  const items = Array.isArray(o.items) ? o.items.slice(0, 60).map(x => String(x).slice(0, 80)) : [];
-  if (!items.length) return null;
-  return { game: String(o.game || '').slice(0, 60), items, mm: !!o.mm, listingGame: String(o.listingGame || '').slice(0, 60), status: 'pending' };
+  if (!o || typeof o !== 'object' || Array.isArray(o) || !Array.isArray(o.items) || !o.items.length || o.items.length > 60) return null;
+  if (o.items.some(x => typeof x !== 'string' || !x.trim() || x.trim().length > 80)) return null;
+  if (typeof o.game !== 'string' || !o.game.trim() || o.game.length > 60) return null;
+  if (o.listingGame != null && (typeof o.listingGame !== 'string' || o.listingGame.length > 60)) return null;
+  const items = o.items.map(x => x.trim());
+  return { game: o.game.trim(), items, mm: o.mm === true, listingGame: String(o.listingGame || '').trim(), status: 'pending' };
 }
 app.post('/api/chat/send', requireUser, async (req, res) => {
   if (limited('chat:' + req.user, 20, 10 * 1000)) return res.status(429).json({ error: 'You are sending messages too fast.' });
-  const to = String(req.body.receiver || '');
-  const text = String(req.body.text || '').slice(0, 2000);
-  if (!to) return res.status(400).json({ error: 'Choose who to message.' });
-  if (!text.trim()) return res.status(400).json({ error: 'Message is empty.' });
+  const b = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const to = typeof b.receiver === 'string' ? b.receiver.trim() : '';
+  const text = typeof b.text === 'string' ? b.text.slice(0, 2000) : '';
+  const itemId = b.itemId == null || b.itemId === '' ? '' : String(b.itemId);
+  if (!to || to.length > 40 || to === req.user) return res.status(400).json({ error: 'Choose another user.' });
+  if (!text.trim() && !b.offer && !b.imageId) return res.status(400).json({ error: 'Message is empty.' });
+  if (itemId && (!/^\d{1,16}$/.test(itemId) || !Number.isSafeInteger(Number(itemId)) || Number(itemId) <= 0)) return res.status(400).json({ error: 'Invalid item ID.' });
   try { const blocked = await spamBlocked(req.user); if (blocked) return res.status(429).json({ error: blocked }); } catch (e) { console.error('spam check error:', e); }
   const out = await inTx(res, async (tx) => {
     const ex = await tx.execute({ sql: 'SELECT bannedUntil FROM users WHERE username = ?', args: [req.user] });
     const until = Number(ex.rows[0] && ex.rows[0].bannedUntil) || 0;
     if (until === -1 || until > Date.now()) throw new Abort('Your account is banned.', 403);
     if (!(await tx.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [to] })).rows.length) throw new Abort('Account not found.', 404);
+    if (itemId) {
+      const listingA = await findStoredListing(itemId, req.user);
+      const listingB = await findStoredListing(itemId, to);
+      if (!listingA && !listingB) throw new Abort('This listing no longer exists. Refresh the page before messaging.', 400);
+    }
     let imageId = null;
-    if (req.body.imageId) {
-      imageId = String(req.body.imageId).slice(0, 64);
+    if (b.imageId) {
+      if (typeof b.imageId !== 'string' || b.imageId.length > 64) throw new Abort('Invalid picture ID.', 400);
+      imageId = b.imageId;
       const im = await tx.execute({ sql: 'SELECT 1 FROM chat_images WHERE id = ? AND sender = ?', args: [imageId, req.user] });
       if (!im.rows.length) throw new Abort('Picture not found.', 400);
     }
-    const msg = { sender: req.user, receiver: to, text, timestamp: Date.now(), itemRef: cleanItemRef(req.body.itemRef), itemId: req.body.itemId ? String(req.body.itemId).slice(0, 64) : null };
-    if (imageId) { msg.imageId = imageId; msg.caption = String(req.body.caption || '').slice(0, 500); }
-    const offer = cleanOffer(req.body.offer); if (offer) msg.offer = offer;
+    const msg = { sender: req.user, receiver: to, text, timestamp: Date.now(), itemRef: cleanItemRef(b.itemRef), itemId: itemId || null };
+    if (imageId) { msg.imageId = imageId; msg.caption = typeof b.caption === 'string' ? b.caption.slice(0, 500) : ''; }
+    const offer = cleanOffer(b.offer); if (b.offer && !offer) throw new Abort('Invalid offer details.', 400); if (offer) msg.offer = offer;
     await withBothRows(tx, req.user, to, (rows) => {
       while (rows[req.user].some(m => m.sender === req.user && m.timestamp === msg.timestamp)) msg.timestamp++;   // timestamp is the id
       rows[req.user].push(msg);
@@ -1258,27 +1303,32 @@ app.post('/api/chat/delete', requireUser, async (req, res) => {
 });
 // offers: the receiver accepts / declines / asks for more items; the sender updates the items after being asked
 app.post('/api/chat/offer', requireUser, async (req, res) => {
-  const sender = String(req.body.sender || ''), receiver = String(req.body.receiver || ''), ts = Number(req.body.timestamp);
-  const action = String(req.body.action || '');
-  if (![sender, receiver].includes(req.user) || !ts) return res.status(400).json({ error: 'Bad request.' });
+  const b = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const sender = typeof b.sender === 'string' ? b.sender : '', receiver = typeof b.receiver === 'string' ? b.receiver : '';
+  const ts = Number(b.timestamp), action = typeof b.action === 'string' ? b.action : '';
+  if (!sender || !receiver || sender === receiver || ![sender, receiver].includes(req.user) || !Number.isSafeInteger(ts) || ts <= 0 || !['accept', 'decline', 'add', 'update'].includes(action)) return res.status(400).json({ error: 'Bad request.' });
   const out = await inTx(res, async (tx) => {
     let found = false;
     await withBothRows(tx, sender, receiver, (rows) => {
       for (const n of Object.keys(rows)) if (rows[n]) rows[n].forEach(m => {
-        if (m.sender !== sender || m.timestamp !== ts || !m.offer) return;
+        if (m.sender !== sender || Number(m.timestamp) !== ts || !m.offer) return;
         found = true;
+        if (!m.offer || !Array.isArray(m.offer.items) || !m.offer.items.length || m.offer.items.length > 60 || !['pending', 'accepted', 'declined', 'add'].includes(m.offer.status)) throw new Abort('This offer failed validation.', 409);
         if (action === 'accept' || action === 'decline' || action === 'add') {
           if (req.user !== receiver) throw new Abort('Only the other person can respond to this offer.', 403);
-          if (m.offer.status !== 'pending') throw new Abort('This offer was already answered.');
+          if (m.offer.status !== 'pending') throw new Abort('This offer was already answered.', 409);
           m.offer.status = action === 'accept' ? 'accepted' : action === 'decline' ? 'declined' : 'add';
           m.offer.by = req.user;
         } else if (action === 'update') {
           if (req.user !== sender) throw new Abort('Only the sender can change the offer.', 403);
-          const o = cleanOffer({ ...m.offer, items: req.body.items, mm: req.body.mm });
+          if (m.offer.status !== 'add') throw new Abort('Items can only be changed after the other person asks for additions.', 409);
+          if (!Array.isArray(b.items) || !b.items.length || b.items.length > 60 || b.items.some(x => typeof x !== 'string' || !x.trim() || x.length > 80)) throw new Abort('Invalid offer items.', 400);
+          // Keep game, listing context, and middleman flag from the original server-stored offer.
+          const o = cleanOffer({ game: m.offer.game, listingGame: m.offer.listingGame, mm: m.offer.mm, items: b.items });
           if (!o) throw new Abort('Pick at least one item.', 400);
           m.offer = o;
-          m.text = String(req.body.text || m.text).slice(0, 2000);
-        } else throw new Abort('Bad request.', 400);
+          m.text = typeof b.text === 'string' ? b.text.trim().slice(0, 2000) : String(m.text || '').slice(0, 2000);
+        }
       });
     });
     if (!found) throw new Abort('Offer not found.', 404);
@@ -1527,10 +1577,14 @@ app.get('/api/tickets/middlemen', requireUser, wrap(async (req, res) => {
 const cleanReason = (v, n) => String(v || '').slice(0, n);
 app.post('/api/reports/item', requireUser, wrap(async (req, res) => {
   if (limited('rep:' + req.user, 20, 60 * 60 * 1000)) return bad(res, 'Too many reports.', 429);
-  const b = req.body, itemId = String(b.itemId || '').slice(0, 64), reason = cleanReason(b.reason, 100);
-  if (!itemId || !reason) return bad(res, 'Bad request.');
+  const b = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const itemId = String(b.itemId || ''), reason = typeof b.reason === 'string' ? cleanReason(b.reason.trim(), 100) : '';
+  if (!/^\d{1,16}$/.test(itemId) || !Number.isSafeInteger(Number(itemId)) || Number(itemId) <= 0 || !reason) return bad(res, 'Bad request.');
+  const listing = await findStoredListing(itemId);
+  if (!listing) return bad(res, 'This listing no longer exists.', 404);
+  if (listing.owner === req.user) return bad(res, 'You cannot report your own listing.', 403);
   if ((await db.execute({ sql: 'SELECT id FROM item_reports WHERE itemId = ? AND reporter = ? LIMIT 1', args: [itemId, req.user] })).rows.length) return res.json({ duplicate: true });
-  await db.execute({ sql: 'INSERT INTO item_reports (itemId, itemName, itemGame, seller, reporter, reason, details, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', args: [itemId, cleanReason(b.itemName, 100), cleanReason(b.itemGame, 60), cleanReason(b.seller, 40), req.user, reason, cleanReason(b.details, 1000), Date.now()] });
+  await db.execute({ sql: 'INSERT INTO item_reports (itemId, itemName, itemGame, seller, reporter, reason, details, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', args: [itemId, cleanReason(listing.item.name, 100), cleanReason(listing.item.game, 60), cleanReason(listing.owner, 40), req.user, reason, typeof b.details === 'string' ? cleanReason(b.details.trim(), 1000) : '', Date.now()] });
   res.json({ ok: true });
 }));
 app.post('/api/reports/user', requireUser, wrap(async (req, res) => {
@@ -1548,13 +1602,16 @@ app.get('/api/admin/reports/users', requireUser, requireAdmin, wrap(async (req, 
   res.json({ rows: (await db.execute('SELECT * FROM user_reports ORDER BY createdAt DESC')).rows.map(r => ({ ...r, id: Number(r.id), createdAt: Number(r.createdAt) })) });
 }));
 app.post('/api/admin/reports/item/dismiss', requireUser, requireAdmin, wrap(async (req, res) => {
-  await db.execute({ sql: 'DELETE FROM item_reports WHERE id = ?', args: [Number(req.body.id)] }); res.json({ ok: true });
+  const id = Number(req.body && req.body.id); if (!Number.isSafeInteger(id) || id <= 0) return bad(res, 'Invalid report ID.');
+  const r = await db.execute({ sql: 'DELETE FROM item_reports WHERE id = ?', args: [id] }); if (!r.rowsAffected) return bad(res, 'Report not found.', 404); res.json({ ok: true });
 }));
 app.post('/api/admin/reports/user/dismiss', requireUser, requireAdmin, wrap(async (req, res) => {
-  await db.execute({ sql: 'DELETE FROM user_reports WHERE id = ?', args: [Number(req.body.id)] }); res.json({ ok: true });
+  const id = Number(req.body && req.body.id); if (!Number.isSafeInteger(id) || id <= 0) return bad(res, 'Invalid report ID.');
+  const r = await db.execute({ sql: 'DELETE FROM user_reports WHERE id = ?', args: [id] }); if (!r.rowsAffected) return bad(res, 'Report not found.', 404); res.json({ ok: true });
 }));
 app.post('/api/admin/deals/:id/cancel-report', requireUser, requireAdmin, wrap(async (req, res) => {
-  const rs = await db.execute({ sql: "UPDATE deals SET status = 'not_received', reportedAt = 0, reportedBy = NULL, chatSnapshot = NULL, updatedAt = ? WHERE id = ? AND status = 'reported'", args: [Date.now(), Number(req.params.id)] });
+  const id = dealId(req); if (!id) return bad(res, 'Invalid deal ID.');
+  const rs = await db.execute({ sql: "UPDATE deals SET status = 'not_received', reportedAt = 0, reportedBy = NULL, chatSnapshot = NULL, updatedAt = ? WHERE id = ? AND status = 'reported'", args: [Date.now(), id] });
   if (!rs.rowsAffected) return bad(res, 'This report was already handled.', 409);
   res.json({ ok: true });
 }));
