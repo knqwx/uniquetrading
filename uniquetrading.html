@@ -2875,7 +2875,7 @@
 }
 
         /* ===== message menu + editing state ===== */
-        .msg-edited { font-style: italic; opacity: 0.95; }
+        .msg-edited { font-style: normal; opacity: 0.95; }
         .msg-context-menu { position: fixed; max-width: calc(100vw - 16px); }
         @media (pointer: coarse) { .message-bubble { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; } }
         .message-bubble.editing { outline: 2px solid #ffd166; outline-offset: 3px; box-shadow: 0 0 0 4px rgba(255,209,102,0.18); }
@@ -4946,7 +4946,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         // ВНИМАНИЕ: пока нет реального платёжного провайдера (Stripe и т.п.),
         // покупка работает в демо-режиме: списания денег нет, нужна только привязанная карта.
         // Перед реальным запуском подключи оплату и начисляй баланс на сервере после подтверждения платежа.
-        const PAYMENT_DEMO_MODE = true;
+        const PAYMENT_DEMO_MODE = false; // Never simulate payments in the client; real top-ups require a verified payment provider.
         const MIN_TOPUP = 1;
         const MAX_TOPUP = 10000;
 
@@ -6417,8 +6417,31 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         async function editMessageInDB(targetUsername, timestamp, newText) {
             const r = await srv('/api/chat/edit', 'POST', { receiver: targetUsername, timestamp, text: newText });
-            if (!r.ok) { srvFail(r); return; }
+            if (!r.ok) { srvFail(r); return false; }
+
+            // Update the visible bubble immediately; no page reload or polling delay.
+            const bubble = document.querySelector('.message-bubble[data-timestamp="' + Number(timestamp) + '"]');
+            if (bubble) {
+                const content = bubble.querySelector('.msg-text-content');
+                if (content) content.innerHTML = linkifyText(newText);
+                let edited = bubble.querySelector('.msg-edited');
+                if (!edited) {
+                    const time = bubble.querySelector('.msg-time');
+                    if (time) {
+                        time.append(document.createTextNode(' · '));
+                        edited = document.createElement('span');
+                        edited.className = 'msg-edited';
+                        time.appendChild(edited);
+                    }
+                }
+                if (edited) {
+                    edited.textContent = 'edited';
+                    edited.title = 'Edited just now';
+                    edited.style.fontStyle = 'normal';
+                }
+            }
             showToast('Message updated');
+            return true;
         }
 
         async function deleteMessageInDB(targetUsername, timestamp, threadKey) {
