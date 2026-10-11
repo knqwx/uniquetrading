@@ -90,6 +90,8 @@ async function init() {
   for (const col of ['balance REAL DEFAULT 0.00', 'lastItemTime INTEGER', 'messages TEXT', 'card TEXT', 'isMiddleman INTEGER DEFAULT 0', 'lastSeen INTEGER', 'heldBalance REAL DEFAULT 0', 'bannedUntil INTEGER DEFAULT 0', 'bannedAt INTEGER DEFAULT 0', 'banReason TEXT', 'appeal TEXT', 'appealAt INTEGER DEFAULT 0', 'appealStatus TEXT', 'roblox TEXT']) await run(`ALTER TABLE users ADD COLUMN ${col}`);
   await run(`UPDATE users SET joinedAt = 0 WHERE joinedAt = 1`);
   await run(`CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, username TEXT, createdAt INTEGER, expiresAt INTEGER)`);
+  await run(`CREATE TABLE IF NOT EXISTS admin_sessions (token TEXT PRIMARY KEY, username TEXT NOT NULL, sessionId TEXT NOT NULL, createdAt INTEGER NOT NULL, expiresAt INTEGER NOT NULL)`);
+  await run(`CREATE INDEX IF NOT EXISTS idx_admin_sessions_user_session ON admin_sessions(username, sessionId, expiresAt)`);
   await run(`CREATE TABLE IF NOT EXISTS signup_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ip TEXT, createdAt INTEGER)`);
   await run(`CREATE TABLE IF NOT EXISTS deals (id INTEGER PRIMARY KEY AUTOINCREMENT, buyer TEXT, seller TEXT, itemName TEXT, amount REAL, sellerAmount REAL, status TEXT, createdAt INTEGER, updatedAt INTEGER, reportedAt INTEGER, chatSnapshot TEXT, reportedBy TEXT, itemId TEXT)`);
   await run(`CREATE TABLE IF NOT EXISTS chat_clears (user TEXT, other TEXT, clearedAt INTEGER, PRIMARY KEY (user, other))`);
@@ -271,6 +273,20 @@ setInterval(() => { const cut = Date.now() - DAY; for (const [k, t] of ipSeen) i
 const IS_SECURE = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 const CROSS_SITE = IS_SECURE && process.env.CROSS_SITE_COOKIES !== '0';   // on Render: on by default because the pages live on github.io; set CROSS_SITE_COOKIES=0 to turn off
 const cookieOpts = (maxAge) => ({ httpOnly: true, secure: CROSS_SITE ? true : IS_SECURE, sameSite: CROSS_SITE ? 'none' : 'lax', maxAge, path: '/' });
+async function refreshAdminSession(res, username, sessionId) {
+  // Admin access is represented by a separate HttpOnly token minted only after a server-side role check.
+  const role = await db.execute({ sql: "SELECT customId FROM users WHERE username = ?", args: [username] });
+  if (!role.rows.length || String(role.rows[0].customId || '') !== 'knqw') {
+    await db.execute({ sql: 'DELETE FROM admin_sessions WHERE sessionId = ?', args: [sessionId] });
+    res.clearCookie('admin_sid', { ...cookieOpts(0), maxAge: undefined });
+    return;
+  }
+  const token = crypto.randomBytes(32).toString('hex');
+  const now = Date.now();
+  await db.execute({ sql: 'DELETE FROM admin_sessions WHERE sessionId = ?', args: [sessionId] });
+  await db.execute({ sql: 'INSERT INTO admin_sessions (token, username, sessionId, createdAt, expiresAt) VALUES (?, ?, ?, ?, ?)', args: [token, username, sessionId, now, now + SESSION_MS] });
+  res.cookie('admin_sid', token, cookieOpts(SESSION_MS));
+}
 async function startSession(res, username) {
   const sid = crypto.randomBytes(32).toString('hex');
   const now = Date.now();
@@ -280,6 +296,7 @@ async function startSession(res, username) {
   const list = readSids(res.req).filter(x => x !== sid);
   list.push(sid);
   res.cookie('sids', list.slice(-10).join(','), cookieOpts(SESSION_MS));
+  await refreshAdminSession(res, username, sid);
 }
 function readSids(req) {
   return String((req && req.cookies && req.cookies.sids) || '').split(',').filter(x => /^[a-f0-9]{64}$/.test(x)).slice(0, 10);
@@ -479,6 +496,7 @@ app.post('/api/switch', async (req, res) => {
     if (!r.rows.length) return res.status(401).json({ error: 'Please log in.' });
     const sid = String(r.rows[0].id);
     res.cookie('sid', sid, cookieOpts(SESSION_MS));
+    await refreshAdminSession(res, username, sid);
     res.json({ username });
   } catch (e) { res.status(500).json({ error: 'Server error' }); }
 });
@@ -488,7 +506,9 @@ app.post('/api/logout', async (req, res) => {
     const cur = String(req.cookies.sid || '');
     res.cookie('sids', readSids(req).filter(x => x !== cur).join(','), cookieOpts(SESSION_MS));
   } catch (e) {}
+  try { await db.execute({ sql: 'DELETE FROM admin_sessions WHERE token = ?', args: [String(req.cookies.admin_sid || '')] }); } catch (e) {}
   try { await db.execute({ sql: 'DELETE FROM sessions WHERE id = ?', args: [String(req.cookies.sid || '')] }); } catch (e) {}
+  res.clearCookie('admin_sid', { ...cookieOpts(0), maxAge: undefined });
   res.clearCookie('sid', { ...cookieOpts(0), maxAge: undefined });
   res.json({ ok: true });
 });
@@ -506,11 +526,23 @@ const parseMoney = (v) => { if (typeof v !== 'number' && (typeof v !== 'string' 
 
 async function requireAdmin(req, res, next) {
   try {
-    const r = await db.execute({ sql: 'SELECT customId FROM users WHERE username = ?', args: [req.user] });
-    if (!r.rows.length || String(r.rows[0].customId || '') !== 'knqw') return res.status(403).json({ error: 'Only the admin can do this.' });
+    const token = String(req.cookies.admin_sid || '');
+    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(403).json({ error: 'A valid admin session is required.' });
+    const r = await db.execute({
+      sql: `SELECT a.username FROM admin_sessions a
+            JOIN sessions s ON s.id = a.sessionId AND s.username = a.username
+            JOIN users u ON u.username = a.username
+            WHERE a.token = ? AND a.username = ? AND a.sessionId = ?
+              AND a.expiresAt > ? AND s.expiresAt > ? AND u.customId = 'knqw'`,
+      args: [token, req.user, String(req.cookies.sid || ''), Date.now(), Date.now()]
+    });
+    if (!r.rows.length) return res.status(403).json({ error: 'A valid admin session is required.' });
     next();
-  } catch (e) { res.status(500).json({ error: 'Server error' }); }
+  } catch (e) { console.error('admin session validation failed:', e); res.status(500).json({ error: 'Server error' }); }
 }
+// Defense in depth: every /api/admin/* route is protected here even if a route is added
+// later without explicitly attaching the authorization middleware.
+app.use('/api/admin', requireUser, requireAdmin);
 const audit = (admin, action, target, detail, amount) => db.execute({ sql: 'INSERT INTO admin_audit (admin, action, target, detail, amount, createdAt) VALUES (?, ?, ?, ?, ?, ?)', args: [admin, action, target || '', String(detail || '').slice(0, 300), Number(amount) || 0, Date.now()] }).catch(e => console.error('audit failed:', e.message));
 class Abort extends Error { constructor(msg, code = 409) { super(msg); this.code = code; } }
 // run fn(tx) in a write transaction; throw Abort(...) to roll back and answer with that message
