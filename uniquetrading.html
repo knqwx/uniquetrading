@@ -4096,7 +4096,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         // /api/users is light (no listings, pictures are URLs). Pass withItems = true only on screens that need everybody's listings.
         async function getAllUsersFromDB(withItems = false) {
             try {
-                const [a, b, l] = await Promise.all([srv('/api/users'), srv('/api/profile'), withItems ? srv('/api/listings') : Promise.resolve(null)]);
+                const [b, l] = await Promise.all([srv('/api/profile'), withItems ? srv('/api/listings') : Promise.resolve(null)]);
+                const isAdminProfile = !!(b.ok && b.data.user && String(b.data.user.customId || '') === 'knqw');
+                const a = await srv(isAdminProfile ? '/api/admin/directory' : '/api/users');
                 if (!a.ok) return [];
                 const itemsOf = {};
                 if (l && l.ok) (l.data.listings || []).forEach(x => { itemsOf[x.username] = x.items || []; });
@@ -4628,6 +4630,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             img.onerror = null;
             img.classList.add('missing');
         }
+        // Capture image errors without inline onerror attributes (compatible with script-src-attr 'none').
+        document.addEventListener('error', (event) => {
+            const img = event.target;
+            if (img instanceof HTMLImageElement && img.hasAttribute('data-img-fallback')) itemImgFallback(img);
+        }, true);
         // items may contain the same name several times; group them: [{name, count}]
         function groupItems(items) {
             const order = [], counts = {};
@@ -4656,7 +4663,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const _anc = _list.find(n => isAncientItem(item.game, n));
             if (_anc) {
                 const c = itemImageCandidates(_anc, item.cat || item.category);
-                return `src="${escapeHtml(c[0])}" data-alts="${escapeHtml(c.slice(1).join('|'))}" data-fb="${escapeHtml(fb)}" onerror="itemImgFallback(this)"`;
+                return `src="${escapeHtml(c[0])}" data-alts="${escapeHtml(c.slice(1).join('|'))}" data-fb="${escapeHtml(fb)}" data-img-fallback="1"`;
             }
             return `src="${fb}"`;
         }
@@ -4698,7 +4705,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             listEl.classList.toggle('cards', isMM2Game(selectedGameForListing));
             listEl.innerHTML = list.length
                 ? list.map(n => isMM2Game(selectedGameForListing)
-                    ? `<button type="button" class="item-picker-card item-picker-item" data-name="${escapeHtml(n)}"><img class="card-img" src="${escapeHtml(itemImageCandidates(n, pickerActiveCat)[0])}" data-alts="${escapeHtml(itemImageCandidates(n, pickerActiveCat).slice(1).join('|'))}" alt="${escapeHtml(n)}" loading="lazy" onerror="itemImgFallback(this)"><span>${escapeHtml(n)}</span></button>`
+                    ? `<button type="button" class="item-picker-card item-picker-item" data-name="${escapeHtml(n)}"><img class="card-img" src="${escapeHtml(itemImageCandidates(n, pickerActiveCat)[0])}" data-alts="${escapeHtml(itemImageCandidates(n, pickerActiveCat).slice(1).join('|'))}" alt="${escapeHtml(n)}" loading="lazy" data-img-fallback="1"><span>${escapeHtml(n)}</span></button>`
                     : `<button type="button" class="item-picker-item" data-name="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')
                 : '<div class="item-picker-empty">No items added to this category yet. You can type the item name below.</div>';
             listEl.querySelectorAll('.item-picker-item').forEach(b => b.addEventListener('click', () => chooseListingItem(b.dataset.name)));
