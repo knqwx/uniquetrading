@@ -47,6 +47,13 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Max-Age', '600');
   }
   if (req.method === 'OPTIONS') return res.sendStatus(origin && !ALLOWED_ORIGINS.has(origin) ? 403 : 204);
+  // The session cookie is SameSite=None in production, so a foreign website could make a visitor's browser send state-changing
+  // requests. Browsers always attach an Origin header to those, so refuse any POST/DELETE from an origin that is not ours.
+  if (origin && req.method !== 'GET' && req.method !== 'HEAD' && !ALLOWED_ORIGINS.has(origin)) {
+    let sameHost = false;
+    try { sameHost = new URL(origin).host === req.headers.host; } catch (e) {}
+    if (!sameHost) return res.status(403).json({ error: 'Request blocked.' });
+  }
   next();
 });
 // Content-Security-Policy. The page uses inline <script>/<style> and a few inline handlers, so 'unsafe-inline' is still needed
@@ -459,11 +466,15 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Switch between accounts this browser is ALREADY logged into. The username in the body is only a choice among them:
+// it works only if one of the secret session ids in this browser's own httpOnly "sids" cookie belongs to that account
+// and is still valid, so it cannot be used to become someone this browser never logged in as.
 app.post('/api/switch', async (req, res) => {
   try {
+    if (limited('switch:' + ipOf(req), 30, 60 * 1000)) return res.status(429).json({ error: 'Too many attempts. Try again in a minute.' });
     const username = String(req.body.username || '');
     const sids = readSids(req);
-    if (!username || !sids.length) return res.status(401).json({ error: 'Please log in.' });
+    if (!username || username.length > 100 || !sids.length) return res.status(401).json({ error: 'Please log in.' });
     const r = await db.execute({ sql: `SELECT id FROM sessions WHERE username = ? AND expiresAt > ? AND id IN (${sids.map(() => '?').join(',')})`, args: [username, Date.now(), ...sids] });
     if (!r.rows.length) return res.status(401).json({ error: 'Please log in.' });
     const sid = String(r.rows[0].id);
