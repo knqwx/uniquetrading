@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'node:crypto';
 import dns from 'node:dns/promises';
 import path from 'node:path';
+import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@libsql/client';
 
@@ -30,7 +31,11 @@ for (const m of ['get', 'post', 'delete']) {
 process.on('unhandledRejection', (e) => console.error('unhandledRejection:', e));
 process.on('uncaughtException', (e) => console.error('uncaughtException:', e));
 app.disable('x-powered-by');
-app.set('trust proxy', 1);                 // Render sits behind a proxy: req.ip is the real visitor IP
+// Configure the exact number of trusted reverse-proxy hops for your deployment.
+// Render normally uses one proxy hop; never set this to true (trust every proxy).
+const TRUST_PROXY_HOPS = Number.parseInt(process.env.TRUST_PROXY_HOPS || '1', 10);
+if (!Number.isInteger(TRUST_PROXY_HOPS) || TRUST_PROXY_HOPS < 0 || TRUST_PROXY_HOPS > 5) throw new Error('TRUST_PROXY_HOPS must be an integer from 0 to 5');
+app.set('trust proxy', TRUST_PROXY_HOPS);
 app.use('/api/chat/image', express.json({ limit: '1mb' }));   // photos are ~100-300 KB as base64; everything else stays at 50 KB
 app.use(express.json({ limit: '50kb' }));
 app.use(cookieParser());
@@ -56,44 +61,81 @@ app.use((req, res, next) => {
   }
   next();
 });
-// Content-Security-Policy. The page uses inline <script>/<style> and a few inline handlers, so 'unsafe-inline' is still needed
-// for scripts; everything else is locked down (no foreign scripts, no framing, no <base>/<object>, forms only post to self).
+// Content-Security-Policy: inline scripts receive a per-response nonce; inline styles remain allowed for legacy style attributes.
+// Third-party script execution, framing, plugins, foreign form targets, and script event attributes are blocked.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'nonce-__CSP_NONCE__'",
+  "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com",
   "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
   "connect-src 'self' https://unique-pdee.onrender.com https://api.ipify.org https://api64.ipify.org",
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'self'",
-  "frame-ancestors 'none'"
+  "frame-ancestors 'none'",
+  "upgrade-insecure-requests"
 ].join('; ');
 app.use((req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(18).toString('base64');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
   res.setHeader('X-Frame-Options', 'DENY');                       // clickjacking: nobody may embed the site in a frame
-  res.setHeader('Content-Security-Policy', CSP);
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader('Content-Security-Policy', CSP.replace('__CSP_NONCE__', res.locals.cspNonce));
   if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');
   next();
 });
 
 const DAY = 24 * 60 * 60 * 1000;
 const SESSION_MS = 30 * DAY;
-const ipOf = (req) => String(req.ip || '').replace(/^::ffff:/, '');
+const ipOf = (req) => {
+  // Always use Express's proxy-aware address, never trust X-Forwarded-For directly.
+  const ip = String(req.ip || '').trim().replace(/^::ffff:/i, '').toLowerCase();
+  return ip && ip.length <= 64 && !/[\s,]/.test(ip) ? ip : '';
+};
+const ipFingerprint = (ip) => crypto.createHmac('sha256', cleanEnv(process.env.IP_HASH_SECRET || TURSO_TOKEN || 'unique-trading-ip-guard-change-me')).update(String(ip || '')).digest('hex');
 
 // ---------- tables ----------
 async function init() {
   const run = async (sql) => { try { await db.execute(sql); } catch (e) { /* already exists */ } };
   await run(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, customId TEXT, username TEXT UNIQUE, displayName TEXT, email TEXT, password TEXT, avatar TEXT, balance REAL DEFAULT 0.00, lastUsernameChange INTEGER, lastDisplayNameChange INTEGER, items TEXT, lastItemTime INTEGER, messages TEXT, card TEXT)`);
   for (const col of ['balance REAL DEFAULT 0.00', 'lastItemTime INTEGER', 'messages TEXT', 'card TEXT', 'isMiddleman INTEGER DEFAULT 0', 'lastSeen INTEGER', 'heldBalance REAL DEFAULT 0', 'bannedUntil INTEGER DEFAULT 0', 'bannedAt INTEGER DEFAULT 0', 'banReason TEXT', 'appeal TEXT', 'appealAt INTEGER DEFAULT 0', 'appealStatus TEXT', 'roblox TEXT']) await run(`ALTER TABLE users ADD COLUMN ${col}`);
+  // Authoritative wallet values are integer cents. Migrate legacy dollar columns exactly once.
+  const userCols = await db.execute('PRAGMA table_info(users)');
+  const userColNames = new Set(userCols.rows.map(r => String(r.name)));
+  if (!userColNames.has('balanceCents')) {
+    await run('ALTER TABLE users ADD COLUMN balanceCents INTEGER NOT NULL DEFAULT 0');
+    await run('UPDATE users SET balanceCents = CAST(ROUND(COALESCE(balance, 0) * 100) AS INTEGER)');
+  }
+  if (!userColNames.has('heldBalanceCents')) {
+    await run('ALTER TABLE users ADD COLUMN heldBalanceCents INTEGER NOT NULL DEFAULT 0');
+    await run('UPDATE users SET heldBalanceCents = CAST(ROUND(COALESCE(heldBalance, 0) * 100) AS INTEGER)');
+  }
+
   await run(`UPDATE users SET joinedAt = 0 WHERE joinedAt = 1`);
   await run(`CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, username TEXT, createdAt INTEGER, expiresAt INTEGER)`);
   await run(`CREATE TABLE IF NOT EXISTS admin_sessions (token TEXT PRIMARY KEY, username TEXT NOT NULL, sessionId TEXT NOT NULL, createdAt INTEGER NOT NULL, expiresAt INTEGER NOT NULL)`);
   await run(`CREATE INDEX IF NOT EXISTS idx_admin_sessions_user_session ON admin_sessions(username, sessionId, expiresAt)`);
   await run(`CREATE TABLE IF NOT EXISTS signup_log (id INTEGER PRIMARY KEY AUTOINCREMENT, ip TEXT, createdAt INTEGER)`);
   await run(`CREATE TABLE IF NOT EXISTS deals (id INTEGER PRIMARY KEY AUTOINCREMENT, buyer TEXT, seller TEXT, itemName TEXT, amount REAL, sellerAmount REAL, status TEXT, createdAt INTEGER, updatedAt INTEGER, reportedAt INTEGER, chatSnapshot TEXT, reportedBy TEXT, itemId TEXT)`);
+  const dealCols = await db.execute('PRAGMA table_info(deals)');
+  const dealColNames = new Set(dealCols.rows.map(r => String(r.name)));
+  if (!dealColNames.has('amountCents')) {
+    await run('ALTER TABLE deals ADD COLUMN amountCents INTEGER NOT NULL DEFAULT 0');
+    await run('UPDATE deals SET amountCents = CAST(ROUND(COALESCE(amount, 0) * 100) AS INTEGER)');
+  }
+  if (!dealColNames.has('sellerAmountCents')) {
+    await run('ALTER TABLE deals ADD COLUMN sellerAmountCents INTEGER NOT NULL DEFAULT 0');
+    await run('UPDATE deals SET sellerAmountCents = CAST(ROUND(COALESCE(sellerAmount, 0) * 100) AS INTEGER)');
+  }
+
   await run(`CREATE TABLE IF NOT EXISTS chat_clears (user TEXT, other TEXT, clearedAt INTEGER, PRIMARY KEY (user, other))`);
   await run(`CREATE TABLE IF NOT EXISTS typing (user TEXT, other TEXT, ts INTEGER, PRIMARY KEY (user, other))`);
   await run(`CREATE TABLE IF NOT EXISTS chat_images (id TEXT PRIMARY KEY, sender TEXT, receiver TEXT, data TEXT, createdAt INTEGER)`);
@@ -104,6 +146,8 @@ async function init() {
   await run(`CREATE TABLE IF NOT EXISTS chat_groups (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, owner TEXT, members TEXT, createdAt INTEGER)`);
   await run(`CREATE TABLE IF NOT EXISTS group_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, groupId INTEGER, sender TEXT, text TEXT, timestamp INTEGER)`);
   await run(`CREATE TABLE IF NOT EXISTS ratings (rater TEXT, target TEXT, stars INTEGER, createdAt INTEGER, PRIMARY KEY (rater, target))`);
+  // One rating/vouch identity per target and network fingerprint. Stores keyed hashes, not raw IPs.
+  await run(`CREATE TABLE IF NOT EXISTS social_ip_guard (kind TEXT NOT NULL, target TEXT NOT NULL, ipHash TEXT NOT NULL, actor TEXT NOT NULL, createdAt INTEGER NOT NULL, PRIMARY KEY (kind, target, ipHash))`);
   await run(`CREATE TABLE IF NOT EXISTS vouches (id INTEGER PRIMARY KEY AUTOINCREMENT, middleman TEXT, author TEXT, text TEXT, createdAt INTEGER, UNIQUE (middleman, author))`);
   await run(`CREATE TABLE IF NOT EXISTS ip_bans (ip TEXT PRIMARY KEY, bannedUntil INTEGER, bannedAt INTEGER, reason TEXT, username TEXT)`);
   await run(`ALTER TABLE users ADD COLUMN passwordHash TEXT`);
@@ -122,6 +166,12 @@ async function init() {
   await run(`DELETE FROM sessions WHERE expiresAt < ${Date.now()}`);
   // withdrawal requests are saved here (the admin sees them in Money -> Withdrawal requests)
   await run(`CREATE TABLE IF NOT EXISTS withdrawals (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, amount REAL, method TEXT, status TEXT DEFAULT 'pending', createdAt INTEGER, handledBy TEXT, handledAt INTEGER)`);
+  const withdrawalCols = await db.execute('PRAGMA table_info(withdrawals)');
+  if (!withdrawalCols.rows.some(r => String(r.name) === 'amountCents')) {
+    await run('ALTER TABLE withdrawals ADD COLUMN amountCents INTEGER NOT NULL DEFAULT 0');
+    await run('UPDATE withdrawals SET amountCents = CAST(ROUND(COALESCE(amount, 0) * 100) AS INTEGER)');
+  }
+
   await run(`CREATE INDEX IF NOT EXISTS withdrawals_created ON withdrawals (createdAt)`);
   // usernames are unique regardless of capitalization ("Alice" and "alice" are the same name)
   try {
@@ -269,9 +319,9 @@ function trackIp(username, ip) {
 setInterval(() => { const cut = Date.now() - DAY; for (const [k, t] of ipSeen) if (t < cut) ipSeen.delete(k); }, 60 * 60 * 1000);
 
 // ---------- sessions ----------
-// Cookies are SameSite=None; Secure on Render, which browsers need when the pages are on another site (github.io).
+// Same-origin deployment uses Lax cookies by default. Set CROSS_SITE_COOKIES=1 only if you intentionally host the frontend on another site (for example GitHub Pages).
 const IS_SECURE = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
-const CROSS_SITE = IS_SECURE && process.env.CROSS_SITE_COOKIES !== '0';   // on Render: on by default because the pages live on github.io; set CROSS_SITE_COOKIES=0 to turn off
+const CROSS_SITE = IS_SECURE && process.env.CROSS_SITE_COOKIES === '1';
 const cookieOpts = (maxAge) => ({ httpOnly: true, secure: CROSS_SITE ? true : IS_SECURE, sameSite: CROSS_SITE ? 'none' : 'lax', maxAge, path: '/' });
 async function refreshAdminSession(res, username, sessionId) {
   // Admin access is represented by a separate HttpOnly token minted only after a server-side role check.
@@ -420,7 +470,7 @@ app.post('/api/signup', async (req, res) => {
     try {
       // NOTE: the old "password" column is left empty for new accounts. The main site still reads it until it is moved to the backend too.
       await db.execute({
-        sql: 'INSERT INTO users (customId, username, displayName, email, password, passwordHash, items, lastIp, joinedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        sql: 'INSERT INTO users (customId, username, displayName, email, password, passwordHash, items, lastIp, joinedAt, balanceCents, heldBalanceCents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)',
         args: [customId, username, username, email, '', hash, JSON.stringify([]), ip || null, now]
       });
     } catch (e) {
@@ -522,7 +572,9 @@ const SELLER_SHARE = 0.9;
 const MIN_DEAL = 0.01, MAX_DEAL = 1000000;
 const MIN_TOPUP = 1, MAX_TOPUP = 10000;
 const round2 = (n) => Math.round(Number(n) * 100) / 100;
-const parseMoney = (v) => { if (typeof v !== 'number' && (typeof v !== 'string' || !/^\d{1,9}(?:\.\d{1,2})?$/.test(v.trim()))) return NaN; const n = Number(v); return Number.isFinite(n) ? round2(n) : NaN; };
+const toCents = (v) => Math.round(Number(v) * 100);
+const fromCents = (v) => (Number(v) || 0) / 100;
+const parseMoney = (v) => { if (typeof v !== 'number' && (typeof v !== 'string' || !/^\d{1,9}(?:\.\d{1,2})?$/.test(v.trim()))) return NaN; const n = Number(v); return Number.isFinite(n) ? toCents(n) : NaN; };
 
 async function requireAdmin(req, res, next) {
   try {
@@ -560,6 +612,18 @@ async function inTx(res, fn) {
     return undefined;
   } finally { tx.close(); }
 }
+const walletLocks = new Map();
+async function withWalletLock(key, fn) {
+  const k = String(key);
+  const prior = walletLocks.get(k) || Promise.resolve();
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  const tail = prior.then(() => gate);
+  walletLocks.set(k, tail);
+  await prior;
+  try { return await fn(); }
+  finally { release(); if (walletLocks.get(k) === tail) walletLocks.delete(k); }
+}
 const moneyLimit = (req, res, key, max, ms) => {
   if (limited(key + ':' + req.user, max, ms)) { res.status(429).json({ error: 'Too many requests. Slow down.' }); return true; }
   return false;
@@ -592,10 +656,10 @@ app.post('/api/change-password', requireUser, async (req, res) => {
 
 // ---------- wallet ----------
 app.get('/api/wallet', requireUser, async (req, res) => {
-  const r = await db.execute({ sql: 'SELECT balance, heldBalance, lastWithdrawAt FROM users WHERE username = ?', args: [req.user] });
+  const r = await db.execute({ sql: 'SELECT balanceCents, heldBalanceCents, lastWithdrawAt FROM users WHERE username = ?', args: [req.user] });
   if (!r.rows.length) return res.status(401).json({ error: 'Please log in.' });
   const last = Number(r.rows[0].lastWithdrawAt) || 0;
-  res.json({ balance: Number(r.rows[0].balance) || 0, held: Number(r.rows[0].heldBalance) || 0, nextWithdrawAt: last ? last + WITHDRAW_COOLDOWN : 0 });
+  res.json({ balance: fromCents(r.rows[0].balanceCents), held: fromCents(r.rows[0].heldBalanceCents), nextWithdrawAt: last ? last + WITHDRAW_COOLDOWN : 0 });
 });
 
 // Withdrawals: one per hour per account, enforced here (not in the page). The request is saved in the withdrawals table; no money is moved or deducted yet.
@@ -603,16 +667,16 @@ const WITHDRAW_COOLDOWN = 60 * 60 * 1000;
 app.post('/api/wallet/withdraw', requireUser, async (req, res) => {
   try {
     if (moneyLimit(req, res, 'withdraw', 20, 60 * 60 * 1000)) return;
-    const amount = parseMoney(req.body.amount);
-    if (!(amount > 0) || amount > 1000000) return res.status(400).json({ error: 'Please enter a valid withdrawal amount.' });
+    const amountCents = parseMoney(req.body.amount);
+    if (!(amountCents > 0) || amountCents > 100000000) return res.status(400).json({ error: 'Please enter a valid withdrawal amount.' });
     const method = String(req.body.method || 'card');
     if (!['card', 'crypto'].includes(method)) return res.status(400).json({ error: 'Please choose a payout method.' });
-    const rs = await db.execute({ sql: 'SELECT balance, lastWithdrawAt, bannedUntil FROM users WHERE username = ?', args: [req.user] });
+    const rs = await db.execute({ sql: 'SELECT balanceCents, lastWithdrawAt, bannedUntil FROM users WHERE username = ?', args: [req.user] });
     if (!rs.rows.length) return res.status(401).json({ error: 'Please log in.' });
     const u = rs.rows[0];
     const until = Number(u.bannedUntil) || 0;
     if (until === -1 || until > Date.now()) return res.status(403).json({ error: 'Your account is banned.' });
-    if (amount > (Number(u.balance) || 0)) return res.status(400).json({ error: 'You do not have enough balance for this withdrawal.' });
+    if (amountCents > (Number(u.balanceCents) || 0)) return res.status(400).json({ error: 'You do not have enough balance for this withdrawal.' });
     const now = Date.now();
     // atomic: only one request can claim the hourly slot
     const upd = await db.execute({ sql: 'UPDATE users SET lastWithdrawAt = ? WHERE username = ? AND COALESCE(lastWithdrawAt, 0) <= ?', args: [now, req.user, now - WITHDRAW_COOLDOWN] });
@@ -621,21 +685,21 @@ app.post('/api/wallet/withdraw', requireUser, async (req, res) => {
       return res.status(429).json({ error: `You can only withdraw once per hour. Try again in ${Math.max(1, Math.ceil(wait / 60000))} min.`, nextWithdrawAt: now + Math.max(0, wait) });
     }
     try {
-      await db.execute({ sql: "INSERT INTO withdrawals (username, amount, method, status, createdAt) VALUES (?, ?, ?, 'pending', ?)", args: [req.user, amount, method, now] });
+      await db.execute({ sql: "INSERT INTO withdrawals (username, amount, amountCents, method, status, createdAt) VALUES (?, ?, ?, ?, 'pending', ?)", args: [req.user, fromCents(amountCents), amountCents, method, now] });
     } catch (e) {
       // the request could not be saved: give the hourly slot back so the user can simply try again
       await db.execute({ sql: 'UPDATE users SET lastWithdrawAt = ? WHERE username = ?', args: [Number(u.lastWithdrawAt) || 0, req.user] }).catch(() => {});
       throw e;
     }
-    console.log(`WITHDRAW request ${req.user} ${amount} ${method}`);
+    console.log(`WITHDRAW request ${req.user} ${fromCents(amountCents)} ${method}`);
     res.json({ ok: true, nextWithdrawAt: now + WITHDRAW_COOLDOWN });
   } catch (e) { console.error('withdraw error:', e); res.status(500).json({ error: 'Withdrawal failed. Try again.' }); }
 });
 
 // admin only: saved withdrawal requests (newest first) and marking them paid / rejected
 app.get('/api/admin/withdrawals', requireUser, requireAdmin, async (req, res) => {
-  const rs = await db.execute('SELECT w.id, w.username, w.amount, w.method, w.status, w.createdAt, w.handledBy, w.handledAt, u.balance FROM withdrawals w LEFT JOIN users u ON u.username = w.username ORDER BY w.id DESC LIMIT 200');
-  res.json({ rows: rs.rows.map(r => ({ id: Number(r.id), username: r.username, amount: Number(r.amount) || 0, method: r.method || '', status: r.status || 'pending', createdAt: Number(r.createdAt) || 0, handledBy: r.handledBy || '', handledAt: Number(r.handledAt) || 0, balance: Number(r.balance) || 0 })) });
+  const rs = await db.execute('SELECT w.id, w.username, w.amountCents, w.method, w.status, w.createdAt, w.handledBy, w.handledAt, u.balanceCents FROM withdrawals w LEFT JOIN users u ON u.username = w.username ORDER BY w.id DESC LIMIT 200');
+  res.json({ rows: rs.rows.map(r => ({ id: Number(r.id), username: r.username, amount: fromCents(r.amountCents), method: r.method || '', status: r.status || 'pending', createdAt: Number(r.createdAt) || 0, handledBy: r.handledBy || '', handledAt: Number(r.handledAt) || 0, balance: fromCents(r.balanceCents) })) });
 });
 app.post('/api/admin/withdrawals/:id/status', requireUser, requireAdmin, async (req, res) => {
   const status = String(req.body.status || '');
@@ -657,16 +721,16 @@ app.post('/api/wallet/topup', requireUser, async (req, res) => {
     const who = await db.execute({ sql: 'SELECT customId FROM users WHERE username = ?', args: [req.user] });
     if (!who.rows.length || String(who.rows[0].customId || '') !== 'knqw') return res.status(403).json({ error: 'Payment provider is not connected.' });
     if (moneyLimit(req, res, 'topup', 5, 60 * 60 * 1000)) return;
-    const amount = parseMoney(req.body.amount);
-    if (!(amount >= MIN_TOPUP)) return res.status(400).json({ error: `Minimum purchase is $${MIN_TOPUP}.` });
-    if (amount > MAX_TOPUP) return res.status(400).json({ error: `Maximum purchase is $${MAX_TOPUP}.` });
+    const amountCents = parseMoney(req.body.amount);
+    if (!(amountCents >= MIN_TOPUP * 100)) return res.status(400).json({ error: `Minimum purchase is $${MIN_TOPUP}.` });
+    if (amountCents > MAX_TOPUP * 100) return res.status(400).json({ error: `Maximum purchase is $${MAX_TOPUP}.` });
     const me = await db.execute({ sql: 'SELECT card FROM users WHERE username = ?', args: [req.user] });
     if (!me.rows.length) return res.status(401).json({ error: 'Please log in.' });
     if (!me.rows[0].card) return res.status(400).json({ error: 'Link a bank card in Settings first.' });
-    await db.execute({ sql: 'UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE username = ?', args: [amount, req.user] });
-    console.log(`DEMO TOPUP ${req.user} +${amount}`);
-    const r = await db.execute({ sql: 'SELECT balance FROM users WHERE username = ?', args: [req.user] });
-    res.json({ balance: Number(r.rows[0].balance) || 0 });
+    await db.execute({ sql: 'UPDATE users SET balanceCents = COALESCE(balanceCents, 0) + ?, balance = (COALESCE(balanceCents, 0) + ?) / 100.0 WHERE username = ?', args: [amountCents, amountCents, req.user] });
+    console.log(`DEMO TOPUP ${req.user} +${fromCents(amountCents)}`);
+    const r = await db.execute({ sql: 'SELECT balanceCents FROM users WHERE username = ?', args: [req.user] });
+    res.json({ balance: fromCents(r.rows[0].balanceCents) });
   } catch (e) { console.error('topup error:', e); res.status(500).json({ error: 'Purchase failed. Try again.' }); }
 });
 
@@ -674,9 +738,10 @@ app.post('/api/wallet/topup', requireUser, async (req, res) => {
 app.post('/api/admin/adjust', requireUser, requireAdmin, async (req, res) => {
   try {
     const target = String(req.body.username || '');
-    const delta = parseMoney(req.body.delta);
+    const deltaCents = parseMoney(req.body.delta);
+    const delta = fromCents(deltaCents);
     if (!target) return res.status(400).json({ error: 'Select a user first.' });
-    if (!Number.isFinite(delta) || delta === 0 || Math.abs(delta) > ADMIN_MAX_ADJUST) return res.status(400).json({ error: `Enter a valid amount (at most $${ADMIN_MAX_ADJUST} at a time).` });
+    if (!Number.isFinite(deltaCents) || deltaCents === 0 || Math.abs(deltaCents) > ADMIN_MAX_ADJUST * 100) return res.status(400).json({ error: `Enter a valid amount (at most $${ADMIN_MAX_ADJUST} at a time).` });
     // money changes need the admin password again, so a stolen session alone cannot create money
     if (limited('adminpw:' + req.user, 10, 15 * 60 * 1000)) return res.status(429).json({ error: 'Too many attempts. Try again later.' });
     const me = await db.execute({ sql: 'SELECT password, passwordHash FROM users WHERE username = ?', args: [req.user] });
@@ -689,12 +754,12 @@ app.post('/api/admin/adjust', requireUser, requireAdmin, async (req, res) => {
     if (!pwOk) return res.status(403).json({ error: 'Enter your admin password to change a balance.' });
     const today = await db.execute({ sql: "SELECT COALESCE(SUM(ABS(amount)), 0) AS t FROM admin_audit WHERE action = 'adjust' AND createdAt > ?", args: [Date.now() - DAY] });
     if (Number(today.rows[0].t) + Math.abs(delta) > ADMIN_DAILY_CAP) return res.status(429).json({ error: `Daily admin balance limit reached ($${ADMIN_DAILY_CAP}).` });
-    const rs = await db.execute({ sql: 'UPDATE users SET balance = MAX(0, COALESCE(balance, 0) + ?) WHERE username = ?', args: [delta, target] });
+    const rs = await db.execute({ sql: 'UPDATE users SET balanceCents = MAX(0, COALESCE(balanceCents, 0) + ?), balance = MAX(0, COALESCE(balanceCents, 0) + ?) / 100.0 WHERE username = ?', args: [deltaCents, deltaCents, target] });
     if (!rs.rowsAffected) return res.status(404).json({ error: 'User not found.' });
-    const r = await db.execute({ sql: 'SELECT balance FROM users WHERE username = ?', args: [target] });
+    const r = await db.execute({ sql: 'SELECT balanceCents FROM users WHERE username = ?', args: [target] });
     console.log(`ADMIN ${req.user} adjusted ${target} by ${delta}`);
     audit(req.user, 'adjust', target, `balance ${delta > 0 ? '+' : ''}${delta}`, delta);
-    res.json({ balance: Number(r.rows[0].balance) || 0 });
+    res.json({ balance: fromCents(r.rows[0].balanceCents) });
   } catch (e) { console.error('adjust error:', e); res.status(500).json({ error: 'Failed to update balance.' }); }
 });
 
@@ -744,17 +809,17 @@ app.get('/api/admin/audit', requireUser, requireAdmin, async (req, res) => {
   res.json({ rows: rs.rows.map(r => ({ admin: r.admin, action: r.action, target: r.target, detail: r.detail, amount: Number(r.amount) || 0, createdAt: Number(r.createdAt) })) });
 });
 app.get('/api/admin/users', requireUser, requireAdmin, async (req, res) => {
-  const rs = await db.execute('SELECT customId, username, displayName, balance, heldBalance, bannedUntil FROM users ORDER BY username');
+  const rs = await db.execute('SELECT customId, username, displayName, balanceCents, heldBalanceCents, bannedUntil FROM users ORDER BY username');
   res.json({ users: rs.rows.map(r => ({
     customId: r.customId, username: r.username, displayName: r.displayName,
-    balance: Number(r.balance) || 0, held: Number(r.heldBalance) || 0, bannedUntil: Number(r.bannedUntil) || 0
+    balance: fromCents(r.balanceCents), held: fromCents(r.heldBalanceCents), bannedUntil: Number(r.bannedUntil) || 0
   })) });
 });
 
 // ---------- deals ----------
 const mapDeal = (r) => ({
   id: Number(r.id), buyer: r.buyer, seller: r.seller, itemName: r.itemName || '',
-  amount: Number(r.amount) || 0, sellerAmount: Number(r.sellerAmount) || 0, status: r.status,
+  amount: fromCents(r.amountCents), sellerAmount: fromCents(r.sellerAmountCents), amountCents: Number(r.amountCents) || 0, sellerAmountCents: Number(r.sellerAmountCents) || 0, status: r.status,
   createdAt: Number(r.createdAt) || 0, updatedAt: Number(r.updatedAt) || 0,
   reportedAt: Number(r.reportedAt) || 0, chatSnapshot: r.chatSnapshot || null, reportedBy: r.reportedBy || '',
   itemId: r.itemId ? String(r.itemId) : ''
@@ -800,7 +865,8 @@ app.post('/api/deals', requireUser, async (req, res) => {
     if (moneyLimit(req, res, 'deal-new', 30, 60 * 60 * 1000)) return;
     if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) return res.status(400).json({ error: 'Bad request.' });
     const buyer = typeof req.body.buyer === 'string' ? req.body.buyer.trim() : '';
-    const amount = parseMoney(req.body.amount);
+    const amountCents = parseMoney(req.body.amount);
+    const amount = fromCents(amountCents);
     let itemName = typeof req.body.itemName === 'string' ? req.body.itemName.trim() : '';
     const itemId = req.body.itemId == null || req.body.itemId === '' ? '' : String(req.body.itemId);
     if (itemId && (!/^\d{1,16}$/.test(itemId) || !Number.isSafeInteger(Number(itemId)) || Number(itemId) <= 0)) return res.status(400).json({ error: 'Invalid item ID.' });
@@ -827,8 +893,8 @@ app.post('/api/deals', requireUser, async (req, res) => {
     if (dup.rows.length) return res.status(409).json({ error: 'You already have a pending payment request in this chat.' });
     const now = Date.now();
     await db.execute({
-      sql: "INSERT INTO deals (buyer, seller, itemName, amount, sellerAmount, status, createdAt, updatedAt, itemId) VALUES (?, ?, ?, ?, ?, 'requested', ?, ?, ?)",
-      args: [buyer, req.user, itemName, amount, round2(amount * SELLER_SHARE), now, now, itemId || null]
+      sql: "INSERT INTO deals (buyer, seller, itemName, amount, sellerAmount, amountCents, sellerAmountCents, status, createdAt, updatedAt, itemId) VALUES (?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?, ?)",
+      args: [buyer, req.user, itemName, amount, round2(amount * SELLER_SHARE), amountCents, Math.round(amountCents * SELLER_SHARE), now, now, itemId || null]
     });
     res.json({ ok: true });
   } catch (e) { console.error('deal create error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
@@ -838,19 +904,19 @@ app.post('/api/deals', requireUser, async (req, res) => {
 app.post('/api/deals/:id/pay', requireUser, async (req, res) => {
   const id = dealId(req); if (!id) return res.status(400).json({ error: 'Bad request.' });
   if (moneyLimit(req, res, 'deal-act', 60, 60 * 1000)) return;
-  const out = await inTx(res, async (tx) => {
+  const out = await withWalletLock(req.user, () => inTx(res, async (tx) => {
     const d = await loadDeal(tx, id);
     if (!d || d.buyer !== req.user) throw new Abort('This request is no longer available.');
-    if (d.status !== 'requested' || !Number.isFinite(d.amount) || d.amount < MIN_DEAL || d.amount > MAX_DEAL || !Number.isFinite(d.sellerAmount) || Math.abs(d.sellerAmount - round2(d.amount * SELLER_SHARE)) > 0.01) throw new Abort('This request failed validation and cannot be paid.', 409);
+    if (d.status !== 'requested' || !Number.isSafeInteger(d.amountCents) || d.amountCents < MIN_DEAL * 100 || d.amountCents > MAX_DEAL * 100 || !Number.isSafeInteger(d.sellerAmountCents) || Math.abs(d.sellerAmountCents - Math.round(d.amountCents * SELLER_SHARE)) > 1) throw new Abort('This request failed validation and cannot be paid.', 409);
     const claim = await tx.execute({ sql: "UPDATE deals SET status = 'paid', updatedAt = ? WHERE id = ? AND status = 'requested'", args: [Date.now(), id] });
     if (!claim.rowsAffected) throw new Abort('This request is no longer available.');
-    const debit = await tx.execute({ sql: 'UPDATE users SET balance = balance - ? WHERE username = ? AND COALESCE(balance, 0) >= ?', args: [d.amount, req.user, d.amount] });
+    const debit = await tx.execute({ sql: 'UPDATE users SET balanceCents = balanceCents - ?, balance = (balanceCents - ?) / 100.0 WHERE username = ? AND COALESCE(balanceCents, 0) >= ?', args: [d.amountCents, d.amountCents, req.user, d.amountCents] });
     if (!debit.rowsAffected) throw new Abort('Not enough balance.');
-    const credit = await tx.execute({ sql: 'UPDATE users SET heldBalance = COALESCE(heldBalance, 0) + ? WHERE username = ?', args: [d.sellerAmount, d.seller] });
+    const credit = await tx.execute({ sql: 'UPDATE users SET heldBalanceCents = COALESCE(heldBalanceCents, 0) + ?, heldBalance = (COALESCE(heldBalanceCents, 0) + ?) / 100.0 WHERE username = ?', args: [d.sellerAmountCents, d.sellerAmountCents, d.seller] });
     if (!credit.rowsAffected) throw new Abort('Seller account not found. You were not charged.');
-    const r = await tx.execute({ sql: 'SELECT balance FROM users WHERE username = ?', args: [req.user] });
-    return Number(r.rows[0].balance) || 0;
-  });
+    const r = await tx.execute({ sql: 'SELECT balanceCents FROM users WHERE username = ?', args: [req.user] });
+    return fromCents(r.rows[0].balanceCents);
+  }));
   if (out !== undefined) res.json({ balance: out });
 });
 
@@ -861,12 +927,12 @@ app.post('/api/deals/:id/complete', requireUser, async (req, res) => {
   const out = await inTx(res, async (tx) => {
     const d = await loadDeal(tx, id);
     if (!d || d.buyer !== req.user) throw new Abort('This deal can no longer be confirmed.');
-    if (!['paid', 'not_received'].includes(d.status) || !Number.isFinite(d.sellerAmount) || d.sellerAmount < 0 || d.sellerAmount > MAX_DEAL) throw new Abort('This deal failed validation and cannot be completed.', 409);
+    if (!['paid', 'not_received'].includes(d.status) || !Number.isSafeInteger(d.sellerAmountCents) || d.sellerAmountCents < 0 || d.sellerAmountCents > MAX_DEAL * 100) throw new Abort('This deal failed validation and cannot be completed.', 409);
     const claim = await tx.execute({ sql: "UPDATE deals SET status = 'completed', updatedAt = ? WHERE id = ? AND status IN ('paid', 'not_received')", args: [Date.now(), id] });
     if (!claim.rowsAffected) throw new Abort('This deal can no longer be confirmed.');
     const rel = await tx.execute({
-      sql: 'UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?), balance = COALESCE(balance, 0) + ? WHERE username = ?',
-      args: [d.sellerAmount, d.sellerAmount, d.seller]
+      sql: 'UPDATE users SET heldBalanceCents = MAX(0, COALESCE(heldBalanceCents, 0) - ?), heldBalance = MAX(0, COALESCE(heldBalanceCents, 0) - ?) / 100.0, balanceCents = COALESCE(balanceCents, 0) + ?, balance = (COALESCE(balanceCents, 0) + ?) / 100.0 WHERE username = ?',
+      args: [d.sellerAmountCents, d.sellerAmountCents, d.sellerAmountCents, d.sellerAmountCents, d.seller]
     });
     if (!rel.rowsAffected) throw new Abort("The seller's account no longer exists. Nothing was changed - ask the admin to resolve this deal.");   // rolled back: the money is never destroyed
     return true;
@@ -942,18 +1008,18 @@ app.post('/api/admin/deals/:id/resolve', requireUser, requireAdmin, async (req, 
   const out = await inTx(res, async (tx) => {
     const d = await loadDeal(tx, id);
     if (!d || !['paid', 'not_received', 'reported'].includes(d.status)) throw new Abort('This transaction was already handled.');
-    if (!Number.isFinite(d.amount) || d.amount < MIN_DEAL || d.amount > MAX_DEAL || !Number.isFinite(d.sellerAmount) || Math.abs(d.sellerAmount - round2(d.amount * SELLER_SHARE)) > 0.01) throw new Abort('Deal amounts failed integrity validation. Escalate this deal for manual review.', 409);
+    if (!Number.isSafeInteger(d.amountCents) || d.amountCents < MIN_DEAL * 100 || d.amountCents > MAX_DEAL * 100 || !Number.isSafeInteger(d.sellerAmountCents) || Math.abs(d.sellerAmountCents - Math.round(d.amountCents * SELLER_SHARE)) > 1) throw new Abort('Deal amounts failed integrity validation. Escalate this deal for manual review.', 409);
     const finalStatus = mode === 'refund' ? 'refunded' : 'released';
     const claim = await tx.execute({ sql: 'UPDATE deals SET status = ?, updatedAt = ? WHERE id = ? AND status = ?', args: [finalStatus, Date.now(), id, d.status] });
     if (!claim.rowsAffected) throw new Abort('This transaction was already handled.');
     if (mode === 'refund') {
-      const credit = await tx.execute({ sql: 'UPDATE users SET balance = COALESCE(balance, 0) + ? WHERE username = ?', args: [d.amount, d.buyer] });
+      const credit = await tx.execute({ sql: 'UPDATE users SET balanceCents = COALESCE(balanceCents, 0) + ?, balance = (COALESCE(balanceCents, 0) + ?) / 100.0 WHERE username = ?', args: [d.amountCents, d.amountCents, d.buyer] });
       if (!credit.rowsAffected) throw new Abort('The buyer account no longer exists.');
-      await tx.execute({ sql: 'UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?) WHERE username = ?', args: [d.sellerAmount, d.seller] });
+      await tx.execute({ sql: 'UPDATE users SET heldBalanceCents = MAX(0, COALESCE(heldBalanceCents, 0) - ?), heldBalance = MAX(0, COALESCE(heldBalanceCents, 0) - ?) / 100.0 WHERE username = ?', args: [d.sellerAmountCents, d.sellerAmountCents, d.seller] });
     } else {
       const rel = await tx.execute({
-        sql: 'UPDATE users SET heldBalance = MAX(0, COALESCE(heldBalance, 0) - ?), balance = COALESCE(balance, 0) + ? WHERE username = ?',
-        args: [d.sellerAmount, d.sellerAmount, d.seller]
+        sql: 'UPDATE users SET heldBalanceCents = MAX(0, COALESCE(heldBalanceCents, 0) - ?), heldBalance = MAX(0, COALESCE(heldBalanceCents, 0) - ?) / 100.0, balanceCents = COALESCE(balanceCents, 0) + ?, balance = (COALESCE(balanceCents, 0) + ?) / 100.0 WHERE username = ?',
+        args: [d.sellerAmountCents, d.sellerAmountCents, d.sellerAmountCents, d.sellerAmountCents, d.seller]
       });
       if (!rel.rowsAffected) throw new Abort('The seller account no longer exists.');
     }
@@ -1026,20 +1092,21 @@ const publicUser = (r) => ({
 });
 // what only the owner sees (never the password or its hash)
 const privateUser = (r) => ({
-  ...publicUser(r), ...banPart(r), email: r.email || '', card: r.card || null, balance: Number(r.balance) || 0,
-  heldBalance: Number(r.heldBalance) || 0, lastUsernameChange: r.lastUsernameChange || null,
+  ...publicUser(r), ...banPart(r), email: r.email || '', card: r.card || null, balance: fromCents(r.balanceCents),
+  heldBalance: fromCents(r.heldBalanceCents), lastUsernameChange: r.lastUsernameChange || null,
   lastDisplayNameChange: r.lastDisplayNameChange || null, lastItemTime: Number(r.lastItemTime) || 0,
   messages: parseJson(r.messages, []), mustChangePassword: Number(r.mustChangePassword) === 1
 });
 // extra columns for the admin panel (no password, no hash)
 const adminUser = (r) => ({
-  ...publicUser(r), ...banPart(r), email: r.email || '', balance: Number(r.balance) || 0, heldBalance: Number(r.heldBalance) || 0,
+  ...publicUser(r), ...banPart(r), email: r.email || '', balance: fromCents(r.balanceCents), heldBalance: fromCents(r.heldBalanceCents),
   lastIp: r.lastIp || '', lastItemTime: Number(r.lastItemTime) || 0
 });
 
 // /api/users is the long list every page load fetches, so it carries only light fields: no listings (items) and no pictures.
 // Pictures are a small URL (served by /api/avatar/:name, cacheable); listings come from /api/listings, only for screens that need them.
-const USER_LIST_COLS = 'customId, username, displayName, roblox, isMiddleman, lastSeen, joinedAt, bannedUntil, bannedAt, banReason, appeal, appealAt, appealStatus, email, balance, heldBalance, lastIp, lastItemTime, (CASE WHEN avatar IS NOT NULL AND avatar != \'\' THEN 1 ELSE 0 END) AS hasAvatar';
+const USER_LIST_COLS = "customId, username, displayName, roblox, isMiddleman, lastSeen, joinedAt, bannedUntil, (CASE WHEN avatar IS NOT NULL AND avatar != '' THEN 1 ELSE 0 END) AS hasAvatar";
+const ADMIN_USER_LIST_COLS = "customId, username, displayName, roblox, isMiddleman, lastSeen, joinedAt, bannedUntil, bannedAt, banReason, appeal, appealAt, appealStatus, email, balanceCents, heldBalanceCents, lastIp, lastItemTime, (CASE WHEN avatar IS NOT NULL AND avatar != '' THEN 1 ELSE 0 END) AS hasAvatar";
 const lightUser = (r) => ({
   customId: r.customId, username: r.username, displayName: r.displayName || r.username,
   avatar: Number(r.hasAvatar) ? '/api/avatar/' + encodeURIComponent(r.username) : null,
@@ -1047,13 +1114,19 @@ const lightUser = (r) => ({
   lastSeen: Number(r.lastSeen) || 0, joinedAt: Number(r.joinedAt) || 0, bannedUntil: Number(r.bannedUntil) || 0
 });
 const lightAdminUser = (r) => ({
-  ...lightUser(r), ...banPart(r), email: r.email || '', balance: Number(r.balance) || 0, heldBalance: Number(r.heldBalance) || 0,
+  ...lightUser(r), ...banPart(r), email: r.email || '', balance: fromCents(r.balanceCents), heldBalance: fromCents(r.heldBalanceCents),
   lastIp: r.lastIp || '', lastItemTime: Number(r.lastItemTime) || 0
 });
 app.get('/api/users', requireUser, async (req, res) => {
-  const admin = await isAdminName(req.user);
   const rs = await db.execute(`SELECT ${USER_LIST_COLS} FROM users`);
-  res.json({ users: rs.rows.map(admin ? lightAdminUser : lightUser) });
+  // This is a public directory for any signed-in account: never include emails, balances, or IP addresses.
+  res.json({ users: rs.rows.map(lightUser) });
+});
+
+app.get('/api/admin/directory', requireUser, requireAdmin, async (req, res) => {
+  const rs = await db.execute(`SELECT ${ADMIN_USER_LIST_COLS} FROM users`);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ users: rs.rows.map(lightAdminUser) });
 });
 
 // listings of everybody (the marketplace), kept out of /api/users on purpose
@@ -1500,6 +1573,19 @@ const isMiddlemanName = async (name) => {
 const userExists = async (name) => !!name && (await db.execute({ sql: 'SELECT 1 FROM users WHERE username = ?', args: [name] })).rows.length > 0;
 const wrap = (fn) => async (req, res) => { try { await fn(req, res); } catch (e) { console.error(req.path, e); if (!res.headersSent) res.status(500).json({ error: 'Server error. Try again.' }); } };
 
+// Rate/vouch anti-farming: at most one account per target from the same observed IP.
+// Only a keyed fingerprint is stored here; raw IPs remain restricted to moderation tables.
+async function claimSocialIp(kind, target, actor, req) {
+  const ip = ipOf(req);
+  if (!ip) return { ok: true, skipped: true };
+  const ipHash = ipFingerprint(ip);
+  const existing = await db.execute({ sql: 'SELECT actor FROM social_ip_guard WHERE kind = ? AND target = ? AND ipHash = ?', args: [kind, target, ipHash] });
+  if (existing.rows.length && String(existing.rows[0].actor) !== actor) return { ok: false };
+  await db.execute({ sql: 'INSERT OR IGNORE INTO social_ip_guard (kind, target, ipHash, actor, createdAt) VALUES (?, ?, ?, ?, ?)', args: [kind, target, ipHash, actor, Date.now()] });
+  const check = await db.execute({ sql: 'SELECT actor FROM social_ip_guard WHERE kind = ? AND target = ? AND ipHash = ?', args: [kind, target, ipHash] });
+  return { ok: !!check.rows.length && String(check.rows[0].actor) === actor };
+}
+
 // ---------- ratings: only after a completed deal ----------
 app.get('/api/ratings/meta', requireUser, wrap(async (req, res) => {
   const meta = {};
@@ -1523,6 +1609,8 @@ app.post('/api/ratings', requireUser, wrap(async (req, res) => {
   if (!target || target === req.user || !Number.isInteger(stars) || stars < 1 || stars > 5) return bad(res, 'Bad request.');
   const d = await db.execute({ sql: "SELECT 1 FROM deals WHERE status IN ('completed','released') AND ((buyer = ? AND seller = ?) OR (buyer = ? AND seller = ?)) LIMIT 1", args: [req.user, target, target, req.user] });
   if (!d.rows.length) return bad(res, 'You can rate someone after a completed deal with them.', 403);
+  const socialClaim = await claimSocialIp('rating', target, req.user, req);
+  if (!socialClaim.ok) return bad(res, 'A rating for this user has already been submitted from this network.', 403);
   await db.execute({ sql: 'INSERT INTO ratings (rater, target, stars, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(rater, target) DO UPDATE SET stars = excluded.stars, createdAt = excluded.createdAt', args: [req.user, target, stars, Date.now()] });
   res.json({ ok: true });
 }));
@@ -1559,6 +1647,8 @@ app.post('/api/vouches', requireUser, wrap(async (req, res) => {
   const mm = String(req.body.middleman || ''), text = String(req.body.text || '').trim();
   if (!mm || mm === req.user || !(await isMiddlemanName(mm))) return bad(res, 'You can only vouch for another middleman.');
   if (text.length < 3) return bad(res, 'Write at least 3 characters.');
+  const socialClaim = await claimSocialIp('vouch', mm, req.user, req);
+  if (!socialClaim.ok) return bad(res, 'A vouch for this middleman has already been submitted from this network.', 403);
   await db.execute({ sql: 'INSERT INTO vouches (middleman, author, text, createdAt) VALUES (?, ?, ?, ?) ON CONFLICT(middleman, author) DO UPDATE SET text = excluded.text, createdAt = excluded.createdAt', args: [mm, req.user, text.slice(0, 300), Date.now()] });
   res.json({ ok: true });
 }));
@@ -1909,7 +1999,17 @@ const PERM_DELETE_MS = 30 * DAY;      // permanently banned accounts disappear 3
 setInterval(() => db.execute({ sql: "DELETE FROM users WHERE bannedUntil = -1 AND bannedAt > 0 AND bannedAt <= ? AND COALESCE(customId, '') != 'knqw' AND COALESCE(heldBalance, 0) = 0 AND NOT EXISTS (SELECT 1 FROM deals WHERE (buyer = users.username OR seller = users.username) AND status IN ('paid','not_received','reported'))", args: [Date.now() - PERM_DELETE_MS] }).catch(() => {}), 60 * 60 * 1000);
 
 // ---------- the site itself ----------
-app.get('/', (req, res) => res.redirect('/uniquetrading.html'));
+async function serveFrontend(req, res, next) {
+  try {
+    const html = await fs.readFile(path.join(__dirname, 'uniquetrading_fixed.html'), 'utf8');
+    const nonce = res.locals.cspNonce;
+    // Inline scripts are nonce-authorized per response; no unsafe-inline is needed for script execution.
+    const securedHtml = html.replace(/<script(?![^>]*\bsrc\s*=)([^>]*)>/gi, (tag, attrs) => `<script${attrs} nonce="${nonce}">`);
+    res.type('html').send(securedHtml);
+  } catch (e) { next(e); }
+}
+app.get('/', serveFrontend);
+app.get('/uniquetrading.html', serveFrontend);
 app.use(express.static(path.join(__dirname, 'public')));
 
 // last resort: any error that reaches here becomes a clean JSON 500 (and is written to the Render log)
