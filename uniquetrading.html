@@ -2935,52 +2935,71 @@
         }
         @media (orientation: landscape) and (max-height: 520px) and (max-width: 640px) { .items-container { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-/* Mobile item selection: thumb-friendly, high-visibility sheet */
+/* Mobile item selection: stable portrait and landscape layouts; categories never scroll */
 @media (max-width: 600px) {
-  #offer-modal, #item-picker-modal { padding: 0 !important; align-items: flex-end !important; }
+  #offer-modal, #item-picker-modal { padding: 0 !important; align-items: center !important; justify-content: center !important; }
   #offer-modal .item-picker-content, #item-picker-modal .item-picker-content {
-    width: 100vw !important; max-width: none !important; height: min(94dvh, 900px) !important;
-    max-height: 94dvh !important; border-radius: 20px 20px 0 0 !important;
-    padding: 18px 14px calc(14px + env(safe-area-inset-bottom)) !important;
+    width: 96vw !important; max-width: 760px !important; height: 92dvh !important; max-height: 92dvh !important;
+    border-radius: 18px !important; padding: 12px 12px calc(10px + env(safe-area-inset-bottom)) !important;
     margin: 0 !important; overflow: hidden !important; display: flex !important; flex-direction: column !important;
-    box-sizing: border-box !important;
+    box-sizing: border-box !important; min-height: 0 !important;
   }
-  #offer-title, #item-picker-title { font-size: 19px !important; line-height: 1.25; padding-right: 34px; margin: 4px 0 14px !important; }
+  #offer-title, #item-picker-title { flex: 0 0 auto; font-size: 18px !important; line-height: 1.2; padding-right: 34px; margin: 2px 0 8px !important; }
   #offer-step-game { overflow-y: auto; min-height: 0; }
-  #offer-games, #select-game-modal .select-game-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
-  #offer-games .game-card-item, #select-game-modal .game-card-item { min-width: 0; padding: 10px 8px !important; border-radius: 12px; font-size: 13px !important; }
-  #offer-games .game-card-thumb, #select-game-modal .game-card-thumb { width: 100% !important; max-width: 110px; height: auto !important; aspect-ratio: 1 / 1; object-fit: contain; }
-  #offer-step-items { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  #offer-games, #select-game-modal .select-game-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
+  #offer-games .game-card-item, #select-game-modal .game-card-item { min-width: 0; padding: 8px 7px !important; border-radius: 12px; font-size: 13px !important; }
+  #offer-games .game-card-thumb, #select-game-modal .game-card-thumb { width: 100% !important; max-width: 90px; height: auto !important; aspect-ratio: 1 / 1; object-fit: contain; }
+  #offer-step-items { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
   #offer-step-items .offer-hint { flex: 0 0 auto; }
-  #offer-step-items .item-picker-body { flex: 1; min-height: 0; flex-direction: column !important; gap: 10px !important; overflow: hidden; }
-  #offer-cats, #item-picker-cats { width: 100% !important; flex: 0 0 auto; display: flex; flex-direction: row !important; flex-wrap: nowrap !important; gap: 7px !important; overflow-x: auto !important; overflow-y: hidden !important; padding: 2px 1px 7px; max-height: none !important; scrollbar-width: none; }
-  #offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat { flex: 0 0 auto; min-height: 42px; white-space: nowrap; font-size: 13px !important; padding: 9px 12px !important; border: 1px solid #414141; border-radius: 999px; background: #242424; }
+  #offer-step-items .item-picker-body { flex: 1 1 auto; min-height: 0; flex-direction: column !important; gap: 6px !important; overflow: hidden; }
+  #offer-cats, #item-picker-cats {
+    width: 100% !important; flex: 0 0 auto; display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important; grid-auto-rows: minmax(30px, auto);
+    gap: 5px !important; overflow: visible !important; padding: 1px 0 5px; max-height: none !important;
+    align-content: start; box-sizing: border-box;
+  }
+  #offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat {
+    min-width: 0; min-height: 32px; width: 100%; white-space: normal; overflow-wrap: anywhere;
+    display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 11px !important;
+    line-height: 1.1; padding: 5px 4px !important; border: 1px solid #414141; border-radius: 8px; background: #242424;
+  }
+  #offer-cats .item-picker-cat span:first-child, #item-picker-cats .item-picker-cat span:first-child { min-width: 0; overflow-wrap: anywhere; }
   #offer-cats .item-picker-cat.active, #item-picker-cats .item-picker-cat.active { background: rgba(255,115,0,.2); border-color: #ff7300; box-shadow: none; }
-  #offer-cats .cat-count { margin-left: 4px; }
-  #offer-cat-title, #item-picker-cat-title { flex: 0 0 auto; font-size: 12px !important; margin: 0 0 2px; }
-  #offer-custom-input, #item-picker-custom-input { width: 100% !important; min-width: 0; min-height: 48px !important; font-size: 16px !important; padding: 12px 13px !important; box-sizing: border-box; }
-  #offer-step-items .item-picker-toolbar { flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px; }
+  #offer-cat-title, #item-picker-cat-title { flex: 0 0 auto; font-size: 11px !important; margin: 0 0 2px; }
+  #offer-custom-input, #item-picker-custom-input { width: 100% !important; min-width: 0; min-height: 42px !important; font-size: 16px !important; padding: 9px 11px !important; box-sizing: border-box; }
+  #offer-step-items .item-picker-toolbar { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; }
   #offer-step-items .item-picker-custom { width: 100%; }
   #offer-sort { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); }
-  #offer-sort button { min-height: 40px; padding: 6px 4px; font-size: 13px; }
-  #offer-list, #item-picker-list { flex: 1 1 auto; min-height: 120px !important; max-height: none !important; overflow-y: auto !important; overscroll-behavior: contain; padding: 2px 2px 10px; gap: 8px !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; align-content: start; }
-  #offer-list .item-picker-item, #item-picker-list .item-picker-item { min-width: 0; min-height: 48px; display: flex; align-items: center; justify-content: center; text-align: center; overflow-wrap: anywhere; padding: 9px 7px !important; font-size: 13px !important; line-height: 1.25; border-radius: 10px; }
+  #offer-sort button { min-height: 34px; padding: 5px 4px; font-size: 12px; }
+  #offer-list, #item-picker-list { flex: 1 1 auto; min-height: 80px !important; max-height: none !important; overflow-y: auto !important; overscroll-behavior: contain; padding: 2px 2px 8px; gap: 7px !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; align-content: start; }
+  #offer-list .item-picker-item, #item-picker-list .item-picker-item { min-width: 0; min-height: 42px; display: flex; align-items: center; justify-content: center; text-align: center; overflow-wrap: anywhere; padding: 7px 6px !important; font-size: 12px !important; line-height: 1.2; border-radius: 9px; }
   #offer-list.cards, #item-picker-list.cards { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-  #offer-list .item-picker-card, #item-picker-list .item-picker-card { width: auto !important; min-width: 0; min-height: 136px; justify-content: flex-start; gap: 7px; padding: 9px 7px !important; font-size: 12px !important; }
-  #offer-list .item-picker-card .card-img, #item-picker-list .item-picker-card .card-img { width: 100% !important; max-width: 108px !important; height: auto !important; aspect-ratio: 1 / 1; object-fit: contain; background: #171717; }
+  #offer-list .item-picker-card, #item-picker-list .item-picker-card { width: auto !important; min-width: 0; min-height: 112px; justify-content: flex-start; gap: 5px; padding: 7px 6px !important; font-size: 11px !important; }
+  #offer-list .item-picker-card .card-img, #item-picker-list .item-picker-card .card-img { width: 100% !important; max-width: 86px !important; height: auto !important; aspect-ratio: 1 / 1; object-fit: contain; background: #171717; }
   #offer-list .item-picker-card span, #item-picker-list .item-picker-card span { width: 100%; overflow-wrap: anywhere; }
   #offer-list .selected, #item-picker-list .selected { border-color: #ff7300 !important; background: rgba(255,115,0,.22) !important; box-shadow: inset 0 0 0 1px rgba(255,115,0,.25); }
-  #offer-step-items .offer-selected-head { flex: 0 0 auto; margin: 8px 0 5px !important; }
-  #offer-selected { flex: 0 0 auto; max-height: 82px !important; overflow-y: auto; padding-bottom: 4px; }
-  #offer-selected .offer-chip { font-size: 12px !important; padding: 5px 7px !important; gap: 4px; }
-  #offer-selected .qbtn { width: 30px !important; height: 30px !important; }
-  #offer-selected .x { min-width: 28px; min-height: 30px; display: inline-flex; align-items: center; justify-content: center; }
-  #offer-warn { flex: 0 0 auto; margin: 4px 0; font-size: 12px; }
-  #offer-step-items .offer-actions { flex: 0 0 auto; position: sticky; bottom: 0; display: flex; gap: 9px; padding: 10px 0 calc(2px + env(safe-area-inset-bottom)); background: #1b1b1b; }
-  #offer-step-items .offer-actions .deal-btn { flex: 1; min-height: 48px; padding: 11px 10px !important; font-size: 14px !important; }
+  #offer-step-items .offer-selected-head { flex: 0 0 auto; margin: 5px 0 3px !important; }
+  #offer-selected { flex: 0 0 auto; max-height: 58px !important; overflow-y: auto; padding-bottom: 2px; }
+  #offer-selected .offer-chip { font-size: 11px !important; padding: 4px 6px !important; gap: 4px; }
+  #offer-selected .qbtn { width: 27px !important; height: 27px !important; }
+  #offer-selected .x { min-width: 26px; min-height: 27px; display: inline-flex; align-items: center; justify-content: center; }
+  #offer-warn { flex: 0 0 auto; margin: 3px 0; font-size: 11px; }
+  #offer-step-items .offer-actions { flex: 0 0 auto; position: relative; bottom: auto; display: flex; gap: 8px; padding: 7px 0 2px; background: #1b1b1b; }
+  #offer-step-items .offer-actions .deal-btn { flex: 1; min-height: 42px; padding: 9px 8px !important; font-size: 13px !important; }
   #item-picker-modal .item-picker-right { flex: 1; min-height: 0; overflow: hidden; }
-  #item-picker-modal .item-picker-custom { flex: 0 0 auto; display: flex; gap: 8px; }
-  #item-picker-custom-btn { min-width: 70px; min-height: 48px; }
+  #item-picker-modal .item-picker-custom { flex: 0 0 auto; display: flex; gap: 7px; }
+  #item-picker-custom-btn { min-width: 66px; min-height: 42px; }
+}
+@media (max-width: 600px) and (orientation: landscape) {
+  #offer-modal .item-picker-content, #item-picker-modal .item-picker-content { width: 96vw !important; height: 94dvh !important; max-height: 94dvh !important; padding: 8px 12px !important; }
+  #offer-title, #item-picker-title { margin-bottom: 5px !important; }
+  #offer-cats, #item-picker-cats { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 4px !important; padding-bottom: 3px; }
+  #offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat { min-height: 27px; padding: 3px !important; font-size: 10px !important; }
+  #offer-step-items .item-picker-toolbar { flex-direction: row; align-items: center; }
+  #offer-step-items .item-picker-custom { flex: 1; }
+  #offer-sort { width: 42%; }
+  #offer-list .item-picker-card, #item-picker-list .item-picker-card { min-height: 88px; flex-direction: row; text-align: left; }
+  #offer-list .item-picker-card .card-img, #item-picker-list .item-picker-card .card-img { width: 52px !important; max-width: 52px !important; flex: 0 0 52px; }
 }
 
 </style>
