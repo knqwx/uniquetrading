@@ -2875,6 +2875,7 @@
 }
 
         /* ===== message menu + editing state ===== */
+        .msg-edited { font-style: italic; opacity: 0.95; }
         .msg-context-menu { position: fixed; max-width: calc(100vw - 16px); }
         @media (pointer: coarse) { .message-bubble { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; } }
         .message-bubble.editing { outline: 2px solid #ffd166; outline-offset: 3px; box-shadow: 0 0 0 4px rgba(255,209,102,0.18); }
@@ -4015,7 +4016,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         function normUser(u) {
             return {
                 customId: u.customId, username: u.username, displayName: u.displayName, email: u.email || '', password: '',
-                avatar: u.avatar ? (u.avatar.charAt(0) === '/' ? API_BASE + u.avatar : u.avatar) : null, balance: u.balance !== undefined && u.balance !== null ? u.balance : 0,
+                avatar: safeImgSrc(u.avatar ? (u.avatar.charAt(0) === '/' ? API_BASE + u.avatar : u.avatar) : null) || null, balance: u.balance !== undefined && u.balance !== null ? u.balance : 0,
                 lastUsernameChange: u.lastUsernameChange || null, lastDisplayNameChange: u.lastDisplayNameChange || null,
                 items: u.items || [], lastItemTime: u.lastItemTime || 0, roblox: u.roblox || '', lastIp: u.lastIp || '',
                 messages: u.messages || [], card: u.card || null, isMiddleman: !!u.isMiddleman,
@@ -4119,6 +4120,19 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 .replace(/'/g, '&#039;');
         }
 
+        // Only real picture data (or this site's own /api/avatar/ path) may ever reach an <img src>. Anything else - javascript:, svg, quotes,
+        // tags, odd values saved long ago - becomes '' so a bad value stored in the database can never run code in someone's browser.
+        const IMG_DATA_RE = /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/;
+        function safeImgSrc(v) {
+            if (typeof v !== 'string' || !v || v.length > 1000000) return '';
+            if (IMG_DATA_RE.test(v)) return v;
+            const base = API_BASE + '/api/avatar/';
+            if (v.startsWith(base) && /^[A-Za-z0-9._~%-]+$/.test(v.slice(base.length))) return v;
+            return '';
+        }
+        // ready-made, escaped src attribute value ('' when the picture is not safe)
+        const imgSrcAttr = (v) => escapeHtml(safeImgSrc(v));
+
         // ===== Онлайн-статус =====
         const ONLINE_WINDOW = 75000;      // пользователь считается онлайн, если пинг был не позже 75 сек назад
         const HEARTBEAT_EVERY = 25000;
@@ -4195,8 +4209,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
 
         function avatarImgHtml(user, cls) {
-            if (user.avatar) {
-                return `<img class="${cls}" src="${user.avatar}" alt="Avatar">`;
+            if (safeImgSrc(user.avatar)) {
+                return `<img class="${cls}" src="${imgSrcAttr(user.avatar)}" alt="Avatar">`;
             }
             return `<div class="${cls}" style="background-color: ${getColorFromName(user.username)};">${escapeHtml(user.username.charAt(0).toUpperCase())}</div>`;
         }
@@ -4568,7 +4582,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
         // src + fallback attributes for an item image. Uploaded photo wins, then the Ancient's icon, then the game thumbnail.
         function itemImgAttrs(item) {
-            if (item.photo) return `src="${item.photo}"`;
+            if (safeImgSrc(item.photo)) return `src="${imgSrcAttr(item.photo)}"`;
             const fb = getGameThumb(item.game);
             const _list = (item.items && item.items.length) ? item.items : [item.name];
             const _anc = _list.find(n => isAncientItem(item.game, n));
@@ -4682,8 +4696,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     const userBalanceRaw = Number(userObj.balance || 0);
 
                     let avatarInner = `<div class="user-avatar" style="background-color: ${avatarColor};">${firstLetter}</div>`;
-                    if (userObj.avatar) {
-                        avatarInner = `<img class="user-avatar" src="${userObj.avatar}" alt="Avatar">`;
+                    if (safeImgSrc(userObj.avatar)) {
+                        avatarInner = `<img class="user-avatar" src="${imgSrcAttr(userObj.avatar)}" alt="Avatar">`;
                     }
 
                     try {
@@ -5274,8 +5288,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const firstLetter = item.sellerUsername.charAt(0).toUpperCase();
             const avatarColor = getColorFromName(item.sellerUsername);
 
-            if (item.sellerAvatar) {
-                detailSellerAvatar.innerHTML = `<img src="${item.sellerAvatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Seller">`;
+            if (safeImgSrc(item.sellerAvatar)) {
+                detailSellerAvatar.innerHTML = `<img src="${imgSrcAttr(item.sellerAvatar)}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Seller">`;
                 detailSellerAvatar.style.backgroundColor = 'transparent';
             } else {
                 detailSellerAvatar.innerHTML = escapeHtml(firstLetter);
@@ -5384,11 +5398,13 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         function chatSig(msgs) {
             let max = 0;
             let offerSig = '';
+            let editSig = 0;      // changes whenever any message is edited, so the other person's screen updates by itself
             msgs.forEach(m => {
                 if (m.timestamp > max) max = m.timestamp;
-                if (m.offer) offerSig += (m.offer.status || 'p') + (m.offer.items ? m.offer.items.length : 0) + ';';
+                if (m.editedAt) editSig += Number(m.editedAt) % 1000003;
+                if (m.offer) offerSig += (m.offer.status || 'p') + (m.offer.items ? m.offer.items.join(',') : '') + ';';
             });
-            return msgs.length + ':' + max + ':' + offerSig;
+            return msgs.length + ':' + max + ':' + editSig + ':' + offerSig;
         }
 
         function itemPriceLabel(item) {
@@ -5651,8 +5667,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 item.className = `chat-item ${activeChatUsername === threadKeyI ? 'active' : ''} ${dUn > 0 ? 'unread' : ''}`;
 
                 let avatarHtml = `<div class="chat-item-avatar" style="background-color: ${avatarColor};">${escapeHtml(firstLetter)}</div>`;
-                if (otherUser.avatar) {
-                    avatarHtml = `<img class="chat-item-avatar" src="${otherUser.avatar}" alt="Avatar">`;
+                if (safeImgSrc(otherUser.avatar)) {
+                    avatarHtml = `<img class="chat-item-avatar" src="${imgSrcAttr(otherUser.avatar)}" alt="Avatar">`;
                 }
 
                 item.innerHTML = `<span class="av-wrap">${avatarHtml}${presenceDot(username)}</span><div class="chat-item-info"><div class="chat-item-name">${escapeHtml(otherUser.displayName || username)}${otherUser.isMiddleman ? '<span class="mm-badge sm">MM</span>' : ''}${isNewAccount(otherUser) ? '<span class="new-badge">New</span>' : ''}</div>${itemLabel ? `<div class="chat-item-sub">&#127991; ${escapeHtml(itemLabel)}</div>` : ''}<div class="chat-item-last">${escapeHtml(lastMsg)}</div></div>${unreadBadge(dUn)}`;
@@ -5710,7 +5726,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const warn = o.mm ? '<div class="offer-mm-warn">This trade will require a middleman to complete</div>' : '';
                 return `<div class="${base} has-offer" ${attrs} data-noedit="1">${ref}<div class="offer-card-title">Offer <small>&middot; ${escapeHtml(o.game || '')} &middot; ${o.items.length} item${o.items.length === 1 ? '' : 's'}</small></div><div class="offer-chips">${offerChipsHtml(o.game || '', o.items)}</div>${warn}${status}${btns}<span class="msg-text-content" style="display:none;">${escapeHtml(m.text || '')}</span>${time}</div>`;
             }
-            return `<div class="${base}" ${attrs}>${ref}<span class="msg-text-content">${linkifyText(m.text)}</span>${time}</div>`;
+            const timeE = m.editedAt ? `<span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))} &middot; <span class="msg-edited" title="Edited ${escapeHtml(getExactDate(m.editedAt))}">edited</span></span>` : time;
+            return `<div class="${base}" ${attrs}>${ref}<span class="msg-text-content">${linkifyText(m.text)}</span>${timeE}</div>`;
         }
         async function loadChatImages(root) {
             const imgs = root.querySelectorAll('img[data-image-id]');
@@ -5721,6 +5738,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     if (!data) {
                         const ir = await srv('/api/chat/image/' + encodeURIComponent(id));
                         data = ir.ok ? ir.data.data : null;
+                        if (data && !IMG_DATA_RE.test(data)) data = null;
                         if (data) chatImageCache.set(id, data);
                     }
                     if (data) {
@@ -6082,8 +6100,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const firstLetter = targetUsername.charAt(0).toUpperCase();
             const avatarColor = getColorFromName(targetUsername);
             let headerAvatarHtml = `<div class="chat-header-avatar" style="background-color: ${avatarColor};">${escapeHtml(firstLetter)}</div>`;
-            if (otherUser.avatar) {
-                headerAvatarHtml = `<img class="chat-header-avatar" src="${otherUser.avatar}" alt="Avatar">`;
+            if (safeImgSrc(otherUser.avatar)) {
+                headerAvatarHtml = `<img class="chat-header-avatar" src="${imgSrcAttr(otherUser.avatar)}" alt="Avatar">`;
             }
 
             const clearedAt = await getChatClearedAt(currentUser, threadKey);
@@ -7336,8 +7354,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const avatarColor = getColorFromName(userObj.username);
             const displayId = userObj.customId || '1';
 
-            if (userObj.avatar) {
-                modalAvatarBox.innerHTML = `<img src="${userObj.avatar}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
+            if (safeImgSrc(userObj.avatar)) {
+                modalAvatarBox.innerHTML = `<img src="${imgSrcAttr(userObj.avatar)}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;" alt="Avatar">`;
                 modalAvatarBox.style.backgroundColor = 'transparent';
             } else {
                 modalAvatarBox.innerHTML = escapeHtml(firstLetter);
@@ -7795,8 +7813,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const avatarColor = getColorFromName(username);
 
                 let avatarInner = `<div class="account-mini-avatar" style="background-color: ${avatarColor};">${escapeHtml(firstLetter)}</div>`;
-                if (uObj && uObj.avatar) {
-                    avatarInner = `<img class="account-mini-avatar" src="${uObj.avatar}" alt="Avatar">`;
+                if (uObj && safeImgSrc(uObj.avatar)) {
+                    avatarInner = `<img class="account-mini-avatar" src="${imgSrcAttr(uObj.avatar)}" alt="Avatar">`;
                 }
 
                 const item = document.createElement('div');
