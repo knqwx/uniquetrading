@@ -3058,7 +3058,7 @@
                     <div class="user-picker-selected" id="admin-user-selected">No user selected</div>
                 </div>
                 <div class="setting-group">
-                    <label class="setting-label">Your admin password (needed for every balance change)</label>
+                    <label class="setting-label">Your admin password (needed for every balance change and password reset)</label>
                     <input type="password" class="setting-input" id="admin-adjust-password" autocomplete="current-password" placeholder="Password">
                 </div>
                 <div class="setting-group">
@@ -3069,6 +3069,19 @@
                         <button class="admin-btn sub" id="admin-sub-btn" type="button">&minus; Subtract</button>
                     </div>
                     <div class="setting-hint">Free of charge. Balance can't go below $0.</div>
+                </div>
+                <div class="setting-group" style="border-top:1px solid #333; padding-top:16px; margin-top:6px;">
+                    <label class="setting-label">Reset password for the selected user</label>
+                    <button class="admin-btn sub" id="admin-reset-pw-btn" type="button" style="height:42px;width:100%;">Reset password</button>
+                    <div class="setting-hint">Uses the user and your admin password above. Creates a one-time temporary password; the user must choose a new one at their next login and is logged out everywhere.</div>
+                    <div id="admin-reset-result" style="display:none; margin-top:12px; background:#1a1a1a; border:1px solid #ff7300; border-radius:10px; padding:12px;">
+                        <div class="setting-hint" id="admin-reset-result-label" style="margin:0 0 6px;"></div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <code id="admin-reset-temp" style="flex:1; font-size:16px; color:#fff; word-break:break-all; user-select:all;"></code>
+                            <button class="admin-btn add" id="admin-reset-copy" type="button" style="height:36px;">Copy</button>
+                        </div>
+                        <div class="setting-hint" style="margin:8px 0 0;">Shown once. Send it to the user privately, then it disappears from this screen.</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -5032,6 +5045,92 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         adminAddBtn.addEventListener('click', () => adminAdjust(1));
         adminSubBtn.addEventListener('click', () => adminAdjust(-1));
+
+        // ===== Admin: reset a user's password (temporary password shown once) =====
+        {
+            const resetBtn = document.getElementById('admin-reset-pw-btn');
+            const resultBox = document.getElementById('admin-reset-result');
+            const resultLabel = document.getElementById('admin-reset-result-label');
+            const tempEl = document.getElementById('admin-reset-temp');
+            const copyBtn = document.getElementById('admin-reset-copy');
+            let hideTimer = null;
+            function hideResetResult() {
+                clearTimeout(hideTimer);
+                resultBox.style.display = 'none';
+                tempEl.textContent = '';
+            }
+            resetBtn.addEventListener('click', async () => {
+                const me = currentUser ? await getUserByUsername(currentUser) : null;
+                if (!me || me.customId !== 'knqw') { showToast('Only knqw can reset passwords.'); return; }
+                const target = adminUserSelect.value;
+                if (!target) { showToast('Search and select a user first.'); return; }
+                if (target === currentUser) { showToast('Change your own password in Account settings.'); return; }
+                const pwEl = document.getElementById('admin-adjust-password');
+                if (!pwEl.value) { showToast('Enter your admin password first.'); pwEl.focus(); return; }
+                const ok = await askDealConfirm('Reset password', `Reset the password of ${target}? They will be logged out everywhere and must choose a new password at their next login.`, 'Reset', true);
+                if (!ok) return;
+                resetBtn.disabled = true;
+                try {
+                    const r = await srv('/api/admin/reset-password', 'POST', { username: target, password: pwEl.value });
+                    if (!r.ok) { srvFail(r); return; }
+                    pwEl.value = '';
+                    tempEl.textContent = String(r.data.tempPassword || '');
+                    resultLabel.textContent = `Temporary password for ${target}:`;
+                    resultBox.style.display = 'block';
+                    clearTimeout(hideTimer);
+                    hideTimer = setTimeout(hideResetResult, 120000);
+                    showToast('Password reset. Copy the temporary password now.');
+                } catch (e) {
+                    console.error(e);
+                    showToast('Failed to reset password.');
+                } finally {
+                    resetBtn.disabled = false;
+                }
+            });
+            copyBtn.addEventListener('click', async () => {
+                try { await navigator.clipboard.writeText(tempEl.textContent); showToast('Copied.'); }
+                catch (e) {
+                    const rg = document.createRange(); rg.selectNodeContents(tempEl);
+                    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(rg);
+                    showToast('Press Ctrl+C to copy.');
+                }
+            });
+            adminUserSelect.addEventListener('change', hideResetResult);
+        }
+
+        // ===== Forced password change after an admin reset =====
+        (async function enforcePasswordChange() {
+            if (!currentUser) return;
+            const pr = await srv('/api/profile');
+            if (!pr.ok || !pr.data.user || !pr.data.user.mustChangePassword) return;
+            const ov = document.createElement('div');
+            ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;padding:16px;';
+            ov.innerHTML = `
+                <div style="background:#242424;border:1px solid #333;border-radius:14px;max-width:400px;width:100%;padding:24px;font-family:'Inter',sans-serif;color:#fff;">
+                    <div style="font-size:20px;font-weight:700;margin-bottom:6px;">Choose a new password</div>
+                    <div style="color:#aaa;font-size:13px;margin-bottom:16px;">Your password was reset by an admin. Enter the temporary password you were given and choose a new one.</div>
+                    <input type="password" class="setting-input" id="force-pw-old" placeholder="Temporary password" autocomplete="current-password" style="margin-bottom:8px;width:100%;box-sizing:border-box;">
+                    <input type="password" class="setting-input" id="force-pw-new" placeholder="New password (min 10 chars, upper, lower, number, symbol)" autocomplete="new-password" style="margin-bottom:8px;width:100%;box-sizing:border-box;">
+                    <input type="password" class="setting-input" id="force-pw-new2" placeholder="Repeat new password" autocomplete="new-password" style="margin-bottom:14px;width:100%;box-sizing:border-box;">
+                    <button class="save-settings-btn" id="force-pw-save" type="button" style="width:100%;">Save new password</button>
+                </div>`;
+            document.body.appendChild(ov);
+            const saveBtn = ov.querySelector('#force-pw-save');
+            saveBtn.addEventListener('click', async () => {
+                const o = ov.querySelector('#force-pw-old').value;
+                const n = ov.querySelector('#force-pw-new').value;
+                const n2 = ov.querySelector('#force-pw-new2').value;
+                if (!o || !n) { showToast('Fill in all fields.'); return; }
+                if (n !== n2) { showToast('The new passwords do not match.'); return; }
+                if (n === o) { showToast('Choose a different password than the temporary one.'); return; }
+                saveBtn.disabled = true;
+                const r = await srv('/api/change-password', 'POST', { currentPassword: o, newPassword: n });
+                saveBtn.disabled = false;
+                if (!r.ok) { srvFail(r); return; }
+                showToast('Password changed.');
+                ov.remove();
+            });
+        })();
 
         async function openProfileByUsername(username) {
             const u = await getUserByUsername(username);
