@@ -614,12 +614,14 @@ app.post('/api/admin/withdrawals/:id/status', requireUser, requireAdmin, async (
   res.json({ ok: true });
 });
 
-// Top-up is a DEMO (free money). It only works while PAYMENT_DEMO_MODE=1 is set in Render. Remove that variable before real launch.
-// Fixed: the demo credit is no longer open to everyone. Even with PAYMENT_DEMO_MODE=1 only the admin account can use it,
-// so flipping the switch on Render can no longer hand out free money to regular users.
+// No simulated money in production. A client-side flag or a mistakenly enabled Render
+// environment variable must never credit a wallet without a verified payment provider.
 app.post('/api/wallet/topup', requireUser, async (req, res) => {
   try {
-    if (process.env.PAYMENT_DEMO_MODE !== '1') return res.status(403).json({ error: 'Payment provider is not connected.' });
+    if (process.env.NODE_ENV === 'production' || process.env.RENDER === 'true' ||
+        process.env.PAYMENT_DEMO_MODE !== '1') {
+      return res.status(503).json({ error: 'Payment provider is not connected.' });
+    }
     const who = await db.execute({ sql: 'SELECT customId FROM users WHERE username = ?', args: [req.user] });
     if (!who.rows.length || String(who.rows[0].customId || '') !== 'knqw') return res.status(403).json({ error: 'Payment provider is not connected.' });
     if (moneyLimit(req, res, 'topup', 5, 60 * 60 * 1000)) return;
