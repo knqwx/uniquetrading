@@ -293,6 +293,11 @@ async function init() {
       const lc = (await db.execute('SELECT COUNT(*) c FROM listings')).rows[0].c, orph = (await db.execute('SELECT COUNT(*) c FROM listings WHERE ownerId NOT IN (SELECT id FROM users)')).rows[0].c;
       const pend = (await db.execute("SELECT COUNT(*) c FROM users WHERE items IS NOT NULL AND items NOT IN ('', '[]', 'null')")).rows[0].c;
       console.log(`Listings: ${lc} in the listings table, ${orph} without a matching seller, ${pend} users still have old-style items waiting to be moved`);
+      if (Number(orph) > 0) {
+        const od = (await db.execute('SELECT ownerId, typeof(ownerId) t, COUNT(*) c FROM listings WHERE ownerId NOT IN (SELECT id FROM users) GROUP BY ownerId, typeof(ownerId) LIMIT 15')).rows;
+        console.log('Listings without a seller, by ownerId: ' + od.map(r => `${r.ownerId} (${r.t}) x${r.c}`).join('; '));
+      }
+      console.log('Users: ' + (await db.execute('SELECT id, username FROM users LIMIT 20')).rows.map(r => `${r.id}=${r.username}`).join(', '));
     } catch (e) { console.error('listing check failed', e.message); }
     console.log('Sessions in database: ' + (await db.execute('SELECT COUNT(*) c FROM sessions')).rows[0].c + ', users: ' + (await db.execute('SELECT COUNT(*) c FROM users')).rows[0].c);
   } catch (e) { console.error('schema log failed', e.message); }
