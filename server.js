@@ -2233,6 +2233,23 @@ app.post('/api/items', requireUser, async (req, res) => {
   });
   if (out) res.json(out);
 });
+// delete several of my own listings at once: { ids: [..up to 200..] } -> { ok, deleted }
+app.post('/api/items/delete-many', requireUser, async (req, res) => {
+  const ids = [...new Set((Array.isArray(req.body && req.body.ids) ? req.body.ids : []).map(Number).filter(n => Number.isSafeInteger(n) && n > 0))].slice(0, 200);
+  if (!ids.length) return res.status(400).json({ error: 'Pick at least one item.' });
+  const out = await inTx(res, async (tx) => {
+    const mine = (await tx.execute({ sql: `SELECT id FROM listings WHERE ownerId = ? AND id IN (${ids.map(() => '?').join(',')})`, args: [req.userId, ...ids] })).rows.map(r => Number(r.id));
+    for (const id of mine) {
+      await tx.execute({ sql: 'DELETE FROM listings WHERE id = ?', args: [id] });
+      await tx.execute({ sql: "DELETE FROM media WHERE kind = 'listing' AND refId = ?", args: [String(id)] });
+      await tx.execute({ sql: "UPDATE deals SET status = 'cancelled', updatedAt = ? WHERE itemId = ? AND seller = ? AND status = 'requested'", args: [Date.now(), String(id), req.user] });
+    }
+    if (mine.length) await bumpMeta(tx, 'listingsRev');
+    return mine.length;
+  });
+  if (out !== undefined) res.json({ ok: true, deleted: out });
+});
+
 app.delete('/api/items/:id', requireUser, async (req, res) => {
   const deleteId = Number(req.params.id); /* validated just below */ if (!listingIdOk(req.params.id)) return res.status(400).json({ error: 'Invalid listing ID.' });
   const out = await inTx(res, async (tx) => {
