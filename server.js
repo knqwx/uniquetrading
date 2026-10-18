@@ -59,6 +59,22 @@ const smallJson = express.json({ limit: '50kb', verify: keepRaw });
 const BIG_BODY_PATHS = new Set(['/api/chat/image', '/api/items', '/api/profile']);
 app.use((req, res, next) => (BIG_BODY_PATHS.has(req.path) ? bigJson : smallJson)(req, res, next));
 app.use(cookieParser());
+// If the browser sends several "sid" cookies (an old one from an earlier version next to the new one), cookie-parser keeps only the first,
+// which can be the stale one. Use whichever one belongs to a live session.
+app.use(async (req, res, next) => {
+  try {
+    const hdr = String(req.headers.cookie || '');
+    const all = [...hdr.matchAll(/(?:^|;\s*)sid=([^;]*)/g)].map(m => m[1]);
+    if (all.length > 1) {
+      for (const v of all) {
+        if (!tokenOk(v)) continue;
+        const r = await db.execute({ sql: 'SELECT 1 FROM sessions WHERE id = ? AND expiresAt > ?', args: [sha256(v), Date.now()] });
+        if (r.rows.length) { req.cookies.sid = v; break; }
+      }
+    }
+  } catch (e) { /* fall through to the normal lookup */ }
+  next();
+});
 // CORS: only your own site may call the API from a browser (extra origins: ALLOWED_ORIGINS=https://a.com,https://b.com)
 const ALLOWED_ORIGINS = new Set(['https://unique-pdee.onrender.com', 'https://knqwx.github.io', ...String(process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)]);
 app.use((req, res, next) => {
@@ -932,6 +948,7 @@ app.post('/api/login', async (req, res) => {
     trackIp(String(u.username), ip);
     await startSession(res, { id: Number(u.id), username: String(u.username), isAdmin });
     res.clearCookie('admin_sid', clearOpts());          // a fresh sign-in never inherits admin powers: they are granted separately, after the password is typed again
+    console.log(`login ok for ${u.username}: origin ${req.headers.origin || '-'}, cookie flags ${CROSS_SITE ? 'SameSite=None; Secure (cross-site)' : (IS_SECURE ? 'SameSite=Lax; Secure' : 'SameSite=Lax')}`);
     res.json({ username: String(u.username), isAdmin });
   } catch (e) {
     console.error('login error:', e);
