@@ -289,6 +289,11 @@ async function init() {
   await run(`ALTER TABLE users ADD COLUMN mustChangePassword INTEGER DEFAULT 0`);   // set when the admin resets a password
   try {
     for (const t of ['users', 'sessions']) { const ti = await db.execute(`PRAGMA table_info(${t})`); console.log(`Schema ${t}: ` + ti.rows.map(r => `${r.name} ${r.type}`).join(', ')); }
+    try {
+      const lc = (await db.execute('SELECT COUNT(*) c FROM listings')).rows[0].c, orph = (await db.execute('SELECT COUNT(*) c FROM listings WHERE ownerId NOT IN (SELECT id FROM users)')).rows[0].c;
+      const pend = (await db.execute("SELECT COUNT(*) c FROM users WHERE items IS NOT NULL AND items NOT IN ('', '[]', 'null')")).rows[0].c;
+      console.log(`Listings: ${lc} in the listings table, ${orph} without a matching seller, ${pend} users still have old-style items waiting to be moved`);
+    } catch (e) { console.error('listing check failed', e.message); }
     console.log('Sessions in database: ' + (await db.execute('SELECT COUNT(*) c FROM sessions')).rows[0].c + ', users: ' + (await db.execute('SELECT COUNT(*) c FROM users')).rows[0].c);
   } catch (e) { console.error('schema log failed', e.message); }
   await run(`CREATE TABLE IF NOT EXISTS admin_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, admin TEXT, action TEXT, target TEXT, detail TEXT, amount REAL DEFAULT 0, createdAt INTEGER)`);
