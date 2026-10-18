@@ -3565,11 +3565,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 </div>
                 <div class="your-items-header" id="your-items-header-row">
                     <span class="your-items-title" id="your-items-title-text">Your Items</span>
-                    <button class="add-item-btn" id="select-items-btn" type="button" style="display:none;margin-right:6px">Select</button>
                     <button class="add-item-btn" id="open-select-game-btn">+ Add Item</button>
+                    <button class="add-item-btn" id="select-items-btn" type="button" style="display:none">Select</button>
                 </div>
                 <div id="items-select-bar" style="display:none;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px">
-                    <span id="items-select-count" style="font-size:13px;opacity:.85">0 selected</span>
+                    <span id="items-select-count" style="font-size:14px;font-weight:700;color:#fff">0 selected</span>
                     <button class="add-item-btn" id="items-select-all" type="button">Select all</button>
                     <button class="add-item-btn" id="items-delete-selected" type="button" style="background:#b3261e">Delete selected</button>
                     <button class="add-item-btn" id="items-select-cancel" type="button">Cancel</button>
@@ -7926,8 +7926,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 if (itemSelectMode) {
                     card.style.cursor = 'pointer';
                     const on = selectedItemIds.has(Number(item.id));
-                    card.style.outline = on ? '2px solid #e5484d' : '';
-                    if (on) card.insertAdjacentHTML('afterbegin', '<div style="position:absolute;top:6px;right:8px;background:#e5484d;color:#fff;border-radius:50%;width:20px;height:20px;font-size:13px;line-height:20px;text-align:center;z-index:2">&#10003;</div>');
+                    if (on) card.insertAdjacentHTML('beforeend', '<div style="position:absolute;inset:0;background:rgba(0,0,0,.62);border-radius:inherit;display:flex;align-items:center;justify-content:center;color:#fff;font-size:34px;font-weight:700;z-index:2;pointer-events:none">&#10003;</div>');
                     card.style.position = 'relative';
                     card.addEventListener('click', () => {
                         const id = Number(item.id);
