@@ -1,6 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+// Some browsers drop the API's cookie when the page is on another site (GitHub Pages). The login hands back a token which is then sent as X-Session.
+(function () {
+  const of = window.fetch.bind(window);
+  window.fetch = function (url, opts) {
+    try {
+      const u = String(url);
+      if (u.indexOf('/api/') !== -1) {
+        const tok = localStorage.getItem('ut_token');
+        opts = Object.assign({}, opts);
+        if (tok) { const h = new Headers(opts.headers || {}); h.set('X-Session', tok); opts.headers = h; }
+        const done = (r) => {
+          if (u.indexOf('/api/login') !== -1 || u.indexOf('/api/signup') !== -1) { r.clone().json().then(j => { if (j && j.token) localStorage.setItem('ut_token', j.token); }).catch(() => {}); }
+          if (/\/api\/logout/.test(u)) localStorage.removeItem('ut_token');
+          return r;
+        };
+        return of(url, opts).then(done);
+      }
+    } catch (e) {}
+    return of(url, opts);
+  };
+})();
+</script>
     <script>try { if (localStorage.getItem('currentUser')) document.documentElement.classList.add('has-session'); } catch (e) {}</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

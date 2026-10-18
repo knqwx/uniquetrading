@@ -63,6 +63,12 @@ app.use(cookieParser());
 // which can be the stale one. Use whichever one belongs to a live session.
 app.use(async (req, res, next) => {
   try {
+    // Fallback for browsers that refuse third-party cookies (the page on GitHub, the API on Render): the page keeps the token itself and sends it as X-Session.
+    const xs = String(req.headers['x-session'] || '');
+    if (tokenOk(xs)) {
+      const r = await db.execute({ sql: 'SELECT 1 FROM sessions WHERE id = ? AND expiresAt > ?', args: [sha256(xs), Date.now()] });
+      if (r.rows.length) { req.cookies.sid = xs; return next(); }
+    }
     const hdr = String(req.headers.cookie || '');
     const all = [...hdr.matchAll(/(?:^|;\s*)sid=([^;]*)/g)].map(m => m[1]);
     if (all.length > 1) {
@@ -84,7 +90,7 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session');
     res.setHeader('Access-Control-Max-Age', '600');
   }
   if (req.method === 'OPTIONS') return res.sendStatus(origin && !ALLOWED_ORIGINS.has(origin) ? 403 : 204);
@@ -195,6 +201,8 @@ const newMediaId = () => crypto.randomBytes(16).toString('hex');
 async function init() {
   const run = async (sql) => { try { await db.execute(sql); } catch (e) { /* already exists */ } };
   await run(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, customId TEXT, username TEXT UNIQUE, displayName TEXT, email TEXT, password TEXT, avatar TEXT, balance REAL DEFAULT 0.00, lastUsernameChange INTEGER, lastDisplayNameChange INTEGER, items TEXT, lastItemTime INTEGER, messages TEXT, card TEXT)`);
+  // an old database may hold a users table with fewer columns than this version expects: add every one that is missing
+  for (const col of ['customId TEXT', 'username TEXT', 'displayName TEXT', 'email TEXT', 'password TEXT', 'avatar TEXT', 'lastUsernameChange INTEGER', 'lastDisplayNameChange INTEGER', 'items TEXT']) await run(`ALTER TABLE users ADD COLUMN ${col}`);
   for (const col of ['balance REAL DEFAULT 0.00', 'lastItemTime INTEGER', 'messages TEXT', 'card TEXT', 'isMiddleman INTEGER DEFAULT 0', 'lastSeen INTEGER', 'heldBalance REAL DEFAULT 0', 'bannedUntil INTEGER DEFAULT 0', 'bannedAt INTEGER DEFAULT 0', 'banReason TEXT', 'appeal TEXT', 'appealAt INTEGER DEFAULT 0', 'appealStatus TEXT', 'roblox TEXT']) await run(`ALTER TABLE users ADD COLUMN ${col}`);
   // Authoritative wallet values are integer cents. Migrate legacy dollar columns exactly once.
   const userCols = await db.execute('PRAGMA table_info(users)');
@@ -668,59 +676,20 @@ function readSids(req) {
 }
 // Registers a new login for this browser. Admin sessions are NEVER added to the "remembered accounts" cookie, so the admin is not offered in the account switcher.
 // opts.makeCurrent = false adds the account to the switcher without leaving the current one.
-
 async function startSession(res, user, opts = {}) {
   const raw = crypto.randomBytes(32).toString('hex'), now = Date.now();
   const ttl = user.isAdmin ? ADMIN_LOGIN_MS : SESSION_MS;
-  const sessionHash = sha256(raw);
-
-  await db.execute({
-    sql: 'INSERT INTO sessions (id, username, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?, ?)',
-    args: [sessionHash, user.username, user.id, now, now + ttl]
-  });
-
-  
-  try {
-    const check = await db.execute({
-      sql: `SELECT
-        s.username AS sessionUsername,
-        s.userId AS sessionUserId,
-        u.id AS matchedUserId,
-        u.username AS matchedUsername,
-        (SELECT id FROM users WHERE lower(username) = lower(s.username) LIMIT 1) AS usernameUserId,
-        s.expiresAt
-        FROM sessions s
-        LEFT JOIN users u ON u.id = s.userId
-        WHERE s.id = ?`,
-      args: [sessionHash]
-    });
-
-    const row = check.rows[0];
-    console.log('[session-debug] after insert:', {
-      found: !!row,
-      sessionUsername: row?.sessionUsername,
-      sessionUserId: row?.sessionUserId,
-      matchedUserId: row?.matchedUserId ?? null,
-      matchedUsername: row?.matchedUsername ?? null,
-      usernameUserId: row?.usernameUserId ?? null,
-      expiryInFuture: !!row && Number(row.expiresAt) > Date.now()
-    });
-  } catch (e) {
-    console.warn('[session-debug] after-insert check failed:', e.message);
-  }
-
+  await db.execute({ sql: 'INSERT INTO sessions (id, username, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?, ?)', args: [sha256(raw), user.username, user.id, now, now + ttl] });
   const sids = readSids(res.req);
   if (opts.makeCurrent !== false) {
     const prev = String(res.req.cookies.sid || '');
+    // a replaced session that is not remembered in the switcher (an admin session, say) would otherwise stay valid in the database with no cookie pointing at it
     if (tokenOk(prev) && !sids.includes(prev)) await dropSession(prev);
     res.cookie('sid', raw, cookieOpts(ttl));
   }
-  if (!user.isAdmin) {
-    res.cookie('sids', [...sids.filter(x => x !== raw), raw].slice(-10).join(','), cookieOpts(SESSION_MS));
-  }
+  if (!user.isAdmin) res.cookie('sids', [...sids.filter(x => x !== raw), raw].slice(-10).join(','), cookieOpts(SESSION_MS));
   return raw;
 }
-
 async function dropSession(raw) {                    // forget one login completely (including any admin power attached to it)
   const h = sha256(raw);
   await db.execute({ sql: 'DELETE FROM admin_sessions WHERE sessionHash = ?', args: [h] });
@@ -764,6 +733,7 @@ const safeEqual = (a, b) => {
 async function verifyPassword(u, password) {
   let ok = false;
   if (u.passwordHash) ok = await bcrypt.compare(password, String(u.passwordHash));
+  if (!ok && /^\$2[aby]\$/.test(String(u.password || ''))) { try { ok = await bcrypt.compare(password, String(u.password)); } catch (e) {} if (ok) await db.execute({ sql: "UPDATE users SET passwordHash = ?, password = '' WHERE id = ?", args: [String(u.password), Number(u.id)] }); }   // an old bcrypt hash kept in the plain column
   if (!ok && u.password && safeEqual(u.password, password)) {
     ok = true;
     await db.execute({ sql: "UPDATE users SET passwordHash = ?, password = '' WHERE id = ?", args: [await bcrypt.hash(password, 12), Number(u.id)] });   // plaintext is wiped as soon as the hash exists
@@ -810,22 +780,6 @@ async function authenticate(req, id, password, scope) {
   if (id.length > 254 || password.length > 1000) return { status: 400, body: { error: BAD_LOGIN } };
   const rs = await db.execute({ sql: 'SELECT * FROM users WHERE lower(username) = lower(?) OR lower(email) = lower(?) ORDER BY (lower(username) = lower(?)) DESC LIMIT 1', args: [id, id, id] });
   const u = rs.rows.length ? rs.rows[0] : null;
-  if (u) {
-  const schema = await db.execute('PRAGMA table_info(users)');
-  const rowCheck = await db.execute({
-    sql: 'SELECT rowid AS actualRowid, id AS storedId, username FROM users WHERE lower(username) = lower(?) LIMIT 1',
-    args: [id]
-  });
-
-  console.log('[session-debug] users schema:', schema.rows.map(c => ({
-    name: c.name,
-    type: c.type,
-    primaryKey: c.pk,
-    notNull: c.notnull
-  })));
-
-  console.log('[session-debug] user row:', rowCheck.rows[0] || null);
-  }
   // the same person typing their e-mail or their username must hit the same counter, so the key uses the account id when there is one
   const key = lockKey('login', ip, u ? 'u' + u.id : 'n:' + id);
   const st = await lockoutStatus(key);
@@ -995,22 +949,18 @@ app.post('/api/login', async (req, res) => {
     const r = await authenticate(req, id, password, 'login');
     if (!r.user) return res.status(r.status).json(r.body);
     const u = r.user, ip = ipOf(req), isAdmin = isAdminId(u.customId);
-    console.log('[session-debug] authenticated user:', {
-  username: u.username,
-  id: u.id,
-  idType: typeof u.id,
-  keys: Object.keys(u)
-});
     if (!isAdmin) {
       const ban = await activeIpBan(ip);
       if (ban) return res.status(403).json({ error: ipBanText(ban) });
     }
     if (ip) { try { await db.execute({ sql: 'UPDATE users SET lastIp = ? WHERE id = ?', args: [ip, Number(u.id)] }); } catch (e) {} }
     trackIp(String(u.username), ip);
-    await startSession(res, { id: Number(u.id), username: String(u.username), isAdmin });
+    const newSid = await startSession(res, { id: Number(u.id), username: String(u.username), isAdmin });
     res.clearCookie('admin_sid', clearOpts());          // a fresh sign-in never inherits admin powers: they are granted separately, after the password is typed again
     console.log(`login ok for ${u.username}: origin ${req.headers.origin || '-'}, cookie flags ${CROSS_SITE ? 'SameSite=None; Secure (cross-site)' : (IS_SECURE ? 'SameSite=Lax; Secure' : 'SameSite=Lax')}`);
-    res.json({ username: String(u.username), isAdmin });
+    // only for a page hosted on another site: it needs the token because its cookie may be blocked
+    const crossPage = req.headers.origin && req.headers.origin !== `${req.protocol}://${req.headers.host}`;
+    res.json({ username: String(u.username), isAdmin, ...(crossPage && !isAdmin ? { token: newSid } : {}) });
   } catch (e) {
     console.error('login error:', e);
     res.status(500).json({ error: 'Server error. Try again later.' });
