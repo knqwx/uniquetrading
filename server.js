@@ -298,6 +298,20 @@ async function init() {
         console.log('Listings without a seller, by ownerId: ' + od.map(r => `${r.ownerId} (${r.t}) x${r.c}`).join('; '));
       }
       console.log('Users: ' + (await db.execute('SELECT id, username FROM users LIMIT 20')).rows.map(r => `${r.id}=${r.username}`).join(', '));
+      // Listings whose seller could not be recovered (ownerId 0) can be given to one account: set ORPHAN_LISTINGS_OWNER=<username> on Render, redeploy, then remove it.
+      const adopt = String(process.env.ORPHAN_LISTINGS_OWNER || '').trim();
+      if (adopt && Number(orph) > 0) {
+        const ou = (await db.execute({ sql: 'SELECT id FROM users WHERE lower(username) = lower(?)', args: [adopt] })).rows[0];
+        if (!ou) console.error(`ORPHAN_LISTINGS_OWNER: no account named ${adopt}`);
+        else {
+          await db.batch([
+            { sql: 'UPDATE media SET ownerId = ? WHERE kind = \'listing\' AND ownerId NOT IN (SELECT id FROM users)', args: [Number(ou.id)] },
+            { sql: 'UPDATE listings SET ownerId = ? WHERE ownerId NOT IN (SELECT id FROM users)', args: [Number(ou.id)] },
+          ], 'write');
+          await bumpMeta(db, 'listingsRev');
+          console.log(`Listings without a seller now belong to ${adopt}`);
+        }
+      }
     } catch (e) { console.error('listing check failed', e.message); }
     console.log('Sessions in database: ' + (await db.execute('SELECT COUNT(*) c FROM sessions')).rows[0].c + ', users: ' + (await db.execute('SELECT COUNT(*) c FROM users')).rows[0].c);
   } catch (e) { console.error('schema log failed', e.message); }
