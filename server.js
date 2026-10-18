@@ -206,6 +206,33 @@ async function init() {
   // an old database may hold a users table with fewer columns than this version expects: add every one that is missing
   for (const col of ['customId TEXT', 'username TEXT', 'displayName TEXT', 'email TEXT', 'password TEXT', 'avatar TEXT', 'lastUsernameChange INTEGER', 'lastDisplayNameChange INTEGER', 'items TEXT']) await run(`ALTER TABLE users ADD COLUMN ${col}`);
   for (const col of ['balance REAL DEFAULT 0.00', 'lastItemTime INTEGER', 'messages TEXT', 'card TEXT', 'isMiddleman INTEGER DEFAULT 0', 'lastSeen INTEGER', 'heldBalance REAL DEFAULT 0', 'bannedUntil INTEGER DEFAULT 0', 'bannedAt INTEGER DEFAULT 0', 'banReason TEXT', 'appeal TEXT', 'appealAt INTEGER DEFAULT 0', 'appealStatus TEXT', 'roblox TEXT']) await run(`ALTER TABLE users ADD COLUMN ${col}`);
+  // The very old users table had "id TEXT" (not a real row id). Everything here needs integer ids, so the table is rebuilt once, keeping every row and column.
+  try {
+    const ti = await db.execute('PRAGMA table_info(users)');
+    const idCol = ti.rows.find(r => String(r.name) === 'id');
+    if (idCol && String(idCol.type).toUpperCase() !== 'INTEGER') {
+      const cols = ti.rows.filter(r => String(r.name) !== 'id');
+      const names = cols.map(r => String(r.name));
+      const defs = cols.map(r => {
+        const n = String(r.name);
+        if (n === 'username') return 'username TEXT UNIQUE';
+        if (n === 'balanceCents' || n === 'heldBalanceCents') return `${n} INTEGER NOT NULL DEFAULT 0`;
+        return `${n} ${String(r.type || '')}${r.dflt_value != null ? ' DEFAULT ' + r.dflt_value : ''}`.trim();
+      });
+      const sel = names.map(n => (n === 'balanceCents' || n === 'heldBalanceCents') ? `COALESCE(${n}, 0)` : n).join(', ');
+      const list = names.join(', ');
+      console.warn('Rebuilding users: its id column was ' + (idCol.type || 'untyped') + ', it becomes an integer row id');
+      await db.batch([
+        'DROP TABLE IF EXISTS users_new',
+        `CREATE TABLE users_new (id INTEGER PRIMARY KEY AUTOINCREMENT, ${defs.join(', ')})`,
+        // accounts whose old id is a clean whole number keep it; the others get the next free number
+        `INSERT OR IGNORE INTO users_new (id, ${list}) SELECT CAST(id AS INTEGER), ${sel} FROM users WHERE CAST(id AS TEXT) GLOB '[0-9]*' AND CAST(id AS TEXT) NOT GLOB '*[^0-9]*' AND CAST(id AS INTEGER) > 0 ORDER BY CAST(id AS INTEGER)`,
+        `INSERT OR IGNORE INTO users_new (${list}) SELECT ${sel} FROM users WHERE username NOT IN (SELECT username FROM users_new WHERE username IS NOT NULL)`,
+        'DROP TABLE users',
+        'ALTER TABLE users_new RENAME TO users',
+      ], 'write');
+    }
+  } catch (e) { console.error('!! users table rebuild failed:', e.message); }
   // Authoritative wallet values are integer cents. Migrate legacy dollar columns exactly once.
   const userCols = await db.execute('PRAGMA table_info(users)');
   const userColNames = new Set(userCols.rows.map(r => String(r.name)));
@@ -378,7 +405,7 @@ async function migrate() {
   const idOf = new Map(users.rows.map(r => [String(r.username), Number(r.id)]));
 
   // 1) sessions: add the numeric user id
-  await db.execute('UPDATE sessions SET userId = (SELECT id FROM users WHERE users.username = sessions.username) WHERE userId IS NULL');
+  await db.execute('UPDATE sessions SET userId = (SELECT id FROM users WHERE users.username = sessions.username) WHERE username IS NOT NULL AND (userId IS NULL OR userId NOT IN (SELECT id FROM users))');
 
   // 2) messages: users.messages (JSON, duplicated on both rows) -> messages table
   if (!(await metaGet('messages_migrated'))) {
