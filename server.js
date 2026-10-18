@@ -810,6 +810,22 @@ async function authenticate(req, id, password, scope) {
   if (id.length > 254 || password.length > 1000) return { status: 400, body: { error: BAD_LOGIN } };
   const rs = await db.execute({ sql: 'SELECT * FROM users WHERE lower(username) = lower(?) OR lower(email) = lower(?) ORDER BY (lower(username) = lower(?)) DESC LIMIT 1', args: [id, id, id] });
   const u = rs.rows.length ? rs.rows[0] : null;
+  if (u) {
+  const schema = await db.execute('PRAGMA table_info(users)');
+  const rowCheck = await db.execute({
+    sql: 'SELECT rowid AS actualRowid, id AS storedId, username FROM users WHERE lower(username) = lower(?) LIMIT 1',
+    args: [id]
+  });
+
+  console.log('[session-debug] users schema:', schema.rows.map(c => ({
+    name: c.name,
+    type: c.type,
+    primaryKey: c.pk,
+    notNull: c.notnull
+  })));
+
+  console.log('[session-debug] user row:', rowCheck.rows[0] || null);
+  }
   // the same person typing their e-mail or their username must hit the same counter, so the key uses the account id when there is one
   const key = lockKey('login', ip, u ? 'u' + u.id : 'n:' + id);
   const st = await lockoutStatus(key);
