@@ -260,6 +260,10 @@ async function init() {
   await run(`ALTER TABLE users ADD COLUMN joinedAt INTEGER`);
   await run(`ALTER TABLE users ADD COLUMN lastWithdrawAt INTEGER DEFAULT 0`);
   await run(`ALTER TABLE users ADD COLUMN mustChangePassword INTEGER DEFAULT 0`);   // set when the admin resets a password
+  try {
+    for (const t of ['users', 'sessions']) { const ti = await db.execute(`PRAGMA table_info(${t})`); console.log(`Schema ${t}: ` + ti.rows.map(r => `${r.name} ${r.type}`).join(', ')); }
+    console.log('Sessions in database: ' + (await db.execute('SELECT COUNT(*) c FROM sessions')).rows[0].c + ', users: ' + (await db.execute('SELECT COUNT(*) c FROM users')).rows[0].c);
+  } catch (e) { console.error('schema log failed', e.message); }
   await run(`CREATE TABLE IF NOT EXISTS admin_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, admin TEXT, action TEXT, target TEXT, detail TEXT, amount REAL DEFAULT 0, createdAt INTEGER)`);
   // every IP an account has signed up / logged in / browsed from (used for the "same IP" and VPN flags)
   await run(`CREATE TABLE IF NOT EXISTS user_ips (username TEXT, ip TEXT, firstSeen INTEGER, lastSeen INTEGER, PRIMARY KEY (username, ip))`);
@@ -689,11 +693,26 @@ async function dropSession(raw) {                    // forget one login complet
   await db.execute({ sql: 'DELETE FROM admin_sessions WHERE sessionHash = ?', args: [h] });
   await db.execute({ sql: 'DELETE FROM sessions WHERE id = ?', args: [h] });
 }
+// Finds the user behind a session token. Falls back to the stored username when the numeric user id is missing or stale (old databases).
+async function findSession(raw) {
+  const k = skey(raw), now = Date.now();
+  const sr = await db.execute({ sql: 'SELECT id, username, userId, expiresAt FROM sessions WHERE id = ?', args: [k] });
+  if (!sr.rows.length) return { why: 'no sessions row for this cookie value' };
+  const row = sr.rows[0];
+  if (!(Number(row.expiresAt) > now)) return { why: `session expired (expiresAt=${row.expiresAt}, now=${now})` };
+  let ur = row.userId != null ? await db.execute({ sql: 'SELECT id, username, displayName, customId, bannedUntil, mustChangePassword FROM users WHERE id = ?', args: [Number(row.userId)] }) : { rows: [] };
+  if (!ur.rows.length && row.username) {
+    ur = await db.execute({ sql: 'SELECT id, username, displayName, customId, bannedUntil, mustChangePassword FROM users WHERE username = ?', args: [String(row.username)] });
+    if (ur.rows.length) { try { await db.execute({ sql: 'UPDATE sessions SET userId = ? WHERE id = ?', args: [Number(ur.rows[0].id), k] }); } catch (e) {} }
+  }
+  if (!ur.rows.length) return { why: `session found but its user is missing (userId=${row.userId}, username=${row.username})` };
+  return { user: ur.rows[0] };
+}
 async function sessionInfo(raw) {                    // { id, username, displayName, isAdmin } for a valid raw token, else null
   if (!tokenOk(raw)) return null;
-  const r = await db.execute({ sql: 'SELECT u.id, u.username, u.displayName, u.customId FROM sessions s JOIN users u ON u.id = s.userId WHERE s.id = ? AND s.expiresAt > ?', args: [skey(raw), Date.now()] });
-  if (!r.rows.length) return null;
-  const u = r.rows[0];
+  const f = await findSession(raw);
+  if (!f.user) return null;
+  const u = f.user;
   return { id: Number(u.id), username: String(u.username), displayName: String(u.displayName || u.username), isAdmin: isAdminId(u.customId) };
 }
 const BANNED_OK = new Set(['/api/appeal', '/api/logout', '/api/logout-all', '/api/heartbeat']);
@@ -704,8 +723,9 @@ export async function requireUser(req, res, next) {      // use this on every fu
   try {
     const raw = String(req.cookies.sid || '');
     if (!tokenOk(raw)) { dbg401(req, 'no valid sid cookie'); return res.status(401).json({ error: 'Please log in.' }); }
-    const r = await db.execute({ sql: 'SELECT u.id, u.username, u.customId, u.bannedUntil, u.mustChangePassword FROM sessions s JOIN users u ON u.id = s.userId WHERE s.id = ? AND s.expiresAt > ?', args: [skey(raw), Date.now()] });
-    if (!r.rows.length) { dbg401(req, 'session not found or expired'); return res.status(401).json({ error: 'Please log in.' }); }
+    const f = await findSession(raw);
+    if (!f.user) { dbg401(req, f.why); return res.status(401).json({ error: 'Please log in.' }); }
+    const r = { rows: [f.user] };
     req.user = String(r.rows[0].username);
     req.userId = Number(r.rows[0].id);
     req.isAdminAccount = isAdminId(r.rows[0].customId);
