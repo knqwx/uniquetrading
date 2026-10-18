@@ -116,9 +116,9 @@ const CSP = [
   "frame-ancestors 'none'",
   "upgrade-insecure-requests"
 ].join('; ');
-// Same-origin deployment uses Lax cookies by default. Set CROSS_SITE_COOKIES=1 only if you intentionally host the frontend on another site (for example GitHub Pages).
+// In production cookies are SameSite=None; Secure so the page can also be hosted elsewhere (GitHub Pages). Set CROSS_SITE_COOKIES=0 to use Lax instead.
 const IS_SECURE = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
-const CROSS_SITE = IS_SECURE && process.env.CROSS_SITE_COOKIES === '1';
+const CROSS_SITE = IS_SECURE && process.env.CROSS_SITE_COOKIES !== '0';   // on by default in production so a GitHub-hosted page can log in; set CROSS_SITE_COOKIES=0 to force Lax
 app.use((req, res, next) => {
   res.locals.cspNonce = crypto.randomBytes(18).toString('base64');
   // HSTS: once a browser has seen the site over HTTPS it refuses plain HTTP for a year (req.secure honours the proxy's X-Forwarded-Proto).
