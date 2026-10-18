@@ -374,7 +374,7 @@ async function migrate() {
           if (!s || !r || s === r || !Number.isFinite(ts) || ts <= 0) { skipped++; continue; }
           stmts.push({ sql: 'INSERT OR IGNORE INTO messages (senderId, receiverId, itemId, ts, text, itemRef, offer, imageId, caption, editedAt, rev) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)',
             args: [s, r, m.itemId ? String(m.itemId) : '', Math.floor(ts), String(m.text == null ? '' : m.text).slice(0, 2000), m.itemRef ? JSON.stringify(m.itemRef) : null, m.offer ? JSON.stringify(m.offer) : null,
-              m.imageId ? String(m.imageId).slice(0, 64) : null, m.caption ? String(m.caption).slice(0, 500) : null, m.editedAt ? Number(m.editedAt) || null : null] });
+              m.imageId ? String(m.imageId).slice(0, 64) : null, m.caption ? String(m.caption).slice(0, 500) : null, m.editedAt && Number.isFinite(Number(m.editedAt)) ? Number(m.editedAt) : null] });
         }
         for (let i = 0; i < stmts.length; i += 200) { const rs = await db.batch(stmts.slice(i, i + 200), 'write'); inserted += rs.reduce((a, x) => a + (x.rowsAffected || 0), 0); }
       }
@@ -399,8 +399,9 @@ async function migrate() {
           while (used.has(id)) id++;                      // legacy ids were per-user timestamps, so two sellers could (rarely) collide
           used.add(id);
           const price = it.price == null ? '' : String(it.price).trim();
-          const priceCents = it.tag === 'selling' && Number.isFinite(parseFloat(price.replace(/,/g, ''))) ? Math.round(parseFloat(price.replace(/,/g, '')) * 100) : null;
-          const created = id > 1e12 ? id : (Number(row.joinedAt) || Date.now());
+          const priceNum = parseFloat(price.replace(/,/g, ''));
+          const priceCents = it.tag === 'selling' && Number.isFinite(priceNum) && priceNum >= 0 && priceNum <= 1e9 ? Math.round(priceNum * 100) : null;   // absurd legacy prices (1e999, NaN) become 'no price' instead of crashing the start-up
+          const created = id > 1e12 ? id : (Number.isFinite(Number(row.joinedAt)) && Number(row.joinedAt) > 0 ? Number(row.joinedAt) : Date.now());
           let photoId = null;
           const img = decodeImageDataUrl(it.photo, 1000000);
           if (img) {
@@ -415,7 +416,8 @@ async function migrate() {
           moved++;
         }
         stmts.push({ sql: 'UPDATE users SET items = NULL WHERE id = ?', args: [Number(row.id)] });
-        await db.batch(stmts, 'write');
+        // one user's unusable data must never stop the whole site from starting: log it, keep their old data untouched (nothing was committed) and go on
+        try { await db.batch(stmts, 'write'); } catch (e) { console.error(`Migration: listings of user ${row.username} could not be moved (${e.message}); left as they were`); moved -= stmts.filter(x => x.sql.startsWith('INSERT INTO listings')).length; }
       }
       console.log(`Migration: ${moved} listings moved to the listings table (${dropped} invalid entries dropped)`);
       await bumpMeta(db, 'listingsRev');
@@ -431,7 +433,7 @@ async function migrate() {
       const stmts = [];
       for (const r of rows) {
         const img = decodeImageDataUrl(r.data, 1000000), s = idOf.get(String(r.sender)), p = idOf.get(String(r.receiver));
-        if (img && s && p && MEDIA_ID_RE.test(String(r.id))) { stmts.push({ sql: "INSERT OR IGNORE INTO media (id, kind, ownerId, peerId, mime, size, data, createdAt) VALUES (?, 'chat', ?, ?, ?, ?, ?, ?)", args: [String(r.id), s, p, img.mime, img.buf.length, img.buf, Number(r.createdAt) || Date.now()] }); n++; }
+        if (img && s && p && MEDIA_ID_RE.test(String(r.id))) { stmts.push({ sql: "INSERT OR IGNORE INTO media (id, kind, ownerId, peerId, mime, size, data, createdAt) VALUES (?, 'chat', ?, ?, ?, ?, ?, ?)", args: [String(r.id), s, p, img.mime, img.buf.length, img.buf, (Number.isFinite(Number(r.createdAt)) && Number(r.createdAt) > 0 ? Number(r.createdAt) : Date.now())] }); n++; }
         stmts.push({ sql: 'DELETE FROM chat_images WHERE id = ?', args: [String(r.id)] });
       }
       await db.batch(stmts, 'write');
