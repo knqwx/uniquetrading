@@ -679,19 +679,31 @@ async function startSession(res, user, opts = {}) {
     args: [sessionHash, user.username, user.id, now, now + ttl]
   });
 
+  
   try {
     const check = await db.execute({
-      sql: 'SELECT s.userId, s.expiresAt, u.id AS matchedUserId FROM sessions s LEFT JOIN users u ON u.id = s.userId WHERE s.id = ?',
+      sql: `SELECT
+        s.username AS sessionUsername,
+        s.userId AS sessionUserId,
+        u.id AS matchedUserId,
+        u.username AS matchedUsername,
+        (SELECT id FROM users WHERE lower(username) = lower(s.username) LIMIT 1) AS usernameUserId,
+        s.expiresAt
+        FROM sessions s
+        LEFT JOIN users u ON u.id = s.userId
+        WHERE s.id = ?`,
       args: [sessionHash]
     });
+
     const row = check.rows[0];
     console.log('[session-debug] after insert:', {
       found: !!row,
-      hasUserId: !!row && row.userId != null,
-      userMatched: !!row && row.matchedUserId != null,
-      expiresAt: row ? Number(row.expiresAt) : null,
-      now,
-      expiryInFuture: !!row && Number(row.expiresAt) > now
+      sessionUsername: row?.sessionUsername,
+      sessionUserId: row?.sessionUserId,
+      matchedUserId: row?.matchedUserId ?? null,
+      matchedUsername: row?.matchedUsername ?? null,
+      usernameUserId: row?.usernameUserId ?? null,
+      expiryInFuture: !!row && Number(row.expiresAt) > Date.now()
     });
   } catch (e) {
     console.warn('[session-debug] after-insert check failed:', e.message);
