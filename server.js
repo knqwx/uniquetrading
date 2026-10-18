@@ -668,20 +668,47 @@ function readSids(req) {
 }
 // Registers a new login for this browser. Admin sessions are NEVER added to the "remembered accounts" cookie, so the admin is not offered in the account switcher.
 // opts.makeCurrent = false adds the account to the switcher without leaving the current one.
+
 async function startSession(res, user, opts = {}) {
   const raw = crypto.randomBytes(32).toString('hex'), now = Date.now();
   const ttl = user.isAdmin ? ADMIN_LOGIN_MS : SESSION_MS;
-  await db.execute({ sql: 'INSERT INTO sessions (id, username, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?, ?)', args: [sha256(raw), user.username, user.id, now, now + ttl] });
+  const sessionHash = sha256(raw);
+
+  await db.execute({
+    sql: 'INSERT INTO sessions (id, username, userId, createdAt, expiresAt) VALUES (?, ?, ?, ?, ?)',
+    args: [sessionHash, user.username, user.id, now, now + ttl]
+  });
+
+  try {
+    const check = await db.execute({
+      sql: 'SELECT s.userId, s.expiresAt, u.id AS matchedUserId FROM sessions s LEFT JOIN users u ON u.id = s.userId WHERE s.id = ?',
+      args: [sessionHash]
+    });
+    const row = check.rows[0];
+    console.log('[session-debug] after insert:', {
+      found: !!row,
+      hasUserId: !!row && row.userId != null,
+      userMatched: !!row && row.matchedUserId != null,
+      expiresAt: row ? Number(row.expiresAt) : null,
+      now,
+      expiryInFuture: !!row && Number(row.expiresAt) > now
+    });
+  } catch (e) {
+    console.warn('[session-debug] after-insert check failed:', e.message);
+  }
+
   const sids = readSids(res.req);
   if (opts.makeCurrent !== false) {
     const prev = String(res.req.cookies.sid || '');
-    // a replaced session that is not remembered in the switcher (an admin session, say) would otherwise stay valid in the database with no cookie pointing at it
     if (tokenOk(prev) && !sids.includes(prev)) await dropSession(prev);
     res.cookie('sid', raw, cookieOpts(ttl));
   }
-  if (!user.isAdmin) res.cookie('sids', [...sids.filter(x => x !== raw), raw].slice(-10).join(','), cookieOpts(SESSION_MS));
+  if (!user.isAdmin) {
+    res.cookie('sids', [...sids.filter(x => x !== raw), raw].slice(-10).join(','), cookieOpts(SESSION_MS));
+  }
   return raw;
 }
+
 async function dropSession(raw) {                    // forget one login completely (including any admin power attached to it)
   const h = sha256(raw);
   await db.execute({ sql: 'DELETE FROM admin_sessions WHERE sessionHash = ?', args: [h] });
