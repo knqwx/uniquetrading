@@ -680,12 +680,14 @@ async function sessionInfo(raw) {                    // { id, username, displayN
 }
 const BANNED_OK = new Set(['/api/appeal', '/api/logout', '/api/logout-all', '/api/heartbeat']);
 const MUST_CHANGE_OK = new Set(['/api/change-password', '/api/logout', '/api/logout-all', '/api/heartbeat']);
+let dbg401Count = 0;
+function dbg401(req, why) { if (dbg401Count++ < 60) console.warn(`401 ${req.method} ${req.path}: ${why} (origin ${req.headers.origin || '-'}, host ${req.headers.host}, cookies: ${Object.keys(req.cookies || {}).join(',') || 'none'})`); }
 export async function requireUser(req, res, next) {      // use this on every future endpoint
   try {
     const raw = String(req.cookies.sid || '');
-    if (!tokenOk(raw)) return res.status(401).json({ error: 'Please log in.' });
+    if (!tokenOk(raw)) { dbg401(req, 'no valid sid cookie'); return res.status(401).json({ error: 'Please log in.' }); }
     const r = await db.execute({ sql: 'SELECT u.id, u.username, u.customId, u.bannedUntil, u.mustChangePassword FROM sessions s JOIN users u ON u.id = s.userId WHERE s.id = ? AND s.expiresAt > ?', args: [sha256(raw), Date.now()] });
-    if (!r.rows.length) return res.status(401).json({ error: 'Please log in.' });
+    if (!r.rows.length) { dbg401(req, 'session not found or expired'); return res.status(401).json({ error: 'Please log in.' }); }
     req.user = String(r.rows[0].username);
     req.userId = Number(r.rows[0].id);
     req.isAdminAccount = isAdminId(r.rows[0].customId);

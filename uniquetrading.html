@@ -4160,7 +4160,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 adminElevated = false;
                 if (await ensureAdminElevation()) out = await call();
             }
-            if (out.status === 401 && !opts.noRedirect) { location.href = 'login.html'; }
+            if (out.status === 401 && !opts.noRedirect) { try { localStorage.setItem('ut_why_login', path + ' answered 401 (' + new Date().toLocaleTimeString() + ')'); } catch (e) {} location.href = 'login.html'; }
             return out;
         }
         // ===== Admin: password confirmation window =====

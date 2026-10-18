@@ -449,6 +449,7 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
         }
     }
 
+    try { const why = localStorage.getItem('ut_why_login'); if (why) { localStorage.removeItem('ut_why_login'); errorMsg.textContent = 'You were sent back here because: ' + why; errorMsg.style.display = 'block'; } } catch (e) {}
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('mode') === 'signup') setMode(false);
     // "Switch account" sends people here with the username filled in
