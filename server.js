@@ -90,7 +90,7 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session, X-UT-Page');
     res.setHeader('Access-Control-Max-Age', '600');
   }
   if (req.method === 'OPTIONS') return res.sendStatus(origin && !ALLOWED_ORIGINS.has(origin) ? 403 : 204);
@@ -312,7 +312,7 @@ async function init() {
           console.log(`Listings without a seller now belong to ${adopt}`);
         }
       }
-    } catch (e) { console.error('listing check failed', e.message); }
+    } catch (e) { if (!/no such table/.test(String(e.message))) console.error('listing check failed', e.message); }
     console.log('Sessions in database: ' + (await db.execute('SELECT COUNT(*) c FROM sessions')).rows[0].c + ', users: ' + (await db.execute('SELECT COUNT(*) c FROM users')).rows[0].c);
   } catch (e) { console.error('schema log failed', e.message); }
   await run(`CREATE TABLE IF NOT EXISTS admin_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, admin TEXT, action TEXT, target TEXT, detail TEXT, amount REAL DEFAULT 0, createdAt INTEGER)`);
@@ -1890,7 +1890,7 @@ const adminUser = (r, items = []) => ({
 
 // /api/users is the long list every page load fetches, so it carries only light fields: no listings (items) and no pictures.
 // Pictures are a small URL (served by /api/avatar/:name, cacheable); listings come from /api/listings, only for screens that need them.
-const USER_LIST_COLS = "customId, username, displayName, roblox, isMiddleman, lastSeen, joinedAt, bannedUntil, (CASE WHEN avatar IS NOT NULL AND avatar != '' THEN 1 ELSE 0 END) AS hasAvatar";
+const USER_LIST_COLS = "id, customId, username, displayName, roblox, isMiddleman, lastSeen, joinedAt, bannedUntil, (CASE WHEN avatar IS NOT NULL AND avatar != '' THEN 1 ELSE 0 END) AS hasAvatar";
 const ADMIN_USER_LIST_COLS = "customId, username, displayName, roblox, isMiddleman, lastSeen, joinedAt, bannedUntil, bannedAt, banReason, appeal, appealAt, appealStatus, email, balanceCents, heldBalanceCents, lastIp, lastItemTime, (CASE WHEN avatar IS NOT NULL AND avatar != '' THEN 1 ELSE 0 END) AS hasAvatar";
 const lightUser = (r) => ({
   customId: r.customId, username: r.username, displayName: r.displayName || r.username,
@@ -1905,6 +1905,11 @@ const lightAdminUser = (r) => ({
 app.get('/api/users', requireUser, async (req, res) => {
   const rs = await db.execute(`SELECT ${USER_LIST_COLS} FROM users`);
   // This is a public directory for any signed-in account: never include emails, balances, or IP addresses.
+  // An older copy of the page (without the X-UT-Page header) still expects each user's listings inside this list, so they are added for it.
+  if (!req.headers['x-ut-page']) {
+    const byOwner = await listingsOfOwners(rs.rows.map(r => Number(r.id)).filter(n => Number.isFinite(n)));
+    return res.json({ users: rs.rows.map(r => ({ ...lightUser(r), items: byOwner.get(Number(r.id)) || [] })) });
+  }
   res.json({ users: rs.rows.map(lightUser) });
 });
 
