@@ -1760,6 +1760,49 @@
             opacity: 0.9;
         }
 
+        .grid-show-more { grid-column: 1 / -1; justify-self: center; background: #1f1f1f; color: #ff9a44; border: 1px solid #444; border-radius: 22px; padding: 10px 28px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; margin: 8px 0 24px; }
+        .grid-show-more:hover { border-color: #ff7300; }
+        .detail-activity { display: none; align-items: center; gap: 8px; color: #ffb36b; font-size: 13px; font-weight: 600; margin: 0 0 12px; background: rgba(255, 115, 0, 0.1); border: 1px solid rgba(255, 115, 0, 0.35); border-radius: 18px; padding: 6px 12px; width: fit-content; max-width: 100%; box-sizing: border-box; }
+        .detail-activity .act-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff7300; flex: 0 0 auto; animation: actPulse 1.6s ease-in-out infinite; }
+        @keyframes actPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+        .chat-older-wrap { text-align: center; padding: 6px 0 10px; }
+        .chat-load-older { background: #1f1f1f; color: #ff9a44; border: 1px solid #444; border-radius: 16px; padding: 6px 14px; font-size: 12px; cursor: pointer; font-family: inherit; }
+        .chat-load-older:disabled { opacity: 0.6; cursor: default; }
+        .chat-img-missing { color: #888; font-size: 12px; padding: 8px 0; }
+        .escrow-card { margin: 18px 0 4px; }
+        .escrow-sub { color: #cfcfcf; font-size: 13px; font-weight: 600; margin: 14px 0 6px; }
+        .escrow-total { color: #ff9a44; margin-left: 6px; }
+        .escrow-list { display: flex; flex-direction: column; gap: 8px; }
+        .escrow-row { background: #1f1f1f; border: 1px solid #383838; border-radius: 10px; padding: 10px 12px; display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; text-align: left; flex-wrap: wrap; }
+        .escrow-main { min-width: 0; flex: 1 1 200px; }
+        .escrow-item { color: #fff; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+        .escrow-meta { color: #9a9a9a; font-size: 12px; margin-top: 2px; overflow-wrap: anywhere; }
+        .escrow-when { color: #ff9a44; font-size: 12px; margin-top: 4px; overflow-wrap: anywhere; }
+        .escrow-amt { color: #fff; font-weight: 700; font-size: 15px; white-space: nowrap; }
+        .escrow-empty { color: #777; font-size: 13px; padding: 4px 0; }
+        .escrow-open { background: none; border: 1px solid #444; color: #ff9a44; border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; margin-top: 6px; font-family: inherit; }
+        .accounts-modal-content { max-width: 94vw; box-sizing: border-box; }
+        .accounts-list-container .acc-sub { color: #888888; font-size: 12px; }
+        .account-item .acc-current-tag { color: #ff9a44; font-size: 11px; font-weight: 600; margin-left: 6px; }
+        .account-item.is-note { cursor: default; }
+        .account-item.is-note:hover { background-color: #25201d; }
+        .remove-saved-acc { min-width: 32px; min-height: 32px; line-height: 1; }
+        .logout-account-modal-btn {
+            width: 100%;
+            margin-top: 10px;
+            background: transparent;
+            color: #ff6b6b;
+            border: 1px solid rgba(255, 77, 77, 0.55);
+            border-radius: 8px;
+            padding: 11px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .logout-account-modal-btn:hover { background-color: rgba(255, 77, 77, 0.12); }
+
         .db-modal-content {
             width: 80vw;
             max-width: 900px;
@@ -3002,6 +3045,34 @@
   #offer-list .item-picker-card .card-img, #item-picker-list .item-picker-card .card-img { width: 52px !important; max-width: 52px !important; flex: 0 0 52px; }
 }
 
+
+/* ===== Short screens (phone turned sideways, very high zoom): nothing fixed may eat the screen, and the chat box must stay reachable ===== */
+@media (max-height: 480px) {
+  .top-bar { position: absolute; }                    /* scrolls away with the page instead of covering 30%+ of a short screen */
+  .chat-window-col { overflow-y: auto; }
+  .chat-messages-container { flex: 1 0 150px; padding: 10px 12px; gap: 8px; }
+  .chat-header-row { padding: 6px 12px; gap: 8px; flex: 0 0 auto; }
+  .chat-header-avatar { width: 28px; height: 28px; font-size: 12px; }
+  .chat-input-row { position: sticky; bottom: 0; z-index: 3; background-color: #1c1c1c; flex: 0 0 auto; padding: 8px 12px; gap: 8px; }
+  .modal-content { max-height: 94vh; max-height: 94dvh; overflow-y: auto; }
+}
+@media (max-width: 760px) and (max-height: 480px) {
+  /* an open conversation takes the whole screen; the "< Chats" bar leads back to the list and the header */
+  .messages-page.active:has(.messages-layout.show-chat) { top: 0; height: 100vh; height: 100dvh; z-index: 150; }
+  .messages-layout.show-chat .chat-back-bar { padding: 6px 12px; }
+}
+
+/* ===== Very narrow screens (320px phones, 400%+ zoom): the header row must fit; the name is shown by the avatar, social icons go first ===== */
+@media (max-width: 400px) {
+  .header-right { max-width: calc(100vw - 58px); min-width: 0; }
+  .header-right .auth-buttons { margin-left: 2px; gap: 4px; }
+  .social-link, .top-link.discord-link { padding: 4px 3px; }
+  .auth-buttons .user-balance-box, .auth-buttons .user-profile-box, .auth-buttons .messages-icon-btn { padding: 5px 6px; }
+  .auth-buttons .user-profile-box .user-name { display: none; }
+}
+@media (max-width: 300px) {
+  .header-right > .top-link { display: none; }
+}
 </style>
 </head>
 <body>
@@ -3124,7 +3195,17 @@
             <div class="balance-title">Wallet</div>
             <div class="setting-hint" style="margin-bottom: 6px;">Available Balance</div>
             <div class="balance-amount-display" id="balance-page-amount">$0</div>
-            <div class="setting-hint" id="balance-held-line" style="margin: 6px 0 0;">On hold: $0 (released when the buyer confirms delivery)</div>
+            <div class="setting-hint" id="balance-held-line" style="margin: 6px 0 0;">On hold for you: $0</div>
+
+            <!-- Escrow: money you have paid that is still held, to whom, and for which item -->
+            <div class="balance-container escrow-card" id="escrow-card">
+                <div class="wallet-card-title">Money held in escrow</div>
+                <div class="setting-hint" id="escrow-hint">Money you paid for an item stays here until you confirm delivery. If you do nothing, it is released to the seller automatically after 7 days.</div>
+                <div class="escrow-sub">You paid <span id="escrow-paid-total" class="escrow-total"></span></div>
+                <div class="escrow-list" id="escrow-paid-list"></div>
+                <div class="escrow-sub" id="escrow-incoming-title">Held for you as a seller <span id="escrow-incoming-total" class="escrow-total"></span></div>
+                <div class="escrow-list" id="escrow-incoming-list"></div>
+            </div>
 
             <div class="wallet-grid">
                 <!-- Левая колонка: покупка валюты -->
@@ -3148,6 +3229,7 @@
                     </div>
 
                     <button class="save-settings-btn" id="topup-buy-btn">Buy</button>
+                    <div class="setting-hint" id="topup-secure-hint" style="margin-top: 8px;">You pay on our payment provider's secure page. This site never sees or stores your card number.</div>
                 </div>
 
                 <!-- Правая колонка: вывод -->
@@ -3162,13 +3244,14 @@
                     <div class="setting-group">
                         <label class="setting-label">Payout Method</label>
                         <select class="setting-select" id="withdraw-method-select">
-                            <option value="card">Linked Bank Card</option>
+                            <option value="card">Bank card payout</option>
                             <option value="crypto">Cryptocurrency (USDT)</option>
                         </select>
                     </div>
 
                     <button class="save-settings-btn" id="withdraw-action-btn">Withdraw to Real Money</button>
                     <div class="setting-hint" id="withdraw-limit-hint" style="margin-top: 8px;">Limit: 1 withdrawal per hour.</div>
+                    <div class="setting-hint" style="margin-top: 4px;">No payment details are typed on this site: after you request a payout, the team contacts you to arrange it.</div>
                 </div>
             </div>
 
@@ -3400,6 +3483,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 <div class="detail-item-title" id="detail-item-title">Item Name</div>
                 <div class="detail-item-price-val" id="detail-price-val"></div>
                 <div class="detail-stock" id="detail-stock">Stock: 1</div>
+                <div class="detail-activity" id="detail-activity" role="status" aria-live="polite"><span class="act-dot"></span><span id="detail-activity-text"></span></div>
                 <div class="detail-time-val" id="detail-time-val" title="Click to toggle date format">Just now</div>
                 
                 <button class="buy-item-action-btn" id="buy-item-action-btn">Contact Seller</button>
@@ -3519,40 +3603,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 <div class="setting-hint">Enter your Roblox username. It is saved when you press Save Changes.</div>
             </div>
 
-            <div class="setting-group">
-                <label class="setting-label">Linked Bank Card</label>
-                <div id="card-container-wrapper">
-                    <!-- Динамически выводится карта или кнопка привязки -->
-                </div>
-            </div>
-
             <button class="save-settings-btn" id="save-account-settings-btn">Save Changes</button>
-        </div>
-    </div>
-
-    <!-- Модальное окно привязки карты -->
-    <div class="modal-overlay" id="link-card-modal">
-        <div class="modal-content" style="width: 400px; text-align: left;">
-            <button class="close-modal" id="close-link-card-btn">&times;</button>
-            <div class="settings-title" style="font-size: 18px; margin-bottom: 15px;">Link Bank Card</div>
-            
-            <div class="setting-group">
-                <label class="setting-label">Card Number</label>
-                <input type="text" class="setting-input" id="card-number-input" placeholder="4222 2222 2222 2222" maxlength="19">
-            </div>
-
-            <div style="display: flex; gap: 15px;">
-                <div class="setting-group" style="flex: 1;">
-                    <label class="setting-label">Expiry (MM/YY)</label>
-                    <input type="text" class="setting-input" id="card-expiry-input" placeholder="12/28" maxlength="5">
-                </div>
-                <div class="setting-group" style="flex: 1;">
-                    <label class="setting-label">CVV</label>
-                    <input type="password" class="setting-input" id="card-cvv-input" placeholder="123" maxlength="4">
-                </div>
-            </div>
-
-            <button class="save-settings-btn" id="confirm-link-card-btn">Link Card</button>
         </div>
     </div>
 
@@ -3724,13 +3775,35 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     <!-- Тост-уведомление -->
     <div class="toast-notification" id="toast-notification">Notification</div>
 
-    <!-- Модальное окно смены аккаунта -->
+    <!-- Manage Accounts: the accounts signed in on THIS browser, add / remove, and log out -->
     <div class="modal-overlay" id="switch-modal">
-        <div class="modal-content accounts-modal-content">
-            <button class="close-modal" id="close-switch-modal-btn">&times;</button>
-            <div class="accounts-title">Switch Account</div>
+        <div class="modal-content accounts-modal-content" role="dialog" aria-modal="true" aria-labelledby="accounts-title-text">
+            <button class="close-modal" id="close-switch-modal-btn" aria-label="Close">&times;</button>
+            <div class="accounts-title" id="accounts-title-text">Manage Accounts</div>
             <div class="accounts-list-container" id="accounts-list"></div>
-            <button class="add-account-modal-btn" id="add-account-btn">+ Add Account</button>
+            <button class="add-account-modal-btn" id="add-account-btn" type="button">+ Add Account</button>
+            <button class="logout-account-modal-btn" id="manage-logout-btn" type="button">Log out</button>
+        </div>
+    </div>
+
+    <!-- Add Account: signs in to ANOTHER existing account (this is not registration) and keeps the current one -->
+    <div class="modal-overlay" id="add-account-modal" style="z-index: 230;">
+        <div class="modal-content settings-modal-content" role="dialog" aria-modal="true" aria-labelledby="add-account-title" style="text-align:left;">
+            <button class="close-modal" id="add-account-close" type="button" aria-label="Close">&times;</button>
+            <div class="settings-title" id="add-account-title">Add Account</div>
+            <div class="setting-hint" style="margin-bottom:14px;">Sign in to another account you already have. You stay signed in to your current account.</div>
+            <form id="add-account-form" autocomplete="off" novalidate>
+                <div class="setting-group">
+                    <label class="setting-label" for="add-account-id">Username or email</label>
+                    <input type="text" class="setting-input" id="add-account-id" autocomplete="username" autocapitalize="off" spellcheck="false">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label" for="add-account-pw">Password</label>
+                    <input type="password" class="setting-input" id="add-account-pw" autocomplete="current-password">
+                </div>
+                <div class="setting-hint" id="add-account-err" role="alert" style="color:#ff6b6b;min-height:18px;margin:0 0 10px;"></div>
+                <button class="save-settings-btn" type="submit" id="add-account-submit">Add account</button>
+            </form>
         </div>
     </div>
 
@@ -4063,45 +4136,157 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const SERVER_URL = 'https://unique-pdee.onrender.com';
         const API_BASE = (location.hostname.endsWith('.onrender.com') || location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : SERVER_URL;
         // ===== Server API helper (session cookie; all private data and all writes go through the server) =====
-        async function srv(path, method, body) {
-            try {
-                const r = await fetch(API_BASE + path, {
-                    method: method || 'GET', credentials: 'include', cache: 'no-store',
-                    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-                    body: body !== undefined ? JSON.stringify(body) : undefined
-                });
-                let data = {};
-                try { data = await r.json(); } catch (e) {}
-                if (r.status === 401) { location.href = 'login.html'; }
-                return { ok: r.ok, status: r.status, data: data || {} };
-            } catch (e) {
-                return { ok: false, status: 0, data: { error: 'Cannot reach the server. Check your connection.' } };
+        // opts.noRedirect: a 401 here means "wrong password", not "your session ended" (add-account), so the page must NOT bounce to the login page.
+        // opts.noElevate: background calls never pop up the admin password window.
+        async function srv(path, method, body, opts) {
+            opts = opts || {};
+            const call = async () => {
+                try {
+                    const r = await fetch(API_BASE + path, {
+                        method: method || 'GET', credentials: 'include', cache: 'no-store',
+                        headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+                        body: body !== undefined ? JSON.stringify(body) : undefined
+                    });
+                    let data = {};
+                    try { data = await r.json(); } catch (e) {}
+                    return { ok: r.ok, status: r.status, data: data || {} };
+                } catch (e) {
+                    return { ok: false, status: 0, data: { error: 'Cannot reach the server. Check your connection.' } };
+                }
+            };
+            let out = await call();
+            // Admin tools need the admin password typed again (it expires after 30 idle minutes): ask once, then repeat the call.
+            if (out.status === 403 && out.data && out.data.adminElevationRequired && !opts.noElevate) {
+                adminElevated = false;
+                if (await ensureAdminElevation()) out = await call();
             }
+            if (out.status === 401 && !opts.noRedirect) { location.href = 'login.html'; }
+            return out;
+        }
+        // ===== Admin: password confirmation window =====
+        let adminElevated = false, adminElevPromise = null;
+        function ensureAdminElevation() {
+            if (adminElevPromise) return adminElevPromise;
+            adminElevPromise = new Promise((resolve) => {
+                const ov = document.createElement('div');
+                ov.className = 'modal-overlay active';
+                ov.style.zIndex = '100001';
+                ov.innerHTML = `
+                    <div class="modal-content settings-modal-content" role="dialog" aria-modal="true" aria-labelledby="admin-elev-title" style="text-align:left;">
+                        <button class="close-modal" type="button" id="admin-elev-x" aria-label="Cancel">&times;</button>
+                        <div class="settings-title" id="admin-elev-title">Confirm admin password</div>
+                        <div class="setting-hint" style="margin-bottom:12px;">Admin tools need your password again. The confirmation ends after 30 minutes without use, or when you sign out.</div>
+                        <input type="password" class="setting-input" id="admin-elev-pw" autocomplete="current-password" placeholder="Admin password" style="width:100%;box-sizing:border-box;">
+                        <div class="setting-hint" id="admin-elev-err" style="color:#ff6b6b;min-height:18px;margin:8px 0;"></div>
+                        <div style="display:flex;gap:10px;justify-content:flex-end;">
+                            <button class="deal-btn" type="button" id="admin-elev-cancel">Cancel</button>
+                            <button class="deal-btn primary" type="button" id="admin-elev-ok">Confirm</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(ov);
+                const pw = ov.querySelector('#admin-elev-pw'), err = ov.querySelector('#admin-elev-err'), ok = ov.querySelector('#admin-elev-ok');
+                const done = (v) => { ov.remove(); adminElevPromise = null; resolve(v); };
+                const submit = async () => {
+                    if (!pw.value) { err.textContent = 'Enter your password.'; pw.focus(); return; }
+                    ok.disabled = true; err.textContent = '';
+                    const r = await srv('/api/admin/elevate', 'POST', { password: pw.value }, { noElevate: true, noRedirect: true });
+                    ok.disabled = false;
+                    if (r.ok) { adminElevated = true; try { updateAppealsBadge(); } catch (e) {} done(true); return; }
+                    pw.value = '';
+                    let m = r.data.error || 'Could not confirm. Try again.';
+                    if (r.data.attemptsLeft !== undefined && !r.data.locked) m += ` ${r.data.attemptsLeft} more wrong ${r.data.attemptsLeft === 1 ? 'try' : 'tries'} and admin access is locked.`;
+                    err.textContent = m;
+                    pw.focus();
+                };
+                ok.addEventListener('click', submit);
+                pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } else if (e.key === 'Escape') done(false); });
+                ov.querySelector('#admin-elev-cancel').addEventListener('click', () => done(false));
+                ov.querySelector('#admin-elev-x').addEventListener('click', () => done(false));
+                setTimeout(() => pw.focus(), 30);
+            });
+            return adminElevPromise;
         }
         const srvFail = (r) => showToast(r.data.error || 'Something went wrong. Try again.');
 
-        // shape used all over the page; private fields exist only for me, other people's messages are always []
+        // listing photos come as /api/media/<id> (a cacheable picture, not text inside the JSON): make them absolute for a page served from another host
+        function normItem(it) {
+            if (!it) return it;
+            const photo = it.photo ? (String(it.photo).charAt(0) === '/' ? API_BASE + it.photo : it.photo) : null;
+            return { ...it, photo, sellerUsername: it.sellerUsername || it.owner || '' };
+        }
+        // shape used all over the page; private fields exist only for me. Messages are NOT part of a user any more: they live in the chat store (/api/chat/sync).
         function normUser(u) {
             return {
                 customId: u.customId, username: u.username, displayName: u.displayName, email: u.email || '', password: '',
                 avatar: safeImgSrc(u.avatar ? (u.avatar.charAt(0) === '/' ? API_BASE + u.avatar : u.avatar) : null) || null, balance: u.balance !== undefined && u.balance !== null ? u.balance : 0,
                 lastUsernameChange: u.lastUsernameChange || null, lastDisplayNameChange: u.lastDisplayNameChange || null,
-                items: u.items || [], lastItemTime: u.lastItemTime || 0, roblox: u.roblox || '', lastIp: u.lastIp || '',
-                messages: u.messages || [], card: u.card || null, isMiddleman: !!u.isMiddleman,
+                nextUsernameChangeAt: Number(u.nextUsernameChangeAt) || 0, nextDisplayNameChangeAt: Number(u.nextDisplayNameChangeAt) || 0,
+                items: (u.items || []).map(normItem), lastItemTime: u.lastItemTime || 0, roblox: u.roblox || '', lastIp: u.lastIp || '',
+                isMiddleman: !!u.isMiddleman,
                 heldBalance: Number(u.heldBalance) || 0, lastSeen: Number(u.lastSeen) || 0, joinedAt: Number(u.joinedAt) || 0,
                 bannedUntil: Number(u.bannedUntil) || 0, bannedAt: Number(u.bannedAt) || 0, banReason: u.banReason || '',
                 appeal: u.appeal || '', appealAt: Number(u.appealAt) || 0, appealStatus: u.appealStatus || ''
             };
         }
+        // ===== Listings: loaded page by page (GET /api/listings?cursor=), kept while /api/listings/sig says nothing changed =====
+        const LISTING_FETCH = 100, GRID_PAGE = 60, LISTING_CAP = 5000;
+        let listingsState = { items: [], next: null, complete: false, sig: null };
+        async function currentListingsSig() {
+            const r = await srv('/api/listings/sig', undefined, undefined, { noElevate: true });
+            return r.ok ? String(r.data.sig || '') : null;
+        }
+        async function fetchListingsPage(cursor, limit) {
+            const r = await srv('/api/listings?limit=' + limit + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
+            if (!r.ok) return null;
+            return { items: (r.data.items || []).map(normItem), next: r.data.nextCursor || null };
+        }
+        // makes sure the cache describes the CURRENT listings: if anything changed (price, stock, text, picture, sale, delete) it starts over from page 1
+        // The cache is touched by one request at a time (a re-render and a "Show more" click must never append the same page twice).
+        let listingsChain = Promise.resolve();
+        const listingsLock = (fn) => { const run = listingsChain.then(fn); listingsChain = run.catch(() => {}); return run; };
+        function ensureListingsFresh() {
+            return listingsLock(async () => {
+                const sig = await currentListingsSig();
+                if (listingsState.sig !== null && sig !== null && sig === listingsState.sig && listingsState.items.length + (listingsState.complete ? 1 : 0) > 0) return true;
+                const pg = await fetchListingsPage(0, LISTING_FETCH);
+                if (!pg) return false;
+                listingsState = { items: pg.items, next: pg.next, complete: !pg.next, sig };
+                return true;
+            });
+        }
+        function fetchNextListingsPage() {
+            const want = listingsState.next;
+            return listingsLock(async () => {
+                if (listingsState.complete || !listingsState.next || listingsState.items.length >= LISTING_CAP) { listingsState.complete = true; return false; }
+                if (listingsState.next !== want) return true;          // another request already moved on from this page
+                const pg = await fetchListingsPage(listingsState.next, LISTING_FETCH);
+                if (!pg) return false;
+                listingsState.items = listingsState.items.concat(pg.items);
+                listingsState.next = pg.next;
+                if (!pg.next) listingsState.complete = true;
+                return true;
+            });
+        }
+        // every listing (up to the cap), grouped by seller, in the shape the old call returned. Used by the few screens that count / search everything.
+        async function loadAllListingsPages() {
+            if (!(await ensureListingsFresh())) return { ok: false, status: 0, data: {} };
+            let guard = 0;
+            while (!listingsState.complete && guard++ < 60) { if (!(await fetchNextListingsPage())) break; }
+            const grouped = new Map();
+            listingsState.items.forEach(it => { if (!grouped.has(it.owner)) grouped.set(it.owner, []); grouped.get(it.owner).push(it); });
+            return { ok: true, status: 200, data: { listings: [...grouped].map(([username, items]) => ({ username, items })) } };
+        }
         // /api/users is light (no listings, pictures are URLs). Pass withItems = true only on screens that need everybody's listings.
         async function getAllUsersFromDB(withItems = false) {
             try {
-                const [b, l] = await Promise.all([srv('/api/profile'), withItems ? srv('/api/listings') : Promise.resolve(null)]);
+                const [b, l] = await Promise.all([srv('/api/profile'), withItems ? loadAllListingsPages() : Promise.resolve(null)]);
                 const isAdminProfile = !!(b.ok && b.data.user && String(b.data.user.customId || '') === 'knqw');
-                const a = await srv(isAdminProfile ? '/api/admin/directory' : '/api/users');
+                // the admin directory (emails, balances) is only asked for while the admin password confirmation is active; it never pops a window by itself
+                let a = (isAdminProfile && adminElevated) ? await srv('/api/admin/directory', undefined, undefined, { noElevate: true }) : null;
+                if (!a || !a.ok) a = await srv('/api/users');
                 if (!a.ok) return [];
                 const itemsOf = {};
-                if (l && l.ok) (l.data.listings || []).forEach(x => { itemsOf[x.username] = x.items || []; });
+                if (l && l.ok) (l.data.listings || []).forEach(x => { itemsOf[x.username] = (x.items || []).map(normItem); });
                 const list = (a.data.users || []).map(u => {
                     if (b.ok && b.data.user && u.username === b.data.user.username) return normUser(b.data.user);   // my own row already has everything
                     if (withItems) u.items = itemsOf[u.username] || [];
@@ -4190,7 +4375,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 .replace(/'/g, '&#039;');
         }
 
-        // Only real picture data (or this site's own /api/avatar/ path) may ever reach an <img src>. Anything else - javascript:, svg, quotes,
+        // Only real picture data (or this site's own /api/avatar/ and /api/media/ paths) may ever reach an <img src>. Anything else - javascript:, svg, quotes,
         // tags, odd values saved long ago - becomes '' so a bad value stored in the database can never run code in someone's browser.
         const IMG_DATA_RE = /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/;
         function safeImgSrc(v) {
@@ -4198,6 +4383,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (IMG_DATA_RE.test(v)) return v;
             const base = API_BASE + '/api/avatar/';
             if (v.startsWith(base) && /^[A-Za-z0-9._~%-]+$/.test(v.slice(base.length))) return v;
+            const mbase = API_BASE + '/api/media/';
+            if (v.startsWith(mbase) && /^[A-Za-z0-9_%-]{8,100}$/.test(v.slice(mbase.length))) return v;
             return '';
         }
         // ready-made, escaped src attribute value ('' when the picture is not safe)
@@ -4345,7 +4532,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         try {
             const meRes = await fetch(API_BASE + '/api/me', { credentials: 'include', cache: 'no-store' });
             if (meRes.ok) {
-                currentUser = String((await meRes.json()).username || '') || null;
+                const meJson = await meRes.json();
+                currentUser = String(meJson.username || '') || null;
+                adminElevated = !!meJson.adminElevated;
                 if (currentUser) localStorage.setItem('currentUser', currentUser);
             } else if (meRes.status === 401) {
                 localStorage.removeItem('currentUser');
@@ -4356,10 +4545,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         } catch (e) {
             currentUser = localStorage.getItem('currentUser');       // offline / server unreachable
         }
-        async function logoutAndReload() {
-            try { await fetch(API_BASE + '/api/logout', { method: 'POST', credentials: 'include' }); } catch (e) {}
-            try { localStorage.removeItem('currentUser'); } catch (e) {}
-            location.reload();
+        // single account: signs out the account in use. (The Manage Accounts window decides between this and "log out of all sessions".)
+        async function logoutAndReload(all) {
+            try { await fetch(API_BASE + (all ? '/api/logout-all' : '/api/logout'), { method: 'POST', credentials: 'include' }); } catch (e) {}
+            try { localStorage.removeItem('currentUser'); localStorage.removeItem('savedAccounts'); } catch (e) {}
+            location.href = 'login.html';
         }
         // The server sees the real visitor IP, so IP-ban checks go through the API
         async function getServerIpBan() {
@@ -4415,14 +4605,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const settingEmailInput = document.getElementById('setting-email-input');
         const settingPasswordInput = document.getElementById('setting-password-input');
         const saveAccountSettingsBtn = document.getElementById('save-account-settings-btn');
-        const cardContainerWrapper = document.getElementById('card-container-wrapper');
-
-        const linkCardModal = document.getElementById('link-card-modal');
-        const closeLinkCardBtn = document.getElementById('close-link-card-btn');
-        const cardNumberInput = document.getElementById('card-number-input');
-        const cardExpiryInput = document.getElementById('card-expiry-input');
-        const cardCvvInput = document.getElementById('card-cvv-input');
-        const confirmLinkCardBtn = document.getElementById('confirm-link-card-btn');
 
         const selectGameModal = document.getElementById('select-game-modal');
         const openSelectGameBtn = document.getElementById('open-select-game-btn');
@@ -4545,7 +4727,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (clearInput) { const inp = document.getElementById('chat-message-input'); if (inp) inp.value = ''; }
             refreshEditingUi();
         }
-        let activeUserCard = null;
 
         // ===== Chat threads: one chat per (other user + exact item). No item = general chat. =====
         const THREAD_SEP = '~i~';
@@ -4736,13 +4917,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             });
         }
 
-        if (currentUser) {
-            let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-            if (!savedAccounts.includes(currentUser)) {
-                savedAccounts.push(currentUser);
-                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
-            }
-        }
+        try { localStorage.removeItem('savedAccounts'); } catch (e) {}      // the list of accounts is kept by the server for this browser now
 
         async function initHeaderAuth() {
             await initDB();
@@ -4795,8 +4970,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         <div class="profile-dropdown" id="profile-dropdown-menu">
                             <button class="dropdown-item" id="dropdown-profile-btn">Profile</button>
                             <button class="dropdown-item" id="dropdown-settings-btn">Settings</button>
-                            <button class="dropdown-item" id="dropdown-switch-btn">Switch Account</button>
-                            <button class="dropdown-item" id="dropdown-logout-btn" style="color: #ff4d4d;">Log out</button>
+                            <button class="dropdown-item" id="dropdown-switch-btn">Manage Accounts</button>
                         </div>
                     `;
 
@@ -4840,9 +5014,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         switchModal.classList.add('active');
                     });
 
-                    document.getElementById('dropdown-logout-btn').addEventListener('click', () => {
-                        logoutAndReload();
-                    });
                 } else {
                     document.documentElement.classList.remove('has-session');
                 }
@@ -4858,42 +5029,43 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
         showItemSkeletons(15);   // empty placeholder cards until the real listings arrive
 
+        let gridVisible = GRID_PAGE, gridFilterKey = '';
         async function renderGlobalItems() {
             if (!itemsLoadedOnce || lastRenderedMode !== listingMode) showItemSkeletons(15);   // first load and every tab switch
-            let allUsers = await getAllUsersFromDB(true);
-            let allItems = [];
-
-            allUsers.forEach(u => {
-                if (!isBanned(u) && u.items && Array.isArray(u.items)) {
-                    u.items.forEach(item => {
-                        allItems.push({
-                            ...item,
-                            sellerUsername: u.username,
-                            sellerDisplayName: u.displayName || u.username,
-                            sellerJoinedAt: u.joinedAt || 0,
-                            sellerAvatar: u.avatar
-                        });
-                    });
-                }
-            });
-
-            if (activeGameTag !== 'All') {
-                allItems = allItems.filter(item => (item.game || 'Murder Mystery 2') === activeGameTag);
-            }
-
-            if (listingMode === 'marketplace') {
-                allItems = allItems.filter(item => item.tag === 'selling');
-            } else if (listingMode === 'trading') {
-                allItems = allItems.filter(item => item.tag !== 'selling');
-            }
-
             const searchTerms = (document.getElementById('listing-search-input')?.value || '')
                 .toLowerCase().split(/\s+/).filter(Boolean);
-            if (searchTerms.length) {
-                allItems = allItems.filter(item => {
-                    const hay = String(item.name || '').toLowerCase();
-                    return searchTerms.every(t => hay.includes(t));
+            const filterKey = [listingMode, activeGameTag, sortSelect.value, searchTerms.join(' ')].join('|');
+            if (filterKey !== gridFilterKey) { gridFilterKey = filterKey; gridVisible = GRID_PAGE; }
+            // sorting by price / A-Z and searching need every listing; the default "Recently listed" view only needs enough pages to fill the grid
+            const needAll = sortSelect.value !== 'recently' || searchTerms.length > 0;
+            const allUsers = await getAllUsersFromDB(false);
+            const sellers = new Map(allUsers.map(u => [u.username, u]));
+            if (!(await ensureListingsFresh())) { if (!itemsLoadedOnce) globalItemsGrid.innerHTML = '<div class="no-global-items">Could not load the listings. Try again in a moment.</div>'; return; }
+
+            const collect = () => {
+                let list = [];
+                listingsState.items.forEach(item => {
+                    const u = sellers.get(item.owner);
+                    if (u && isBanned(u)) return;
+                    list.push({
+                        ...item,
+                        sellerUsername: item.owner,
+                        sellerDisplayName: (u && (u.displayName || u.username)) || item.owner,
+                        sellerJoinedAt: (u && u.joinedAt) || 0,
+                        sellerAvatar: u ? u.avatar : null
+                    });
                 });
+                if (activeGameTag !== 'All') list = list.filter(item => (item.game || 'Murder Mystery 2') === activeGameTag);
+                if (listingMode === 'marketplace') list = list.filter(item => item.tag === 'selling');
+                else if (listingMode === 'trading') list = list.filter(item => item.tag !== 'selling');
+                if (searchTerms.length) list = list.filter(item => { const hay = String(item.name || '').toLowerCase(); return searchTerms.every(t => hay.includes(t)); });
+                return list;
+            };
+            let allItems = collect();
+            let guard = 0;
+            while (!listingsState.complete && (needAll || allItems.length < gridVisible) && guard++ < 60) {
+                if (!(await fetchNextListingsPage())) break;
+                allItems = collect();
             }
 
             const sortBy = sortSelect.value;
@@ -4919,6 +5091,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             itemsLoadedOnce = true;
             lastRenderedMode = listingMode;
             globalItemsGrid.innerHTML = '';
+            const totalMatching = allItems.length;
+            allItems = allItems.slice(0, gridVisible);
             if (allItems.length === 0) {
                 globalItemsGrid.innerHTML = searchTerms.length
                     ? '<div class="no-global-items">No items match your search.</div>'
@@ -4955,6 +5129,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
                 globalItemsGrid.appendChild(card);
             });
+            if (totalMatching > gridVisible || !listingsState.complete) {
+                const more = document.createElement('button');
+                more.type = 'button';
+                more.className = 'grid-show-more';
+                more.textContent = 'Show more';
+                more.addEventListener('click', () => { more.disabled = true; gridVisible += GRID_PAGE; renderGlobalItems(); });
+                globalItemsGrid.appendChild(more);
+            }
         }
 
         async function openBalancePage(userObj) {
@@ -4972,14 +5154,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             createItemModal.classList.remove('active');
             switchModal.classList.remove('active');
             confirmModal.classList.remove('active');
-            linkCardModal.classList.remove('active');
 
             const freshUser = (await getUserByUsername(currentUser)) || userObj;
             setBal(document.getElementById('balance-page-amount'), freshUser.balance || 0);
             setBal(document.getElementById('header-balance-amount'), freshUser.balance || 0);
-            document.getElementById('balance-held-line').textContent = `On hold: ${fmtMoney(freshUser.heldBalance)} (released when the buyer confirms delivery)`;
+            document.getElementById('balance-held-line').textContent = heldLineText(freshUser.heldBalance);
             document.getElementById('withdraw-amount-input').value = '';
             refreshWithdrawHint();
+            loadWalletExtras();
             resetTopUpForm();
             document.getElementById('admin-amount-input').value = '';
             adminUserSearch.value = '';
@@ -4992,15 +5174,66 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             switchToHome();
         });
 
-        async function refreshWithdrawHint() {
-            const hint = document.getElementById('withdraw-limit-hint');
-            hint.textContent = 'Limit: 1 withdrawal per hour.';
+        function heldLineText(held) {
+            return `On hold for you: ${fmtMoney(Number(held) || 0)} (money from your sales, released when the buyer confirms delivery or after 7 days)`;
+        }
+        let topupAvailable = true;
+        function fmtDateTime(ms) { return new Date(ms).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+        function fmtDuration(ms) {
+            ms = Math.max(0, ms);
+            const d = Math.floor(ms / 86400000), h = Math.floor(ms / 3600000) % 24, m = Math.max(1, Math.ceil(ms / 60000) % 60);
+            return d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m`;
+        }
+        // one line per held deal: the item, who it goes to (or comes from), the amount, and what happens next and when
+        function escrowRowHtml(d, side) {
+            const who = side === 'paid' ? `to @${escapeHtml(d.to)}` : `from @${escapeHtml(d.from)}`;
+            let when;
+            if (d.status === 'paid') when = side === 'paid'
+                ? `Released to the seller automatically on ${escapeHtml(fmtDateTime(d.releaseAt))} (in ${escapeHtml(fmtDuration(d.releaseAt - Date.now()))}), unless you confirm delivery or report a problem first.`
+                : `Released to you automatically on ${escapeHtml(fmtDateTime(d.releaseAt))} (in ${escapeHtml(fmtDuration(d.releaseAt - Date.now()))}), or sooner when the buyer confirms delivery.`;
+            else if (d.status === 'not_received') when = `A problem was reported. If no formal report is filed, an admin takes over on ${escapeHtml(fmtDateTime(d.releaseAt))}.`;
+            else when = 'Reported: waiting for an admin to decide.';
+            const peer = side === 'paid' ? d.to : d.from;
+            return `<div class="escrow-row"><div class="escrow-main"><div class="escrow-item">${escapeHtml(d.itemName || 'Item')}</div><div class="escrow-meta">${who}</div><div class="escrow-when">${when}</div>
+                <button type="button" class="escrow-open" data-open-chat="${escapeHtml(peer)}" data-item-id="${escapeHtml(d.itemId || '')}" data-item-name="${escapeHtml(d.itemName || '')}">Open chat</button></div>
+                <div class="escrow-amt">${escapeHtml(fmtMoney(d.amount))}</div></div>`;
+        }
+        function renderEscrow(esc) {
+            esc = esc || { paid: [], incoming: [] };
+            document.getElementById('escrow-paid-total').textContent = esc.paid.length ? fmtMoney(esc.totalPaid) : '';
+            document.getElementById('escrow-incoming-total').textContent = esc.incoming.length ? fmtMoney(esc.totalIncoming) : '';
+            document.getElementById('escrow-paid-list').innerHTML = esc.paid.length ? esc.paid.map(d => escrowRowHtml(d, 'paid')).join('') : '<div class="escrow-empty">Nothing of yours is held right now.</div>';
+            const inc = document.getElementById('escrow-incoming-list');
+            inc.innerHTML = esc.incoming.map(d => escrowRowHtml(d, 'incoming')).join('');
+            document.getElementById('escrow-incoming-title').style.display = esc.incoming.length ? '' : 'none';
+            inc.style.display = esc.incoming.length ? '' : 'none';
+            if (esc.timeoutDays) document.getElementById('escrow-hint').textContent = `Money you paid for an item stays here until you confirm delivery. If you do nothing, it is released to the seller automatically after ${esc.timeoutDays} days.`;
+        }
+        document.getElementById('escrow-card').addEventListener('click', (e) => {
+            const b = e.target.closest('[data-open-chat]');
+            if (!b) return;
+            const peer = b.getAttribute('data-open-chat'), id = b.getAttribute('data-item-id'), name = b.getAttribute('data-item-name');
+            balancePage.classList.remove('active');
+            openMessagesPage(peer, id ? { id, name: name || 'Item', tag: 'selling', price: '', game: '', sellerUsername: peer } : null);
+        });
+        let lastWalletDealsSig = '';
+        async function loadWalletExtras() {
             try {
                 const w = await srv('/api/wallet');
-                const next = Number(w.data && w.data.nextWithdrawAt) || 0;
-                if (next > Date.now()) hint.textContent = `Limit: 1 withdrawal per hour. You can withdraw again in ${Math.ceil((next - Date.now()) / 60000)} min.`;
+                if (!w.ok) return;
+                topupAvailable = w.data.topupAvailable !== false;
+                const buy = document.getElementById('topup-buy-btn');
+                if (buy) buy.disabled = !topupAvailable;
+                const sh = document.getElementById('topup-secure-hint');
+                if (sh) sh.textContent = topupAvailable ? "You pay on our payment provider's secure page. This site never sees or stores your card number." : 'Wallet top-ups are not available yet: the payment provider is still being connected.';
+                applyLiveBalance(w.data.balance, w.data.held);
+                renderEscrow(w.data.escrow);
+                const hint = document.getElementById('withdraw-limit-hint');
+                const next = Number(w.data.nextWithdrawAt) || 0;
+                hint.textContent = next > Date.now() ? `Limit: 1 withdrawal per hour. You can withdraw again in ${Math.ceil((next - Date.now()) / 60000)} min.` : 'Limit: 1 withdrawal per hour.';
             } catch (e) {}
         }
+        async function refreshWithdrawHint() { /* the hint is filled by loadWalletExtras() together with the escrow list */ }
         document.getElementById('withdraw-action-btn').addEventListener('click', async (e) => {
             const btn = e.currentTarget;
             const amount = parseFloat(document.getElementById('withdraw-amount-input').value);
@@ -5009,19 +5242,17 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 return;
             }
             btn.disabled = true;
-            const r = await srv('/api/wallet/withdraw', 'POST', { amount });
+            const r = await srv('/api/wallet/withdraw', 'POST', { amount, method: document.getElementById('withdraw-method-select').value });
             btn.disabled = false;
-            if (!r.ok) { showToast(r.data.error || 'Withdrawal failed. Try again.'); refreshWithdrawHint(); return; }
+            if (!r.ok) { showToast(r.data.error || 'Withdrawal failed. Try again.'); loadWalletExtras(); return; }
             showToast(`Withdrawal of ${fmtMoney(amount)} requested successfully!`);
             balancePage.classList.remove('active');
             switchToHome();
         });
 
-        // ===== Баланс: пополнение и админ-управление =====
-        // ВНИМАНИЕ: пока нет реального платёжного провайдера (Stripe и т.п.),
-        // покупка работает в демо-режиме: списания денег нет, нужна только привязанная карта.
-        // Перед реальным запуском подключи оплату и начисляй баланс на сервере после подтверждения платежа.
-        const PAYMENT_DEMO_MODE = false; // Never simulate payments in the client; real top-ups require a verified payment provider.
+        // ===== Wallet top-up =====
+        // There is NO card form on this site. "Buy" asks the server for a hosted checkout page of the payment provider and sends the browser
+        // there; the card is typed on the provider's page, and the balance is credited by the provider's signed webhook, never by this page.
         const MIN_TOPUP = 1;
         const MAX_TOPUP = 10000;
 
@@ -5094,32 +5325,40 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (!amount || isNaN(amount)) { showToast('Choose or enter an amount.'); return; }
             if (amount < MIN_TOPUP) { showToast(`Minimum purchase is ${fmtMoney(MIN_TOPUP)}.`); return; }
             if (amount > MAX_TOPUP) { showToast(`Maximum purchase is ${fmtMoney(MAX_TOPUP)}.`); return; }
-
-            const me = await getUserByUsername(currentUser);
-            if (!me) return;
-            if (!me.card) {
-                showToast('Link a bank card in Settings first.');
-                return;
-            }
+            if (!topupAvailable) { showToast('Wallet top-ups are not available yet.'); return; }
 
             topupBuyBtn.disabled = true;
             try {
-                if (!PAYMENT_DEMO_MODE) {
-                    showToast('Payment provider is not connected.');
-                    return;
-                }
                 const tr = await srv('/api/wallet/topup', 'POST', { amount });
+                if (tr.status === 503 || tr.data.topupAvailable === false) { topupAvailable = false; showToast('Wallet top-ups are not available yet.'); return; }
                 if (!tr.ok) { srvFail(tr); return; }
-                showMyBalance(Number(tr.data.balance) || 0);
-                resetTopUpForm();
-                showToast(`${fmtMoney(amount)} added to your balance!`);
+                const url = String(tr.data.checkoutUrl || '');
+                if (!/^https:\/\//i.test(url)) { showToast('The payment page could not be opened. Try again.'); return; }
+                showToast('Taking you to the secure payment page...');
+                location.href = url;
             } catch (e) {
                 console.error(e);
                 showToast('Purchase failed. Try again.');
             } finally {
-                topupBuyBtn.disabled = false;
+                topupBuyBtn.disabled = !topupAvailable;
             }
         });
+
+        // back from the provider's checkout page: ?topup=success|cancelled. The credit itself arrives through the signed webhook (can be a few seconds later).
+        (function handleTopupReturn() {
+            let state = '';
+            try { state = new URLSearchParams(location.search).get('topup') || ''; } catch (e) {}
+            if (state !== 'success' && state !== 'cancelled') return;
+            try { const u = new URL(location.href); u.searchParams.delete('topup'); history.replaceState(null, '', u.pathname + (u.search || '') + u.hash); } catch (e) {}
+            setTimeout(() => {
+                if (!currentUser) return;
+                if (state === 'cancelled') { showToast('Payment cancelled. Nothing was charged.'); return; }
+                showToast('Thanks! Your balance updates as soon as the payment is confirmed.');
+                let tries = 0;
+                const t = setInterval(() => { loadWalletExtras(); if (++tries >= 6) clearInterval(t); }, 4000);
+                loadWalletExtras();
+            }, 600);
+        })();
 
         let adminUsersCache = [];
         const adminUserSearch = document.getElementById('admin-user-search');
@@ -5375,7 +5614,25 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             document.getElementById('report-item-btn').style.display = (currentUser && currentUser !== item.sellerUsername) ? '' : 'none';
             itemDetailPage.classList.add('active');
+            document.getElementById('detail-activity').style.display = 'none';
+            refreshItemActivity();
         }
+        // "Is somebody messaging the seller about this item right now?" (a number from the server: never who). Refreshed while the page is open.
+        async function refreshItemActivity() {
+            const el = document.getElementById('detail-activity');
+            if (!currentActiveItem || !currentUser || !itemDetailPage.classList.contains('active')) { el.style.display = 'none'; return; }
+            const id = currentActiveItem.id;
+            const r = await srv('/api/listings/' + encodeURIComponent(id) + '/activity', undefined, undefined, { noElevate: true, noRedirect: true });
+            if (!currentActiveItem || currentActiveItem.id !== id || !itemDetailPage.classList.contains('active')) return;
+            const n = r.ok ? Number(r.data.count) || 0 : 0;
+            if (!n) { el.style.display = 'none'; return; }
+            const mine = currentUser === currentActiveItem.sellerUsername;
+            document.getElementById('detail-activity-text').textContent = mine
+                ? (n === 1 ? 'Someone is messaging you about this item right now' : `${n} people are messaging you about this item right now`)
+                : (n === 1 ? 'Someone is messaging the seller about this item right now' : `${n} people are messaging the seller about this item right now`);
+            el.style.display = 'flex';
+        }
+        setInterval(() => { if (!document.hidden) refreshItemActivity(); }, 15000);
 
         document.getElementById('delete-item-btn').addEventListener('click', async () => {
             if (!currentActiveItem || !editingItemId || !currentUser || currentUser !== currentActiveItem.sellerUsername) return;
@@ -5459,7 +5716,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             createItemModal.classList.remove('active');
             switchModal.classList.remove('active');
             confirmModal.classList.remove('active');
-            linkCardModal.classList.remove('active');
 
             activeGameTag = 'All';
             document.querySelectorAll('.game-tag-btn').forEach(b => {
@@ -5507,7 +5763,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             createItemModal.classList.remove('active');
             switchModal.classList.remove('active');
             confirmModal.classList.remove('active');
-            linkCardModal.classList.remove('active');
 
             homeLink.classList.remove('active');
             middlemenNavBtn.classList.remove('active'); marketplaceNavBtn.classList.remove('active'); tradingNavBtn.classList.remove('active');
@@ -5538,42 +5793,107 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             refreshUnreadBusy = computeUnread().finally(() => { refreshUnreadBusy = null; });
             return refreshUnreadBusy;
         }
+        // ----- Chat store -----
+        // The page keeps the newest CHAT_PAGE messages of each of my conversations (GET /api/chat/sync) and, for the conversation that is open,
+        // older pages on demand (GET /api/chat/messages?before=). Messages are never part of a user record any more.
+        const CHAT_PAGE = 40;
+        let chatStore = { messages: [], threads: {}, clears: {}, sig: '' };
+        let chatOlder = { key: null, messages: [], hasMore: true, loading: false };
+        function normMsg(m) {
+            if (m && m.imageUrl && String(m.imageUrl).charAt(0) === '/') return { ...m, imageUrl: API_BASE + m.imageUrl };
+            return m;
+        }
+        async function syncChat() {
+            const r = await srv('/api/chat/sync?perThread=' + CHAT_PAGE + '&threads=100');
+            if (!r.ok) return false;
+            const d = r.data, threads = {};
+            (d.threads || []).forEach(t => { threads[tKey(t.other, t.itemId ? String(t.itemId) : '')] = { loaded: Number(t.loaded) || 0, total: Number(t.total) || 0, lastTs: Number(t.lastTs) || 0 }; });
+            const prevSig = chatStore.sig;
+            chatStore = { messages: (d.messages || []).map(normMsg), threads, clears: d.clears || {}, sig: String(d.sig || '') };
+            if (chatOlder.key && chatOlder.messages.length && prevSig !== chatStore.sig) await refreshOlder();
+            return true;
+        }
+        const msgKey = (m) => m.sender + '|' + m.timestamp;
+        // my messages of one conversation, oldest first: the synced newest page plus any older pages loaded for it
+        function threadMessages(key) {
+            const own = chatStore.messages.filter(m => msgThreadKey(m, currentUser) === key);
+            let out = own;
+            if (chatOlder.key === key && chatOlder.messages.length) {
+                const first = own.length ? Math.min(...own.map(m => m.timestamp)) : Infinity;
+                const seen = new Set(own.map(msgKey));
+                out = chatOlder.messages.filter(m => m.timestamp < first && !seen.has(msgKey(m))).concat(own);
+            }
+            return out.slice().sort((a, b) => a.timestamp - b.timestamp);
+        }
+        function threadHasOlder(key) {
+            if (chatOlder.key === key) return chatOlder.hasMore;
+            const t = chatStore.threads[key];
+            return !!t && t.loaded >= CHAT_PAGE;
+        }
+        function olderUrl(key, before, limit) {
+            const { user, itemId } = tParse(key);
+            return '/api/chat/messages?other=' + encodeURIComponent(user) + (itemId ? '&itemId=' + encodeURIComponent(itemId) : '') + '&before=' + before + '&limit=' + limit;
+        }
+        async function loadOlderMessages(key) {
+            if (chatOlder.key !== key) chatOlder = { key, messages: [], hasMore: true, loading: false };
+            if (chatOlder.loading) return;
+            chatOlder.loading = true;
+            try {
+                const all = threadMessages(key);
+                const r = await srv(olderUrl(key, all.length ? all[0].timestamp : 0, 50));
+                if (r.ok) {
+                    chatOlder.messages = (r.data.messages || []).map(normMsg).concat(chatOlder.messages);
+                    chatOlder.hasMore = !!r.data.hasMore;
+                }
+            } finally { chatOlder.loading = false; }
+        }
+        // the older pages already loaded are fetched again when anything in my messages changed, so edits and deletions show up there too
+        async function refreshOlder() {
+            const key = chatOlder.key;
+            if (!key) return;
+            const own = chatStore.messages.filter(m => msgThreadKey(m, currentUser) === key);
+            if (!own.length) { chatOlder = { key: null, messages: [], hasMore: true, loading: false }; return; }
+            const r = await srv(olderUrl(key, Math.min(...own.map(m => m.timestamp)), Math.max(1, Math.min(200, chatOlder.messages.length))));
+            if (r.ok && chatOlder.key === key) { chatOlder.messages = (r.data.messages || []).map(normMsg); chatOlder.hasMore = !!r.data.hasMore; }
+        }
+        const userItemsCache = new Map();
+        async function listingsOfUser(name) {       // a person's live listings (used by the chat header and the "ask for payment" button)
+            const c = userItemsCache.get(name);
+            if (c && Date.now() - c.t < 4000) return c.items;
+            const r = await srv('/api/listings?owner=' + encodeURIComponent(name) + '&limit=500');
+            const items = r.ok ? (r.data.items || []).map(normItem) : [];
+            userItemsCache.set(name, { t: Date.now(), items });
+            return items;
+        }
+
+        // ----- Unread badge + live signals: ONE small request (GET /api/unread) every few seconds, instead of downloading the whole profile -----
+        let lastUnreadInfo = null;
         async function computeUnread() {
             if (!currentUser) return unreadState;
             try {
                 const st = loadReadStore();
-                const pr = await srv('/api/profile');
-                if (!pr.ok || !pr.data.user) return unreadState;
-                const row = pr.data.user;
-                applyLiveBalance(row.balance, row.heldBalance);
+                let since = st.base;
+                Object.keys(st.r).forEach(k => { if (st.r[k] < since) since = st.r[k]; });
+                const ur = await srv('/api/unread?since=' + encodeURIComponent(Math.max(0, Math.floor(since))), undefined, undefined, { noElevate: true });
+                if (!ur.ok) return unreadState;
+                const info = ur.data;
+                lastUnreadInfo = info;
+                applyLiveBalance(info.balance, info.held);
 
                 const viewing = (messagesPage.classList.contains('active') && !document.hidden) ? activeChatUsername : null;
-                const msgs = row.messages || [];
-                let clears = {};
-                try { const cr = await srv('/api/chat/clears'); if (cr.ok) clears = cr.data.clears || {}; } catch (e) {}
-
                 const dm = {}, maxTs = {};
-                msgs.forEach(m => {
-                    if (!m || m.sender === currentUser) return;
+                (info.dm || []).forEach(m => {
                     const t = Number(m.timestamp) || 0;
-                    const k = msgThreadKey(m, currentUser);
-                    if (t <= (clears[k] || 0)) return;
+                    const k = tKey(m.sender, m.itemId ? String(m.itemId) : '');
                     if (t > (maxTs[k] || 0)) maxTs[k] = t;
                     if (t > (st.r[k] !== undefined ? st.r[k] : st.base)) dm[k] = (dm[k] || 0) + 1;
                 });
-
                 const groups = {}, gMax = {};
-                try {
-                    const myGroups = await getMyGroups();
-                    if (myGroups.length) {
-                        const gu = await srv('/api/groups/unread?since=' + encodeURIComponent(st.base));
-                        (gu.ok ? gu.data.rows : []).forEach(r => {
-                            const id = Number(r.groupId), t = Number(r.timestamp) || 0;
-                            if (t > (gMax[id] || 0)) gMax[id] = t;
-                            if (t > (st.r['g:' + id] !== undefined ? st.r['g:' + id] : st.base)) groups[id] = (groups[id] || 0) + 1;
-                        });
-                    }
-                } catch (e) {}
+                (info.groups || []).forEach(r => {
+                    const id = Number(r.groupId), t = Number(r.timestamp) || 0;
+                    if (t > (gMax[id] || 0)) gMax[id] = t;
+                    if (t > (st.r['g:' + id] !== undefined ? st.r['g:' + id] : st.base)) groups[id] = (groups[id] || 0) + 1;
+                });
 
                 // the chat on screen is read: remember it and don't count it
                 if (viewing) {
@@ -5597,8 +5917,20 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     badge.style.display = total > 0 ? '' : 'none';
                     badge.textContent = total > 99 ? '99+' : String(total);
                 }
+                onLiveSignals(info);
             } catch (e) { /* try again next tick */ }
             return unreadState;
+        }
+        // the open chat / wallet refresh themselves only when the server says something changed
+        function onLiveSignals(info) {
+            if (messagesPage.classList.contains('active') && !document.hidden && !chatRendering &&
+                (info.msgSig !== chatSignature || info.dealsSig !== dealSignature || info.groupsSig !== groupSignature)) {
+                renderChatsList(activeChatUsername);
+            }
+            if (balancePage.classList.contains('active') && info.dealsSig !== lastWalletDealsSig) {
+                lastWalletDealsSig = info.dealsSig;
+                loadWalletExtras();
+            }
         }
 
         // ===== Live balance (header + wallet page) =====
@@ -5607,7 +5939,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             setBal(document.getElementById('header-balance-amount'), b);
             setBal(document.getElementById('balance-page-amount'), b);
             const hl = document.getElementById('balance-held-line');
-            if (hl) hl.textContent = `On hold: ${fmtMoney(Number(held) || 0)} (released when the buyer confirms delivery)`;
+            if (hl) hl.textContent = heldLineText(held);
         }
 
         let liveUpdatesStarted = false;
@@ -5619,20 +5951,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshUnread(); });
         }
 
-        function startChatPolling() {
-            if (chatPollTimer) return;
-            chatPollTimer = setInterval(async () => {
-                if (!messagesPage.classList.contains('active') || document.hidden || !currentUser) return;
-                const me = await getUserByUsername(currentUser);
-                if (!me) return;
-                purgeOldChats();
-                const ds = await getDealSig(currentUser);
-                const gs = await getGroupSig();
-                if (chatSig(me.messages || []) !== chatSignature || ds !== dealSignature || gs !== groupSignature) {
-                    renderChatsList(activeChatUsername);
-                }
-            }, 3000);
-        }
+        // Chat screens refresh from the shared /api/unread poll (see onLiveSignals): there is no separate chat polling any more.
+        function startChatPolling() { /* nothing to start */ }
 
         // Updates `live` to match `buf` but keeps every child whose markup is unchanged (no flicker, no image reload)
         function reconcileChildren(live, buf) {
@@ -5646,17 +5966,25 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (!b.length) live.innerHTML = '';
         }
         let lastChatShellSig = '', lastChatBubblesHtml = '';
+        let chatRendering = 0;
         async function renderChatsList(selectUsername = null) {
+            chatRendering++;
+            try { return await renderChatsListInner(selectUsername); }
+            finally { chatRendering--; }
+        }
+        async function renderChatsListInner(selectUsername = null) {
             const chatsLive = document.getElementById('chats-items-container');
             const chatsContainer = document.createElement('div'); // built off-screen, then merged so unchanged rows never re-render
             const chatWindowCol = document.getElementById('chat-window-col');
 
-            let allUsers = await getAllUsersFromDB(true);      // the chat window shows the live listing, so it needs listings too
+            let allUsers = await getAllUsersFromDB(false);
             let me = allUsers.find(u => u.username === currentUser);
             if (!me) return;
 
-            let myMessages = me.messages || [];
-            chatSignature = chatSig(myMessages);
+            if (!(await syncChat())) return;
+            let myMessages = chatStore.messages.slice();
+            if (chatOlder.key) myMessages = myMessages.concat(threadMessages(chatOlder.key).filter(m => !chatStore.messages.some(x => msgKey(x) === msgKey(m))));
+            chatSignature = chatStore.sig;
             dealSignature = await getDealSig(currentUser);
             const myGroups = await getMyGroups();
             groupSignature = await getGroupSig();
@@ -5770,7 +6098,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
 
         // ===== Chat: pictures, typing indicator, offers =====
-        const chatImageCache = new Map();
         function chatBubbleHtml(m, ref) {
             const mine = m.sender === currentUser;
             const base = `message-bubble ${mine ? 'outgoing' : 'incoming'}`;
@@ -5778,7 +6105,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const time = `<span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))}</span>`;
             if (m.imageId) {
                 const cap = m.caption ? `<span class="msg-text-content chat-caption">${linkifyText(m.caption)}</span>` : `<span class="msg-text-content" style="display:none;">${escapeHtml(m.text || '')}</span>`;
-                return `<div class="${base} has-image" ${attrs} data-noedit="1">${ref}<img class="chat-img" data-image-id="${escapeHtml(String(m.imageId))}" alt="Picture">${cap}${time}</div>`;
+                const isrc = safeImgSrc(m.imageUrl || '');
+                return `<div class="${base} has-image" ${attrs} data-noedit="1">${ref}${isrc ? `<img class="chat-img" src="${escapeHtml(isrc)}" alt="Picture" loading="lazy" data-chat-img="1">` : '<div class="chat-img-missing">Picture is no longer available</div>'}${cap}${time}</div>`;
             }
             if (m.offer && Array.isArray(m.offer.items)) {
                 const o = m.offer;
@@ -5804,26 +6132,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const timeE = m.editedAt ? `<span class="msg-time">${escapeHtml(getTimeAgo(m.timestamp))} &middot; <span class="msg-edited" title="Edited ${escapeHtml(getExactDate(m.editedAt))}">edited</span></span>` : time;
             return `<div class="${base}" ${attrs}>${ref}<span class="msg-text-content">${linkifyText(m.text)}</span>${timeE}</div>`;
         }
+        // pictures are ordinary cacheable URLs now (/api/media/<id>): only the click-to-enlarge and the "gone" fallback are wired here
         async function loadChatImages(root) {
-            const imgs = root.querySelectorAll('img[data-image-id]');
-            for (const img of imgs) {
-                const id = img.getAttribute('data-image-id');
-                try {
-                    let data = chatImageCache.get(id);
-                    if (!data) {
-                        const ir = await srv('/api/chat/image/' + encodeURIComponent(id));
-                        data = ir.ok ? ir.data.data : null;
-                        if (data && !IMG_DATA_RE.test(data)) data = null;
-                        if (data) chatImageCache.set(id, data);
-                    }
-                    if (data) {
-                        img.src = data;
-                        img.addEventListener('click', (e) => { e.stopPropagation(); openImageLightbox(data); });
-                    } else {
-                        img.alt = 'Picture is no longer available';
-                    }
-                } catch (e) { img.alt = 'Could not load picture'; }
-            }
+            root.querySelectorAll('img[data-chat-img]').forEach(img => {
+                if (img.dataset.wired) return;
+                img.dataset.wired = '1';
+                img.addEventListener('click', (e) => { e.stopPropagation(); openImageLightbox(img.currentSrc || img.src); });
+                img.addEventListener('error', () => { img.alt = 'Picture is no longer available'; img.classList.add('missing'); }, { once: true });
+            });
         }
         function openImageLightbox(src) {
             const box = document.createElement('div');
@@ -5902,7 +6218,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const up = await srv('/api/chat/image', 'POST', { receiver: targetUsername, data: staged.dataUrl });
             if (!up.ok) { srvFail(up); return; }
             const imageId = up.data.id;
-            chatImageCache.set(imageId, staged.dataUrl);
             stagedChatImage = null;
             await pushChatMessage({
                 sender: currentUser, receiver: targetUsername, text: caption || '\uD83D\uDCF7 Photo', caption: caption || '', imageId: imageId,
@@ -6157,13 +6472,13 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             renderedChatUser = threadKey;
 
-            let myMessages = me.messages || [];
-            let chatMsgs = myMessages.filter(m => msgThreadKey(m, currentUser) === threadKey);
-            chatMsgs.sort((a, b) => a.timestamp - b.timestamp);
+            let chatMsgs = threadMessages(threadKey);
+            const hasOlder = threadHasOlder(threadKey);
 
             let ctxItem = null;
             if (itemId) {
-                const inOther = (otherUser.items || []).find(i => String(i.id) === itemId);
+                const otherItems = await listingsOfUser(targetUsername);
+                const inOther = otherItems.find(i => String(i.id) === itemId);
                 const inMine = (me.items || []).find(i => String(i.id) === itemId);
                 const liveItem = inOther || inMine;
                 const refMsg = [...chatMsgs].reverse().find(m => m.itemRef && m.itemRef.name);
@@ -6180,6 +6495,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             }
 
             const clearedAt = await getChatClearedAt(currentUser, threadKey);
+            const olderHtml = hasOlder ? '<div class="chat-older-wrap"><button type="button" class="chat-load-older" id="chat-load-older">Load earlier messages</button></div>' : '';
             const dealsHere = (await getDealsBetween(currentUser, targetUsername))
                 .filter(d => (d.itemId || '') === itemId)
                 .filter(d => Math.max(d.updatedAt, d.createdAt) > clearedAt);
@@ -6195,7 +6511,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const ref = (m.itemRef && !itemId) ? `<div class="msg-item-ref"><b>${miniItemIconHtml(m.itemRef.game, m.itemRef.name)}${escapeHtml(m.itemRef.name)}</b><span>${escapeHtml(fmtPriceText(m.itemRef.price))}</span></div>` : '';
                 return chatBubbleHtml(m, ref);
             })() }));
-            const bubblesHtml = [...msgEntries, ...dealsHere.map(d => ({ t: d.createdAt, html: dealCardHtml(d, currentUser) }))]
+            const bubblesHtml = olderHtml + [...msgEntries, ...dealsHere.map(d => ({ t: d.createdAt, html: dealCardHtml(d, currentUser) }))]
                 .sort((a, b) => a.t - b.t).map(x => x.html).join('');
 
             const ctxHtml = ctxItem ? `<div class="chat-item-context" id="chat-item-context"><div class="ctx-info"><div class="ctx-label">This chat is about</div><div class="ctx-name">${miniItemIconHtml(ctxItem.game, ctxItem.name, ctxItem.items)}${escapeHtml(ctxItem.name)}</div><div class="ctx-price">${escapeHtml(fmtPriceText(ctxItem.label || itemPriceLabel(ctxItem)))}${ctxItem.gone ? ' &middot; no longer listed' : ''}</div>${(ctxItem.tag === 'specific' && ctxItem.wanted && ctxItem.wanted.items && ctxItem.wanted.items.length) ? `<div class="ctx-price" style="color:#ff9a44;">Wants: ${escapeHtml(fmtItemList(ctxItem.wanted.items))}</div>` : ''}</div></div>` : '';
@@ -6302,6 +6618,15 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 });
             });
 
+            const olderBtn = scrollContainer.querySelector('#chat-load-older');
+            if (olderBtn) olderBtn.addEventListener('click', async () => {
+                olderBtn.disabled = true; olderBtn.textContent = 'Loading...';
+                const h0 = scrollContainer.scrollHeight, t0 = scrollContainer.scrollTop;
+                await loadOlderMessages(threadKey);
+                await renderChatsList(threadKey);
+                const sc = document.getElementById('chat-messages-scroll');
+                if (sc) sc.scrollTop = t0 + (sc.scrollHeight - h0);       // stay where you were reading
+            });
             scrollContainer.addEventListener('click', async (e) => {
                 const btn = e.target.closest('[data-offer-act]');
                 if (!btn) return;
@@ -6530,11 +6855,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         // ===== Delete chat (only for me; gone forever when both sides deleted) =====
         let chatMyRating = 0;
         let chatRateDealId = 0;
-        async function getChatClearedAt(user, other) {
-            try {
-                const r = await srv('/api/chat/clears');
-                return r.ok ? Number((r.data.clears || {})[other]) || 0 : 0;
-            } catch (e) { return 0; }
+        async function getChatClearedAt(user, other) {      // from the last sync: renderChatsList always syncs first
+            return Number((chatStore.clears || {})[other]) || 0;
         }
         async function getMyRating(target) {
             if (!currentUser) return 0;
@@ -6623,11 +6945,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const d = await getDeal(id);
             if (!d || (d.buyer !== currentUser && d.seller !== currentUser)) return false;
             const other = d.buyer === currentUser ? d.seller : d.buyer;
-            const meObj = await getUserByUsername(currentUser);
-            const snap = ((meObj && meObj.messages) || [])
-                .filter(m => msgThreadKey(m, currentUser) === tKey(other, d.itemId))
-                .map(m => ({ sender: m.sender, receiver: m.receiver, text: m.text, timestamp: m.timestamp }));
-            const r = await srv('/api/deals/' + id + '/report', 'POST', { snapshot: snap });
+            // the server freezes the chat evidence itself from its own records: nothing from the browser is trusted for that
+            const r = await srv('/api/deals/' + id + '/report', 'POST', {});
             if (!r.ok) srvFail(r);
             return r.ok;
         }
@@ -6742,11 +7061,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 case 'paid':
                     title = 'Paid - on hold';
                     if (isBuyer) {
-                        text = `You paid ${amt}. The money is held until you confirm delivery.`;
+                        text = `You paid ${amt}. The money is held until you confirm delivery. If you do nothing, it is released to the seller automatically on ${escapeHtml(fmtDateTime(d.releaseAt))}.`;
                         q = 'Did you receive your items?';
                         actions = btn('yes', 'Yes', 'primary') + btn('no', 'No');
                     } else {
-                        text = `${buyerN} paid ${amt}. Your share (${mine}, 90%) is on hold until the buyer confirms delivery.`;
+                        text = `${buyerN} paid ${amt}. Your share (${mine}, 90%) is on hold until the buyer confirms delivery, or until ${escapeHtml(fmtDateTime(d.releaseAt))} when it is released to you automatically.`;
                     }
                     break;
                 case 'not_received':
@@ -6767,7 +7086,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     break;
                 case 'completed':
                     cls = 'done'; title = 'Deal completed';
-                    text = isBuyer ? 'You confirmed that you received your items.' : `${buyerN} confirmed delivery. ${mine} was released to your balance.`;
+                    text = d.autoReleased
+                        ? (isBuyer ? 'The hold period ended without a report, so the money was released to the seller automatically.' : `The hold period ended without a report, so ${mine} was released to your balance automatically.`)
+                        : (isBuyer ? 'You confirmed that you received your items.' : `${buyerN} confirmed delivery. ${mine} was released to your balance.`);
                     if (d.id === chatRateDealId) {
                         const otherN = isBuyer ? sellerN : buyerN;
                         rateHtml = `<div class="deal-rate"><span class="deal-rate-label">${chatMyRating ? `Your rating of ${otherN}` : `How was the deal? Rate ${otherN}`}</span>
@@ -6919,13 +7240,15 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         async function openAdminPage() {
             if (adminPage.classList.contains('active')) return;   // already open: do nothing
             if (!(await isKnqw())) { showToast('Only knqw can open the admin panel.'); return; }
+            // the admin password has to be typed again before the panel opens (and again after 30 idle minutes)
+            if (!adminElevated && !(await ensureAdminElevation())) return;
             closeInfoPages();
             currentViewMode = 'admin';
             [middlemenNavBtn, marketplaceNavBtn, tradingNavBtn, homeLink].forEach(el => el.classList.remove('active'));
             adminNavBtn.classList.add('active');
             mainContentArea.style.display = 'none';
             [middlemenPage, itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
-             selectGameModal, createItemModal, switchModal, confirmModal, linkCardModal, ticketModal
+             selectGameModal, createItemModal, switchModal, confirmModal, ticketModal
             ].forEach(el => el.classList.remove('active'));
             adminPage.classList.add('active');
             adminPage.scrollTop = 0;
@@ -7031,7 +7354,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 let note = '';
                 if (m.removed) note = '<div class="rp-note">Deleted after the report</div>';
                 else if (m.originalText) note = `<div class="rp-note">Edited after the report. Original: ${escapeHtml(m.originalText)}</div>`;
-                return `<div class="message-bubble ${m.sender === d.buyer ? 'outgoing' : 'incoming'} rp-bubble${m.removed ? ' removed' : ''}"><div class="rp-sender">${userLinkHtml(m.sender)} &middot; ${escapeHtml(getExactDate(m.timestamp))}</div>${escapeHtml(m.text)}${note}</div>`;
+                const pic = m.imageUrl ? `<a href="${escapeHtml(API_BASE + m.imageUrl)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(API_BASE + m.imageUrl)}" alt="Picture sent in chat" loading="lazy" style="display:block;max-width:100%;max-height:220px;border-radius:8px;margin:4px 0;"></a>` : '';
+                return `<div class="message-bubble ${m.sender === d.buyer ? 'outgoing' : 'incoming'} rp-bubble${m.removed ? ' removed' : ''}"><div class="rp-sender">${userLinkHtml(m.sender)} &middot; ${escapeHtml(getExactDate(m.timestamp))}</div>${pic}${escapeHtml(m.caption || m.text)}${note}</div>`;
             }).join('') : '<div class="reports-empty">No messages between these users.</div>';
 
             bindUserLinks(box);
@@ -7098,7 +7422,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             mainContentArea.style.display = 'none';
 
             [itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
-             selectGameModal, createItemModal, switchModal, confirmModal, linkCardModal, ticketModal
+             selectGameModal, createItemModal, switchModal, confirmModal, ticketModal
             ].forEach(el => el.classList.remove('active'));
 
             middlemenPage.classList.add('active');
@@ -7497,7 +7821,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const name = profileViewUser.username;
             const fresh = await getUserByUsername(name);
             if (!fresh || !profileViewUser || profileViewUser.username !== name || !profileModal.classList.contains('active')) return;
-            const sig = x => JSON.stringify((x.items || []).map(i => [i.id, i.name, i.price, i.stock, i.tag, i.photo ? 1 : 0]));
+            const sig = x => JSON.stringify((x.items || []).map(i => [i.id, i.updatedAt || 0, i.name, i.price, i.stock, i.tag, i.photo || '']));
             if (sig(fresh) === sig(profileViewUser)) return;
             profileViewUser.items = fresh.items || [];
             renderUserItems(profileViewUser);
@@ -7559,6 +7883,15 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             settingUsernameInput.value = userObj.username || '';
             settingDisplaynameInput.value = userObj.displayName || userObj.username || '';
+            // the server enforces both waiting times; the hints just tell you about them (the admin account has none)
+            const isAdminMe = userObj.customId === 'knqw';
+            const hint = (el, nextAt, every, input) => {
+                const left = isAdminMe ? 0 : nextAt - Date.now();
+                if (left > 0) { el.textContent = `You can change this again in ${fmtLeft(left)} (on ${getExactDate(nextAt)}).`; input.readOnly = true; }
+                else { el.textContent = every; input.readOnly = false; }
+            };
+            hint(document.getElementById('username-hint'), Number(userObj.nextUsernameChangeAt) || 0, 'Can be changed once every 2 weeks.', settingUsernameInput);
+            hint(document.getElementById('displayname-hint'), Number(userObj.nextDisplayNameChangeAt) || 0, 'Can be changed once a week.', settingDisplaynameInput);
             settingsModal.classList.add('active');
         }
 
@@ -7577,10 +7910,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             settingEmailInput.value = userObj.email || '';
             settingPasswordInput.value = '';
             { const c = document.getElementById('setting-current-password-input'); if (c) c.value = ''; }
-            activeUserCard = userObj.card || null;
             activeRoblox = userObj.roblox || '';
 
-            renderCardSectionInSettings();
             renderRobloxSection();
             accountSettingsModal.classList.add('active');
         }
@@ -7621,98 +7952,50 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             }
         }
 
-        function renderCardSectionInSettings() {
-            if (activeUserCard) {
-                cardContainerWrapper.innerHTML = `
-                    <div class="card-linked-box">
-                        <div class="card-info-text">💳 ${escapeHtml(activeUserCard)}</div>
-                        <button class="remove-card-btn" id="remove-card-btn" type="button">Remove Card</button>
-                    </div>
-                `;
-                document.getElementById('remove-card-btn').addEventListener('click', () => {
-                    activeUserCard = null;
-                    renderCardSectionInSettings();
-                    showToast('Bank card removed');
-                });
-            } else {
-                cardContainerWrapper.innerHTML = `
-                    <button class="upload-file-btn" id="open-link-card-btn" type="button" style="width: 100%; text-align: center; padding: 10px;">+ Link Bank Card</button>
-                `;
-                document.getElementById('open-link-card-btn').addEventListener('click', () => {
-                    cardNumberInput.value = '';
-                    cardExpiryInput.value = '';
-                    cardCvvInput.value = '';
-                    linkCardModal.classList.add('active');
-                });
-            }
-        }
-
-        closeLinkCardBtn.addEventListener('click', () => {
-            linkCardModal.classList.remove('active');
-        });
-
-        confirmLinkCardBtn.addEventListener('click', () => {
-            const num = cardNumberInput.value.trim();
-            const exp = cardExpiryInput.value.trim();
-            const cvv = cardCvvInput.value.trim();
-
-            if (!num || num.length < 12) {
-                showToast('Please enter a valid card number');
-                return;
-            }
-            if (!exp) {
-                showToast('Please enter expiry date');
-                return;
-            }
-            if (!cvv || cvv.length < 3) {
-                showToast('Please enter a valid CVV');
-                return;
-            }
-
-            const cleanNum = num.replace(/\D/g, '');
-            const last4 = cleanNum.slice(-4);
-            activeUserCard = `•••• •••• •••• ${last4}`;
-
-            linkCardModal.classList.remove('active');
-            renderCardSectionInSettings();
-            showToast('Bank card linked successfully!');
-        });
-
         saveSettingsBtn.addEventListener('click', async () => {
             let userObj = await getUserByUsername(currentUser);
             if (!userObj) return;
 
             const newUsername = settingUsernameInput.value.trim();
             const newDisplayName = settingDisplaynameInput.value.trim();
+            if (!newUsername) { showToast('Username cannot be empty'); return; }
 
-            if (!newUsername) {
-                showToast('Username cannot be empty');
-                return;
-            }
+            const usernameChanged = newUsername !== currentUser;
+            // a different display name only counts when the text really differs from the one saved (an unchanged field is never sent)
+            const wantedDisplay = newDisplayName || newUsername;
+            const displayChanged = wantedDisplay !== (userObj.displayName || userObj.username);
+            if (!usernameChanged && !displayChanged) { showToast('Nothing to change.'); settingsModal.classList.remove('active'); return; }
+            const isAdminMe = userObj.customId === 'knqw';
+            if (usernameChanged && !isAdminMe && Number(userObj.nextUsernameChangeAt) > Date.now()) { showToast(`You can change your username again in ${fmtLeft(userObj.nextUsernameChangeAt - Date.now())}.`); return; }
+            if (displayChanged && !isAdminMe && Number(userObj.nextDisplayNameChangeAt) > Date.now()) { showToast(`You can change your display name again in ${fmtLeft(userObj.nextDisplayNameChangeAt - Date.now())}.`); return; }
 
-            if (newUsername !== currentUser) {
-                const existing = await getUserByUsername(newUsername);
-                if (existing) {
-                    showToast('Username is already taken');
-                    return;
+            saveSettingsBtn.disabled = true;
+            try {
+                let renamed = false;
+                if (usernameChanged) {
+                    const rr = await srv('/api/profile/rename', 'POST', { username: newUsername });
+                    if (!rr.ok) { srvFail(rr); return; }
+                    renamed = true;
+                    try {          // keep what you had read: the read-position store is keyed by the account name
+                        const old = localStorage.getItem('ut_read_' + currentUser);
+                        if (old) localStorage.setItem('ut_read_' + newUsername, old);
+                        const hdr = localStorage.getItem('ut_hdr_' + currentUser);
+                        if (hdr) localStorage.setItem('ut_hdr_' + newUsername, hdr);
+                        localStorage.setItem('currentUser', newUsername);
+                    } catch (e) {}
                 }
-            }
-
-            if (newUsername !== currentUser) {
-                const rr = await srv('/api/profile/rename', 'POST', { username: newUsername });
-                if (!rr.ok) { srvFail(rr); return; }
-                let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-                savedAccounts = savedAccounts.map(acc => acc === currentUser ? newUsername : acc);
-                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
-                localStorage.setItem('currentUser', newUsername);
-            }
-            if ((newDisplayName || newUsername) !== userObj.displayName) {
-                const dr = await srv('/api/profile', 'POST', { displayName: newDisplayName || newUsername });
-                if (!dr.ok) { srvFail(dr); return; }
-            }
-            showToast('Profile updated successfully!');
-            settingsModal.classList.remove('active');
-            location.reload();
+                if (displayChanged) {
+                    const dr = await srv('/api/profile', 'POST', { displayName: wantedDisplay });
+                    if (!dr.ok) {
+                        srvFail(dr);
+                        if (renamed) location.reload();      // the username already changed: show it
+                        return;
+                    }
+                }
+                showToast('Profile updated successfully!');
+                settingsModal.classList.remove('active');
+                location.reload();
+            } finally { saveSettingsBtn.disabled = false; }
         });
 
         saveAccountSettingsBtn.addEventListener('click', async () => {
@@ -7732,7 +8015,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 if (!userObj) return;
             }
 
-            const ar = await srv('/api/profile', 'POST', { email: newEmail, card: activeUserCard || null, roblox: activeRoblox || null });
+            const ar = await srv('/api/profile', 'POST', { email: newEmail, roblox: activeRoblox || null });
             if (!ar.ok) { srvFail(ar); return; }
             showToast('Account settings saved successfully!');
             accountSettingsModal.classList.remove('active');
@@ -7894,73 +8177,139 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             refreshProfileItems();
         });
 
+        // ===== Manage Accounts =====
+        // The list lives on the server for THIS browser (the accounts you signed in to here); nothing about it is stored in the page.
+        let accountsInfo = { current: '', currentIsAdmin: false, accounts: [] };
+        function avatarForAccount(a, size) {
+            const first = escapeHtml((a.username || '?').charAt(0).toUpperCase());
+            const src = a.avatar ? safeImgSrc(API_BASE + a.avatar) : '';
+            return src ? `<img class="account-mini-avatar" src="${escapeHtml(src)}" alt="">`
+                       : `<div class="account-mini-avatar" style="background-color: ${getColorFromName(a.username || '?')};">${first}</div>`;
+        }
+        function accountsTotal() { return accountsInfo.accounts.length + (accountsInfo.currentIsAdmin ? 1 : 0); }
+        function refreshManageLogoutLabel() {
+            document.getElementById('manage-logout-btn').textContent = accountsTotal() > 1 ? 'Log out of all sessions' : 'Log out';
+        }
         async function renderSwitchAccountsList() {
-            let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-            let allUsers = await getAllUsersFromDB();
-
+            const r = await srv('/api/accounts');
+            if (r.ok) accountsInfo = { current: String(r.data.current || currentUser || ''), currentIsAdmin: !!r.data.currentIsAdmin, accounts: Array.isArray(r.data.accounts) ? r.data.accounts : [] };
+            else accountsInfo = { current: currentUser || '', currentIsAdmin: false, accounts: currentUser ? [{ username: currentUser, displayName: currentUser, avatar: null, current: true }] : [] };
             accountsList.innerHTML = '';
-            if (savedAccounts.length === 0) {
-                accountsList.innerHTML = '<div style="color: #777; text-align: center; padding: 20px;">No saved accounts</div>';
-                return;
+            const several = accountsInfo.accounts.length > 1;
+            if (accountsInfo.currentIsAdmin) {
+                const note = document.createElement('div');
+                note.className = 'account-item current is-note';
+                note.innerHTML = `<div class="account-info"><div class="account-mini-avatar" style="background-color: ${getColorFromName(accountsInfo.current)};">${escapeHtml(accountsInfo.current.charAt(0).toUpperCase())}</div><div class="account-details"><div class="acc-name">${escapeHtml(accountsInfo.current)}<span class="acc-current-tag">current</span></div><div class="acc-sub">Admin accounts are not kept in the account list</div></div></div>`;
+                accountsList.appendChild(note);
             }
-
-            savedAccounts.forEach(username => {
-                let uObj = allUsers.find(u => u.username === username);
-                const isCurrent = username === currentUser;
-                const firstLetter = username.charAt(0).toUpperCase();
-                const avatarColor = getColorFromName(username);
-
-                let avatarInner = `<div class="account-mini-avatar" style="background-color: ${avatarColor};">${escapeHtml(firstLetter)}</div>`;
-                if (uObj && safeImgSrc(uObj.avatar)) {
-                    avatarInner = `<img class="account-mini-avatar" src="${imgSrcAttr(uObj.avatar)}" alt="Avatar">`;
-                }
-
+            accountsInfo.accounts.forEach(a => {
                 const item = document.createElement('div');
-                item.className = `account-item ${isCurrent ? 'current' : ''}`;
+                item.className = 'account-item' + (a.current ? ' current' : '');
+                item.setAttribute('data-account', a.username);
+                const shown = a.displayName && a.displayName !== a.username ? a.displayName : a.username;
                 item.innerHTML = `
                     <div class="account-info">
-                        ${avatarInner}
+                        ${avatarForAccount(a)}
                         <div class="account-details">
-                            <div class="acc-name">${escapeHtml(uObj ? (uObj.displayName || uObj.username) : username)}</div>
-                            <div class="acc-email">${escapeHtml(uObj ? uObj.email : '')}</div>
+                            <div class="acc-name">${escapeHtml(shown)}${a.current ? '<span class="acc-current-tag">current</span>' : ''}</div>
+                            <div class="acc-sub">@${escapeHtml(a.username)}</div>
                         </div>
                     </div>
-                    ${!isCurrent ? `<button class="remove-saved-acc" title="Remove">&times;</button>` : ''}
-                `;
-
+                    ${several ? `<button class="remove-saved-acc" type="button" title="Remove this account from this browser" aria-label="Remove ${escapeHtml(a.username)}">&times;</button>` : ''}`;
                 item.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('remove-saved-acc')) {
-                        e.stopPropagation();
-                        let filtered = savedAccounts.filter(acc => acc !== username);
-                        localStorage.setItem('savedAccounts', JSON.stringify(filtered));
-                        renderSwitchAccountsList();
-                        return;
-                    }
-                    if (!isCurrent) {
-                        (async () => {
-                            try {
-                                const sr = await fetch(API_BASE + '/api/switch', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) });
-                                if (sr.ok) {
-                                    try { localStorage.setItem('currentUser', username); } catch (e) {}
-                                    location.reload();
-                                    return;
-                                }
-                            } catch (e) {}
-                            window.location.href = 'login.html?u=' + encodeURIComponent(username);   // no saved session: ask for the password once
-                        })();
-                    }
+                    if (e.target.closest('.remove-saved-acc')) { e.stopPropagation(); removeAccountFlow(a); return; }
+                    if (!a.current) switchToAccount(a.username);
                 });
-
                 accountsList.appendChild(item);
             });
+            if (!accountsList.children.length) accountsList.innerHTML = '<div style="color: #777; text-align: center; padding: 20px;">No accounts</div>';
+            refreshManageLogoutLabel();
         }
+        async function switchToAccount(username) {
+            const r = await srv('/api/switch', 'POST', { username }, { noRedirect: true });
+            if (r.ok) { try { localStorage.setItem('currentUser', username); } catch (e) {} location.reload(); return; }
+            showToast(r.status === 401 ? 'That session has ended. Add the account again to sign in.' : (r.data.error || 'Could not switch accounts.'));
+            renderSwitchAccountsList();
+        }
+        async function removeAccountFlow(a) {
+            const ok = await askDealConfirm('Remove this account?',
+                `@${a.username} will be signed out on this browser${a.current ? ' right now' : ''}. Your messages, balance and listings are not touched, but you will need the password to sign in to it again.`,
+                'Remove account', true);
+            if (!ok) return;
+            const r = await srv('/api/accounts/remove', 'POST', { username: a.username }, { noRedirect: true });
+            if (!r.ok) { showToast(r.data.error || 'Could not remove the account.'); renderSwitchAccountsList(); return; }
+            if (r.data.wasCurrent) {
+                if (r.data.next) { try { localStorage.setItem('currentUser', r.data.next); } catch (e) {} location.reload(); }
+                else { try { localStorage.removeItem('currentUser'); } catch (e) {} location.href = 'login.html'; }
+                return;
+            }
+            showToast('Account removed from this browser.');
+            renderSwitchAccountsList();
+        }
+        // Log out lives here now. One account: one warning. Several accounts: "log out of all sessions" with two warnings.
+        document.getElementById('manage-logout-btn').addEventListener('click', async () => {
+            const total = accountsTotal();
+            if (total <= 1) {
+                const ok = await askDealConfirm('Log out?', `You will be signed out of ${accountsInfo.current ? '@' + accountsInfo.current : 'your account'} on this browser.`, 'Log out', true);
+                if (ok) await logoutAndReload(false);
+                return;
+            }
+            const names = accountsInfo.accounts.map(a => '@' + a.username).concat(accountsInfo.currentIsAdmin ? ['@' + accountsInfo.current] : []);
+            const ok1 = await askDealConfirm('Log out of all sessions?', `You are signed in to ${total} accounts on this browser (${names.join(', ')}). This signs out of ALL of them.`, 'Continue', true);
+            if (!ok1) return;
+            const ok2 = await askDealConfirm('Are you sure?', 'Every account above will be signed out here and you will need each password to sign in again. This cannot be undone.', 'Log out of all', true);
+            if (ok2) await logoutAndReload(true);
+        });
 
         closeSwitchModalBtn.addEventListener('click', () => {
             switchModal.classList.remove('active');
         });
 
-        addAccountBtn.addEventListener('click', () => {
-            window.location.href = 'login.html';
+        // ----- Add Account window -----
+        const addAccountModal = document.getElementById('add-account-modal');
+        const addAccountForm = document.getElementById('add-account-form');
+        const addAccountId = document.getElementById('add-account-id');
+        const addAccountPw = document.getElementById('add-account-pw');
+        const addAccountErr = document.getElementById('add-account-err');
+        const addAccountSubmit = document.getElementById('add-account-submit');
+        function openAddAccountWindow() {
+            addAccountId.value = ''; addAccountPw.value = ''; addAccountErr.textContent = '';
+            addAccountModal.classList.add('active');
+            setTimeout(() => addAccountId.focus(), 30);
+        }
+        function closeAddAccountWindow() { addAccountModal.classList.remove('active'); addAccountPw.value = ''; }
+        addAccountBtn.addEventListener('click', openAddAccountWindow);
+        document.getElementById('add-account-close').addEventListener('click', closeAddAccountWindow);
+        addAccountModal.addEventListener('click', (e) => { if (e.target === addAccountModal) closeAddAccountWindow(); });
+        // Enter with an empty field moves on to the next empty field; only a complete form is sent
+        addAccountForm.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' || e.isComposing || e.target.tagName !== 'INPUT') return;
+            const fields = [addAccountId, addAccountPw];
+            const empty = fields.filter(f => !f.value.trim());
+            if (!empty.length) return;          // everything filled: let the form submit normally
+            e.preventDefault();
+            const at = fields.indexOf(e.target);
+            for (let i = 1; i <= fields.length; i++) { const f = fields[(at + i) % fields.length]; if (!f.value.trim()) { f.focus(); break; } }
+        });
+        addAccountForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = addAccountId.value.trim(), password = addAccountPw.value;
+            if (!id || !password) { addAccountErr.textContent = 'Enter the username (or email) and the password.'; return; }
+            addAccountSubmit.disabled = true; addAccountErr.textContent = '';
+            // noRedirect: a wrong password answers 401, which must show a message here and never send you to the login page
+            const r = await srv('/api/accounts/add', 'POST', { id, password }, { noRedirect: true });
+            addAccountSubmit.disabled = false;
+            addAccountPw.value = '';
+            if (!r.ok) {
+                let m = r.data.error || 'Could not add the account.';
+                if (r.data.attemptsLeft !== undefined && !r.data.locked) m += ` ${r.data.attemptsLeft} more wrong ${r.data.attemptsLeft === 1 ? 'try' : 'tries'} and this sign-in is locked for 3 hours.`;
+                addAccountErr.textContent = m;
+                addAccountPw.focus();
+                return;
+            }
+            closeAddAccountWindow();
+            showToast(`@${r.data.username} added. Tap it in the list to switch.`);
+            renderSwitchAccountsList();
         });
 
         async function renderDbTable() {
@@ -8109,10 +8458,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     renderDbTable();
                     return;
                 }
-                let savedAccounts = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-                savedAccounts = savedAccounts.filter(acc => acc !== userToDelete);
-                localStorage.setItem('savedAccounts', JSON.stringify(savedAccounts));
-
                 if (currentUser === userToDelete) {
                     logoutAndReload();
                 } else {
@@ -8333,10 +8678,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         function showDeletedScreen() {
             fetch(API_BASE + '/api/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
             localStorage.removeItem('currentUser');
-            try {
-                let saved = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-                localStorage.setItem('savedAccounts', JSON.stringify(saved.filter(a => a !== currentUser)));
-            } catch (e) {}
             document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
             document.body.style.overflow = 'hidden';
             document.getElementById('ban-screen').classList.add('active');
@@ -8470,16 +8811,17 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
         let appealsAdmin = false;
 
-        async function getAppeals() {
-            const r = await srv('/api/admin/appeals');
+        async function getAppeals(background) {
+            // the background badge check must never pop up the admin password window by itself
+            const r = await srv('/api/admin/appeals', undefined, undefined, background ? { noElevate: true } : undefined);
             if (!r.ok) return [];
             return (r.data.rows || []).map(x => ({ username: x.username, displayName: x.displayName, ...banFields(x) })).filter(isBanned);
         }
 
         async function updateAppealsBadge() {
-            if (!appealsAdmin) return;
+            if (!appealsAdmin || !adminElevated) return;     // the list is only available after the admin password was typed
             try {
-                const list = await getAppeals();
+                const list = await getAppeals(true);
                 const pending = list.filter(a => a.appealStatus === 'pending').length;
                 setAppealsBadge(pending);
             } catch (e) { /* не критично */ }
@@ -8881,8 +9223,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         async function getGroupCandidates() {
             const me = await getUserByUsername(currentUser);
             if (!me) return [];
+            await syncChat();
             const tags = {};
-            (me.messages || []).forEach(m => {
+            chatStore.messages.forEach(m => {
                 const other = m.sender === currentUser ? m.receiver : m.sender;
                 if (other && other !== currentUser) tags[other] = 'chat';
             });
@@ -9196,7 +9539,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             btn.classList.add('active');
             mainContentArea.style.display = 'none';
             [middlemenPage, itemDetailPage, messagesPage, balancePage, profileModal, settingsModal, accountSettingsModal,
-             selectGameModal, createItemModal, switchModal, confirmModal, linkCardModal, ticketModal
+             selectGameModal, createItemModal, switchModal, confirmModal, ticketModal
             ].forEach(el => el.classList.remove('active'));
             page.classList.add('active');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -9232,52 +9575,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         document.querySelector('header').addEventListener('click', e => {
             if (e.target.closest('#home-link, #home-brand-link, .nav-left button:not(#games-nav-btn):not(#more-nav-btn), #header-balance-box, #header-messages-btn')) closeInfoPages();
         }, true);
-
-        // ===== IP bans (time or forever) =====
-        // Note: the site has no server, so the visitor's IP comes from a public lookup (ipify) and the check runs in the page.
-        let myIp = null;
-        async function getMyIp() {
-            if (myIp !== null) return myIp;
-            const cached = sessionStorage.getItem('myIp');
-            if (cached) { myIp = cached; return myIp; }
-            for (const url of ['https://api.ipify.org?format=json', 'https://api64.ipify.org?format=json']) {
-                try {
-                    const ctl = new AbortController();
-                    const t = setTimeout(() => ctl.abort(), 4000);
-                    const r = await fetch(url, { signal: ctl.signal });
-                    clearTimeout(t);
-                    const j = await r.json();
-                    if (j && j.ip) { myIp = String(j.ip); sessionStorage.setItem('myIp', myIp); return myIp; }
-                } catch (e) { /* try the next one */ }
-            }
-            myIp = '';
-            return myIp;
-        }
-        function showIpBanScreen(ban) {
-            document.body.style.overflow = 'hidden';
-            document.getElementById('ban-screen').classList.add('active');
-            document.getElementById('ban-title').textContent = 'Your IP address has been banned';
-            const perm = ban.until === -1;
-            document.getElementById('ban-rows').innerHTML = `
-                <div class="ban-row"><span>Reason</span><span>${escapeHtml(ban.reason || 'No reason provided')}</span></div>
-                <div class="ban-row"><span>Banned on</span><span>${escapeHtml(getExactDate(ban.at))}</span></div>
-                <div class="ban-row"><span>Duration</span><span>${perm ? 'Permanent' : 'Until ' + escapeHtml(getExactDate(ban.until))}</span></div>
-                ${perm ? '' : '<div class="ban-row"><span>Time left</span><span id="ban-left"></span></div>'}`;
-            document.getElementById('ban-delete-warning').style.display = 'none';
-            document.getElementById('ban-appeal-area').innerHTML = '';
-            document.getElementById('ban-logout-btn').onclick = () => { logoutAndReload(); };
-            if (!perm) {
-                const tick = async () => {
-                    const left = ban.until - Date.now();
-                    if (left <= 0) { location.reload(); return; }
-                    const el = document.getElementById('ban-left');
-                    if (el) el.textContent = fmtLeft(left);
-                };
-                tick();
-                setInterval(tick, 1000);
-            }
-        }
-
 
         // ===== Report item (listing reports) =====
         let reportItemTarget = null;

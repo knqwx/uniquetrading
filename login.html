@@ -9,22 +9,28 @@
     <!-- Подключаем современный шрифт Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        * { box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+        /* The page scrolls instead of clipping: a tall sign-up form on a phone in landscape, or at 200-400% zoom, must stay fully reachable.
+           The card is centred with auto margins (not align-items:center) so that its top can never end up above the screen. */
         body {
             background-color: #1a1a1a;
             margin: 0;
-            height: 100vh;
+            min-height: 100vh;
+            min-height: 100dvh;
+            padding: 16px;
             font-family: 'Inter', sans-serif;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         .auth-container {
-            width: 380px;
+            width: min(380px, 100%);
+            margin: auto;
             background-color: #262626;
             border-radius: 12px;
-            padding: 30px 30px;
+            padding: 30px clamp(16px, 6vw, 30px);
             box-sizing: border-box;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
             position: relative;
@@ -124,8 +130,10 @@
         .captcha-box {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 10px;
         }
+        .captcha-box input { flex: 1 1 110px; min-width: 0; }
 
         .captcha-question {
             background-color: #1a1a1a;
@@ -206,7 +214,7 @@
 
         /* password strength + signup extras */
         .signup-only { max-height: 0; opacity: 0; overflow: hidden; margin: 0; pointer-events: none; transition: max-height 0.35s ease, opacity 0.25s ease, margin 0.35s ease; }
-        .signup-only.show { max-height: 260px; opacity: 1; margin-bottom: 16px; pointer-events: auto; }
+        .signup-only.show { max-height: 420px; opacity: 1; margin-bottom: 16px; pointer-events: auto; }
         .pw-bar { height: 6px; background: #1a1a1a; border-radius: 6px; overflow: hidden; border: 1px solid #383838; }
         .pw-bar-fill { height: 100%; width: 0%; background: #ff4d4d; transition: width 0.25s ease, background-color 0.25s ease; }
         .pw-label { display: flex; justify-content: space-between; font-size: 12px; color: #b0b0b0; margin: 6px 0 8px; }
@@ -231,7 +239,12 @@
         .field-status.ok { color: #2ecc71; }
         .field-status.bad { color: #ff6b6b; }
         .field-status.checking { color: #b0b0b0; }
-        .input-group { max-height: 120px; }
+        .input-group { max-height: 170px; }
+        .error-message { overflow-wrap: anywhere; line-height: 1.4; }
+        .field-status { overflow-wrap: anywhere; }
+        @media (max-width: 360px) { .pw-rules { grid-template-columns: 1fr; } }
+        @media (max-height: 520px) and (orientation: landscape) { body { padding: 8px; } .auth-container { padding-top: 16px; padding-bottom: 16px; } .brand-header { margin-bottom: 10px; } }
+        @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
     </style>
 </head>
 <body>
@@ -271,7 +284,7 @@
                     <li data-rule="upper">Uppercase letter</li>
                     <li data-rule="num">A number</li>
                     <li data-rule="sym">A symbol (!@#$...)</li>
-                    <li data-rule="personal">Not your name or email</li>
+                    <li data-rule="max">At most 72 bytes</li>
                 </ul>
             </div>
 
@@ -449,18 +462,16 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
     })();
 
     // ===== Password strength (UX only; the server enforces the same rules) =====
-    function passwordChecks(pw, username, email) {
-        const l = pw.toLowerCase();
-        const u = (username || '').trim().toLowerCase();
-        const local = ((email || '').split('@')[0] || '').trim().toLowerCase();
-        const personal = !((u.length >= 3 && l.includes(u)) || (local.length >= 3 && l.includes(local)));
+    // bcrypt on the server only reads the first 72 BYTES of a password, so longer ones are refused (emoji / accents use more than one byte)
+    const pwBytes = (pw) => new TextEncoder().encode(pw).length;
+    function passwordChecks(pw) {
         return {
             len: pw.length >= 10,
             lower: /[a-z]/.test(pw),
             upper: /[A-Z]/.test(pw),
             num: /[0-9]/.test(pw),
             sym: /[^A-Za-z0-9]/.test(pw),
-            personal: pw.length > 0 && personal
+            max: pw.length > 0 && pwBytes(pw) <= 72
         };
     }
     function passwordScore(pw, checks) {
@@ -472,7 +483,7 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
         if (/[^A-Za-z0-9]/.test(pw)) pool += 32;
         const bits = pw.length * Math.log2(Math.max(pool, 2));
         let score = bits < 36 ? 1 : bits < 52 ? 2 : bits < 70 ? 3 : 4;
-        if (!checks.personal) score = Math.min(score, 1);
+        if (!checks.max) score = Math.min(score, 1);
         if (!checks.len) score = Math.min(score, 2);
         return score;
     }
@@ -481,7 +492,7 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
     const pwText = $('pw-strength-text');
     function updatePasswordMeter() {
         const pw = passwordInput.value;
-        const checks = passwordChecks(pw, usernameInput.value, mainInput.value);
+        const checks = passwordChecks(pw);
         const score = passwordScore(pw, checks);
         const labels = ['-', 'Weak', 'Fair', 'Good', 'Strong'];
         const colors = ['#ff4d4d', '#ff4d4d', '#ffb020', '#9acd32', '#2ecc71'];
@@ -550,13 +561,41 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
     termsOverlay.addEventListener('click', (e) => { if (e.target === termsOverlay) closeTerms(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeTerms(); });
 
+    // ===== Enter key: move on to the next empty field; only submit when everything is filled in =====
+    function visibleFields() {
+        const list = [];
+        if (!usernameGroup.classList.contains('collapsed')) list.push(usernameInput);
+        list.push(mainInput, passwordInput);
+        if (!isLoginMode) list.push($('age-checkbox'));
+        list.push(captchaInput);
+        return list;
+    }
+    const fieldEmpty = (el) => (el.type === 'checkbox' ? !el.checked : !el.value.trim());
+    function onEnter(e) {
+        if (e.key !== 'Enter' || e.isComposing || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return;
+        const t = e.target;
+        if (!(t instanceof HTMLInputElement) || t.type === 'submit' || t.type === 'button') return;
+        if (t.type === 'checkbox') return;                              // Enter on the checkbox keeps its normal behaviour
+        const fields = visibleFields();
+        const at = fields.indexOf(t);
+        const empties = fields.filter(fieldEmpty);
+        e.preventDefault();
+        if (!empties.length) { authForm.requestSubmit(); return; }
+        // the next empty field after this one (wrapping around), so Enter never submits half a form
+        let next = null;
+        for (let i = 1; i <= fields.length; i++) { const f = fields[(at + i) % fields.length]; if (fieldEmpty(f)) { next = f; break; } }
+        if (next) { next.focus(); if (next.select && next.type !== 'checkbox') next.select(); }
+    }
+    authForm.addEventListener('keydown', onEnter);
+
     // ===== Submit =====
-    function rememberAccount(username) {
+    // The list of accounts signed in on this browser now lives on the server (Manage Accounts); the page only remembers who is current.
+    // The admin account is never written anywhere that a switcher could read.
+    function rememberAccount(username, isAdmin) {
         try {
             localStorage.setItem('currentUser', username);
             localStorage.setItem('ut_age_ok', '1');
-            const saved = JSON.parse(localStorage.getItem('savedAccounts')) || [];
-            if (!saved.includes(username)) { saved.push(username); localStorage.setItem('savedAccounts', JSON.stringify(saved)); }
+            localStorage.removeItem('savedAccounts');
         } catch (e) {}
     }
 
@@ -581,7 +620,7 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
                 const email = mainInput.value.trim().toLowerCase();
                 if (!username || !email || !password) { showError('Please fill in all fields.'); return; }
                 if (username.length < 3) { showError('Username must be at least 3 characters long.'); return; }
-                if (!passwordOk(passwordChecks(password, username, email))) {
+                if (!passwordOk(passwordChecks(password))) {
                     showError('Your password is too weak. Meet every requirement shown under the password box.');
                     return;
                 }
@@ -594,10 +633,15 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
             }
 
             if (!result.ok) {
-                showError(result.data.error || 'Something went wrong. Try again.');
+                let msg = result.data.error || 'Something went wrong. Try again.';
+                if (result.status === 401 && isLoginMode && Number.isInteger(result.data.attemptsLeft)) {
+                    const n = result.data.attemptsLeft;
+                    msg += ` ${n} more wrong ${n === 1 ? 'try' : 'tries'} and sign-in is locked for 3 hours.`;
+                }
+                showError(msg);
                 return;
             }
-            rememberAccount(result.data.username);
+            rememberAccount(result.data.username, !!result.data.isAdmin);
             window.location.href = 'uniquetrading.html';
         } finally {
             busy = false;
