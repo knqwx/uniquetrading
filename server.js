@@ -267,6 +267,14 @@ async function init() {
   for (const col of ['paidAt INTEGER', 'completedAt INTEGER', 'autoReleased INTEGER DEFAULT 0', 'listingConsumed INTEGER DEFAULT 0']) await run(`ALTER TABLE deals ADD COLUMN ${col}`);
   await run('ALTER TABLE tickets ADD COLUMN closedAt INTEGER');            // when a middleman closed the ticket (closed tickets are the proof needed for a vouch)
 
+  // A table with this name but an unexpected shape can only be left over from an interrupted earlier deploy (the original site never had these tables):
+  // drop it so it is rebuilt correctly instead of crashing the start-up on a missing column.
+  for (const [t, col] of [['messages', 'senderId'], ['listings', 'ownerId'], ['media', 'kind'], ['group_members', 'userId'], ['login_lockouts', 'lockedUntil'], ['topup_intents', 'userId'], ['payment_events', 'eventId']]) {
+    try {
+      const info = await db.execute(`PRAGMA table_info(${t})`);
+      if (info.rows.length && !info.rows.some(r => String(r.name) === col)) { console.warn(`Rebuilding table ${t}: it had an old layout`); await db.execute(`DROP TABLE ${t}`); }
+    } catch (e) { console.error('shape check failed for', t, e.message); }
+  }
   // ---- relational chat: one row per message (was: a JSON array copied onto BOTH users' rows) ----
   // Users are referenced by their permanent numeric id, so renaming an account never touches this table.
   await run(`CREATE TABLE IF NOT EXISTS messages (
@@ -375,17 +383,14 @@ async function migrate() {
     await metaSet('messages_migrated', '1');
     if (rows.length) console.log(`Migration: chat history moved to the messages table (${inserted} messages, ${skipped} unusable entries skipped)`);
   }
-  
-// 3) listings: users.items (JSON) -> listings table (+ photos as media blobs). Per user, atomically; the legacy blob is cleared only if the whole batch commits.
+
+  // 3) listings: users.items (JSON) -> listings table (+ photos as media blobs). Per user, atomically; the legacy blob is cleared only if the whole batch commits.
   {
     const rows = (await db.execute("SELECT id, username, items, joinedAt FROM users WHERE items IS NOT NULL AND items NOT IN ('', '[]', 'null')")).rows;
     if (rows.length) {
       const used = new Set((await db.execute('SELECT id FROM listings')).rows.map(r => Number(r.id)));
       let moved = 0, dropped = 0;
       for (const row of rows) {
-        const userId = Number(row.id);
-        if (!Number.isFinite(userId)) { dropped++; continue; }
-
         const arr = parseJson(row.items, []);
         const stmts = [];
         for (const it of Array.isArray(arr) ? arr : []) {
@@ -394,36 +399,28 @@ async function migrate() {
           while (used.has(id)) id++;                      // legacy ids were per-user timestamps, so two sellers could (rarely) collide
           used.add(id);
           const price = it.price == null ? '' : String(it.price).trim();
-          const parsedPrice = parseFloat(price.replace(/,/g, ''));
-          const priceCents = it.tag === 'selling' && Number.isFinite(parsedPrice) ? Math.round(parsedPrice * 100) : null;
-          
-          const rawJoined = Number(row.joinedAt);
-          const validJoined = Number.isFinite(rawJoined) && rawJoined > 0 ? rawJoined : Date.now();
-          const created = id > 1e12 ? id : validJoined;
-
+          const priceCents = it.tag === 'selling' && Number.isFinite(parseFloat(price.replace(/,/g, ''))) ? Math.round(parseFloat(price.replace(/,/g, '')) * 100) : null;
+          const created = id > 1e12 ? id : (Number(row.joinedAt) || Date.now());
           let photoId = null;
           const img = decodeImageDataUrl(it.photo, 1000000);
           if (img) {
             photoId = newMediaId();
-            stmts.push({ sql: "INSERT INTO media (id, kind, ownerId, refId, mime, size, data, createdAt) VALUES (?, 'listing', ?, ?, ?, ?, ?, ?)", args: [photoId, userId, String(id), img.mime, Number(img.buf.length), img.buf, created] });
+            stmts.push({ sql: "INSERT INTO media (id, kind, ownerId, refId, mime, size, data, createdAt) VALUES (?, 'listing', ?, ?, ?, ?, ?, ?)", args: [photoId, Number(row.id), String(id), img.mime, img.buf.length, img.buf, created] });
           }
-          const stockNum = Number(it.stock);
-          const stock = Number.isInteger(stockNum) && stockNum >= 0 ? stockNum : 1;
-
+          const stock = Number(it.stock);
           stmts.push({ sql: 'INSERT INTO listings (id, ownerId, name, description, tag, price, priceCents, game, category, items, wanted, stock, photoId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            args: [id, userId, String(it.name).slice(0, 80), String(it.description || '').slice(0, 2000), String(it.tag), price, priceCents, String(it.game || '').slice(0, 60), String(it.category || '').slice(0, 60),
+            args: [id, Number(row.id), String(it.name).slice(0, 80), String(it.description || '').slice(0, 2000), String(it.tag), price, priceCents, String(it.game || '').slice(0, 60), String(it.category || '').slice(0, 60),
               JSON.stringify(Array.isArray(it.items) ? it.items.slice(0, 60).map(x => String(x).slice(0, 80)) : []), it.wanted && typeof it.wanted === 'object' ? JSON.stringify(it.wanted) : null,
-              stock, photoId, created, created] });
+              Number.isInteger(stock) && stock >= 0 ? stock : 1, photoId, created, created] });
           moved++;
         }
-        stmts.push({ sql: 'UPDATE users SET items = NULL WHERE id = ?', args: [userId] });
+        stmts.push({ sql: 'UPDATE users SET items = NULL WHERE id = ?', args: [Number(row.id)] });
         await db.batch(stmts, 'write');
       }
       console.log(`Migration: ${moved} listings moved to the listings table (${dropped} invalid entries dropped)`);
       await bumpMeta(db, 'listingsRev');
     }
   }
-  
 
   // 4) chat pictures: chat_images (base64 text) -> media blobs, same ids so existing messages keep working. The old table is dropped once it is empty.
   if ((await db.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'chat_images'")).rows.length) {
