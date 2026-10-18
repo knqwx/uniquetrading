@@ -979,6 +979,12 @@ app.post('/api/login', async (req, res) => {
     const r = await authenticate(req, id, password, 'login');
     if (!r.user) return res.status(r.status).json(r.body);
     const u = r.user, ip = ipOf(req), isAdmin = isAdminId(u.customId);
+    console.log('[session-debug] authenticated user:', {
+  username: u.username,
+  id: u.id,
+  idType: typeof u.id,
+  keys: Object.keys(u)
+});
     if (!isAdmin) {
       const ban = await activeIpBan(ip);
       if (ban) return res.status(403).json({ error: ipBanText(ban) });
