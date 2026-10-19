@@ -3155,6 +3155,82 @@
   #select-game-modal .game-card-name { width:100%; text-align:center; }
 }
 
+
+/* ===== Portrait-phone corrections: compact navigation, centered avatars/game art, single-line category tabs ===== */
+@media (max-width: 760px) and (orientation: portrait) {
+  /* Keep all six main navigation tabs visible without horizontal scrolling. */
+  .top-bar { padding-left: 7px !important; padding-right: 7px !important; }
+  .nav-left {
+    width: 100% !important; min-width: 0 !important; display: flex !important;
+    flex-wrap: nowrap !important; overflow: hidden !important; gap: 1px !important;
+    justify-content: space-between !important; align-items: stretch !important;
+  }
+  .nav-left > * {
+    flex: 1 1 0 !important; min-width: 0 !important; width: 0 !important;
+    padding: 7px 1px !important; font-size: clamp(9px, 2.7vw, 11px) !important;
+    line-height: 1.1 !important; text-align: center !important; letter-spacing: -0.2px;
+    white-space: nowrap !important; overflow: hidden !important; text-overflow: clip !important;
+  }
+  /* Center the profile control and keep the avatar optically centered inside it. */
+  .auth-buttons .user-profile-box {
+    display: inline-flex !important; align-items: center !important; justify-content: center !important;
+    box-sizing: border-box !important; min-width: 38px !important; min-height: 38px !important;
+    padding: 3px !important; gap: 0 !important; line-height: 0 !important;
+  }
+  .auth-buttons .user-profile-box .user-avatar {
+    display: block !important; flex: 0 0 30px !important; width: 30px !important; height: 30px !important;
+    min-width: 30px !important; min-height: 30px !important; margin: 0 auto !important;
+    padding: 0 !important; object-fit: cover !important; object-position: center !important;
+    line-height: 30px !important; text-align: center !important; box-sizing: border-box !important;
+  }
+  /* Game artwork should be centered in portrait game selection, including listing creation. */
+  #select-game-modal .select-game-grid,
+  #offer-games {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    justify-items: stretch !important; align-items: stretch !important;
+  }
+  #select-game-modal .game-card-item,
+  #offer-games .game-card-item {
+    width: 100% !important; min-width: 0 !important; box-sizing: border-box !important;
+    display: flex !important; flex-direction: column !important; align-items: center !important;
+    justify-content: flex-start !important; text-align: center !important;
+  }
+  #select-game-modal .game-card-thumb,
+  #offer-games .game-card-thumb {
+    display: block !important; width: min(100%, 96px) !important; height: auto !important;
+    aspect-ratio: 1 / 1 !important; margin: 0 auto !important; flex: 0 0 auto !important;
+    object-fit: contain !important; object-position: center center !important; align-self: center !important;
+  }
+  #select-game-modal .game-card-name,
+  #offer-games .game-card-name { width: 100% !important; text-align: center !important; }
+
+  /* Each category name and its count stay on one line; the tab strip scrolls horizontally. */
+  #offer-cats, #item-picker-cats {
+    display: flex !important; flex-flow: row nowrap !important; align-items: center !important;
+    justify-content: flex-start !important; gap: 6px !important; width: 100% !important;
+    max-width: 100% !important; min-width: 0 !important; overflow-x: auto !important;
+    overflow-y: hidden !important; white-space: nowrap !important; padding: 2px 1px 7px !important;
+    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; box-sizing: border-box !important;
+  }
+  #offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat {
+    display: inline-flex !important; flex: 0 0 auto !important; flex-flow: row nowrap !important;
+    align-items: center !important; justify-content: center !important; gap: 5px !important;
+    width: auto !important; min-width: max-content !important; max-width: none !important;
+    min-height: 32px !important; padding: 6px 9px !important; white-space: nowrap !important;
+    overflow: visible !important; overflow-wrap: normal !important; word-break: keep-all !important;
+    font-size: 11px !important; line-height: 1 !important; scroll-snap-align: start;
+  }
+  #offer-cats .item-picker-cat span:first-child, #item-picker-cats .item-picker-cat span:first-child {
+    display: inline !important; flex: 0 0 auto !important; min-width: 0 !important;
+    white-space: nowrap !important; overflow: visible !important; overflow-wrap: normal !important;
+  }
+  #offer-cats .item-picker-cat .cat-count, #item-picker-cats .item-picker-cat .cat-count {
+    display: inline-flex !important; flex: 0 0 auto !important; align-items: center !important;
+    justify-content: center !important; margin: 0 !important; padding: 2px 5px !important;
+    white-space: nowrap !important; line-height: 1.1 !important; font-size: 10px !important;
+  }
+}
+
 </style>
 </head>
 <body>
