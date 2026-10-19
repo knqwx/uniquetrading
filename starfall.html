@@ -5304,7 +5304,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         });
         cartFab.addEventListener('click', openShoppingCart);
         document.getElementById('cart-close').addEventListener('click', closeShoppingCart);
-        document.getElementById('cart-continue-btn').addEventListener('click', closeShoppingCart);
+        const cartContinueBtn = document.getElementById('cart-continue-btn');
+        if (cartContinueBtn) cartContinueBtn.addEventListener('click', closeShoppingCart);
         cartOverlay.addEventListener('click', e => { if (e.target === cartOverlay) closeShoppingCart(); });
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && cartOverlay.classList.contains('active')) closeShoppingCart(); });
         cartItemsEl.addEventListener('click', e => {
@@ -10680,84 +10681,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     <div class="checkout-actions"><button class="checkout-secondary" id="checkout-back-btn" type="button">Back to cart</button><button class="checkout-pay" id="checkout-pay-btn" type="button">Pay securely</button></div>
   </section>
 </div>
-
-<!-- Starfall API diagnostics: safe to leave enabled; never prints tokens or private account data. -->
-<style>
-#sf-diag-open{position:fixed;left:12px;bottom:12px;z-index:30000;border:1px solid #777;background:#171717;color:#fff;border-radius:9px;padding:10px 13px;font:600 12px Inter,Arial,sans-serif;box-shadow:0 4px 18px #0008}
-#sf-diag{position:fixed;left:12px;bottom:54px;z-index:30001;width:min(520px,calc(100vw - 24px));max-height:70vh;overflow:auto;box-sizing:border-box;background:#101010;color:#eee;border:1px solid #555;border-radius:12px;padding:14px;font:12px/1.5 ui-monospace,monospace;box-shadow:0 8px 30px #000b;display:none}
-#sf-diag h3{font:600 15px Inter,Arial,sans-serif;margin:0 0 8px}#sf-diag pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:10px 0 0;color:#ddd}#sf-diag button{background:#292929;color:white;border:1px solid #666;border-radius:7px;padding:7px 10px;margin:4px 5px 0 0}#sf-diag .sf-ok{color:#75e6a2}#sf-diag .sf-bad{color:#ff8585}
-</style>
-<button id="sf-diag-open" type="button">Starfall · диагностика</button>
-<section id="sf-diag" role="dialog" aria-label="Starfall API diagnostics" aria-live="polite">
-  <h3>Starfall — проверка подключения</h3>
-  <div id="sf-diag-status">Нажми «Запустить проверки».</div>
-  <button id="sf-diag-run" type="button">Запустить проверки</button><button id="sf-diag-copy" type="button">Копировать результат</button><button id="sf-diag-close" type="button">Закрыть</button>
-  <pre id="sf-diag-log"></pre>
-</section>
-<script>
-window.__sfDiagErrors = window.__sfDiagErrors || [];
-window.addEventListener('error', function(e) {
-  try { window.__sfDiagErrors.push(String(e.message || 'Script error') + (e.filename ? ' @ ' + e.filename.split('/').pop() : '') + (e.lineno ? ':' + e.lineno : '')); } catch (_) {}
-});
-window.addEventListener('unhandledrejection', function(e) {
-  try { window.__sfDiagErrors.push('Unhandled promise rejection: ' + String(e.reason && e.reason.message || e.reason || 'unknown')); } catch (_) {}
-});
-</script>
-<script>
-(function(){
-  const openBtn=document.getElementById('sf-diag-open'), panel=document.getElementById('sf-diag'), runBtn=document.getElementById('sf-diag-run'), copyBtn=document.getElementById('sf-diag-copy'), closeBtn=document.getElementById('sf-diag-close'), statusEl=document.getElementById('sf-diag-status'), logEl=document.getElementById('sf-diag-log');
-  const api=(location.hostname.endsWith('.onrender.com')||location.hostname==='localhost'||location.hostname==='127.0.0.1')?'':'https://unique-pdee.onrender.com';
-  let report='';
-  openBtn.addEventListener('click',()=>{panel.style.display=panel.style.display==='block'?'none':'block';});
-  closeBtn.addEventListener('click',()=>panel.style.display='none');
-  copyBtn.addEventListener('click',()=>{const t=report||'Проверки ещё не запускались'; if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(()=>{statusEl.textContent='Результат скопирован.'}).catch(()=>{logEl.textContent=t}); else {logEl.textContent=t; statusEl.textContent='Выдели и скопируй текст ниже.';}});
-  async function test(path){
-    const started=Date.now();
-    try{
-      const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),12000);
-      const res=await fetch(api+path,{method:'GET',credentials:'include',cache:'no-store',signal:controller.signal,headers:{'X-UT-Page':'2'}});
-      clearTimeout(timer);
-      let data=null; try{data=await res.json()}catch(e){}
-      let detail='';
-      if(path.startsWith('/api/listings?')) detail='; items='+(Array.isArray(data&&data.items)?data.items.length:'ответ без массива items')+'; nextCursor='+(data&&data.nextCursor?'yes':'no');
-      if(path==='/api/listings/sig') detail='; sig='+(data&&data.sig!==undefined?'present':'missing');
-      if(path==='/api/me') detail='; username field='+(data&&data.username?'present':'absent');
-      return {line:(res.ok?'[OK] ':'[HTTP '+res.status+'] ')+path+' — '+(Date.now()-started)+' ms'+detail+(data&&data.error?'; error='+String(data.error).slice(0,180):''),ok:res.ok,status:res.status};
-    }catch(e){return {line:'[NETWORK ERROR] '+path+' — '+(e&&e.name==='AbortError'?'timeout after 12 s':String(e&&e.message||e)),ok:false,status:0};}
-  }
-  runBtn.addEventListener('click',async()=>{
-    runBtn.disabled=true; statusEl.textContent='Проверяем…'; logEl.textContent='';
-    const tokenPresent=(()=>{try{return !!localStorage.getItem('ut_token')}catch(e){return false}})();
-    const currentUserPresent=(()=>{try{return !!localStorage.getItem('currentUser')}catch(e){return false}})();
-    const lines=['Page: '+location.origin+location.pathname,'API: '+(api||'(same origin)'),'Saved session token: '+(tokenPresent?'present':'missing; value hidden'),'Saved currentUser label: '+(currentUserPresent?'present':'missing; value hidden'),'Browser: '+navigator.userAgent.slice(0,140),''];
-    for(const path of ['/api/me','/api/profile','/api/users','/api/listings/sig','/api/listings?limit=1']){
-      const r=await test(path); lines.push(r.line);
-    }
-    // Inspect response shapes without printing usernames, listing names, tokens, or other private values.
-    for(const path of ['/api/profile','/api/users','/api/listings?limit=1']){
-      try {
-        const res=await fetch(api+path,{credentials:'include',cache:'no-store',headers:{'X-UT-Page':'2'}});
-        let data={}; try{data=await res.json()}catch(e){}
-        if(path==='/api/profile'){
-          const u=data&&data.user;
-          lines.push('[SHAPE] /api/profile: user object='+(!!u)+'; username field='+(!!(u&&u.username))+'; items array='+(!!(u&&Array.isArray(u.items)))+'; error='+(data&&data.error?String(data.error).slice(0,120):'none'));
-        } else if(path==='/api/users'){
-          lines.push('[SHAPE] /api/users: users array='+(!!(data&&Array.isArray(data.users)))+'; count='+(data&&Array.isArray(data.users)?data.users.length:'n/a')+'; error='+(data&&data.error?String(data.error).slice(0,120):'none'));
-        } else {
-          const arr=data&&Array.isArray(data.items)?data.items:[];
-          const first=arr[0]||{};
-          lines.push('[SHAPE] listings: items array='+(Array.isArray(data&&data.items))+'; first item keys='+Object.keys(first).slice(0,35).join(',')+'; owner field='+(Object.prototype.hasOwnProperty.call(first,'owner'))+'; sellerUsername field='+(Object.prototype.hasOwnProperty.call(first,'sellerUsername'))+'; tag field='+(Object.prototype.hasOwnProperty.call(first,'tag'))+'; error='+(data&&data.error?String(data.error).slice(0,120):'none'));
-        }
-      } catch(e) { lines.push('[SHAPE ERROR] '+path+': '+String(e&&e.message||e)); }
-    }
-    lines.push('[PAGE] listing grid element='+(!!document.getElementById('global-items-grid'))+'; current grid children='+(document.getElementById('global-items-grid')?.children.length ?? 'n/a')+'; page JS errors='+(window.__sfDiagErrors||[]).length);
-    if(window.__sfDiagErrors&&window.__sfDiagErrors.length) lines.push('[JS ERRORS] '+window.__sfDiagErrors.slice(0,8).join(' || '));
-    const failures=lines.filter(x=>x.startsWith('[HTTP')||x.startsWith('[NETWORK ERROR]')||x.startsWith('[SHAPE ERROR]')).length;
-    lines.push('',failures?'Conclusion: at least one endpoint check failed; send this report for diagnosis.':'Conclusion: endpoint checks completed; shape checks may reveal why rendering has no data.');
-    report=lines.join('\n'); logEl.textContent=report; statusEl.textContent=failures?'Есть ошибки — скопируй результат и отправь его.':'Проверки завершены. Если данные всё равно не видны, отправь результат.'; runBtn.disabled=false;
-  });
-})();
-</script>
 
 </body>
 </html>
