@@ -3501,6 +3501,29 @@
   #item-picker-modal .item-picker-cat-title { display:none !important; }
   #item-picker-modal #item-picker-list { flex:1 1 0 !important; min-height:0 !important; max-height:none !important; margin:2px 0 0 !important; overflow-y:auto !important; }
 }
+
+/* Landscape mobile fixes: also cover tablets/browser layouts whose CSS width exceeds 760px. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .header-right { gap: 2px !important; min-width: 0 !important; }
+  .header-right .social-link,
+  .header-right .top-link.discord-link { padding: 3px 3px !important; margin: 0 !important; }
+  .header-right .social-link svg,
+  .header-right .discord-link svg { width: 18px !important; height: 18px !important; }
+  .header-right .auth-buttons { margin-left: 3px !important; }
+  .header-right > * { flex-shrink: 0; }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  #item-picker-modal { padding: 0 !important; align-items: center !important; justify-content: center !important; }
+  #item-picker-modal .item-picker-content { width: 88vw !important; max-width: 900px !important; height: 88dvh !important; max-height: 88dvh !important; padding: 5px 8px !important; box-sizing: border-box !important; overflow: hidden !important; }
+  #item-picker-modal .item-picker-body { display: flex !important; flex-direction: column !important; gap: 3px !important; min-height: 0 !important; overflow: hidden !important; }
+  #item-picker-modal #item-picker-cats { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; grid-auto-rows: minmax(0, auto) !important; gap: 3px !important; width: 100% !important; max-height: none !important; height: auto !important; overflow: visible !important; flex: 0 0 auto !important; padding: 0 0 3px !important; margin: 0 !important; align-content: start !important; }
+  #item-picker-modal #item-picker-cats .item-picker-cat { min-width: 0 !important; min-height: 21px !important; height: auto !important; padding: 2px !important; gap: 2px !important; font-size: 10px !important; line-height: 1.05 !important; white-space: normal !important; overflow-wrap: anywhere !important; }
+  #item-picker-modal .item-picker-right { display: flex !important; flex: 1 1 auto !important; min-height: 0 !important; flex-direction: column !important; gap: 2px !important; overflow: hidden !important; }
+  #item-picker-modal .item-picker-custom { position: relative !important; display: flex !important; flex-direction: row !important; align-items: center !important; flex: 0 0 auto !important; width: 100% !important; gap: 5px !important; margin: 0 !important; padding: 0 !important; }
+  #item-picker-modal .item-picker-filter-toggle { display: inline-flex !important; }
+  #item-picker-modal .item-picker-filter-menu { position: absolute !important; top: calc(100% + 5px) !important; right: 0 !important; }
+  #item-picker-modal #item-picker-list { flex: 1 1 0 !important; min-height: 0 !important; max-height: none !important; margin: 2px 0 0 !important; overflow-y: auto !important; }
+}
 </style>
 
 </head>
