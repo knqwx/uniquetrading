@@ -660,6 +660,8 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
 
         const password = passwordInput.value;
         let result;
+        let redirecting = false;
+        const redirectLoading = $('redirect-loading');
         busy = true;
         submitBtn.disabled = true;
         try {
@@ -673,14 +675,21 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
                     return;
                 }
                 if (!$('age-checkbox').checked) { showError('You must confirm that you are at least 13 years old.'); return; }
+                // Show the loading screen while the server creates the account, not just before navigation.
+                if (redirectLoading) redirectLoading.classList.add('active');
+                submitBtn.textContent = 'Creating your account…';
                 result = await api('/api/signup', { username, email, password, ageConfirmed: true });
             } else {
                 const id = mainInput.value.trim();
                 if (!id || !password) { showError('Please fill in all fields.'); return; }
+                // Show the loading screen while the server verifies the login.
+                if (redirectLoading) redirectLoading.classList.add('active');
+                submitBtn.textContent = 'Signing in…';
                 result = await api('/api/login', { id, password });
             }
 
             if (!result.ok) {
+                if (redirectLoading) redirectLoading.classList.remove('active');
                 let msg = result.data.error || 'Something went wrong. Try again.';
                 if (result.status === 401 && isLoginMode && Number.isInteger(result.data.attemptsLeft)) {
                     const n = result.data.attemptsLeft;
@@ -690,14 +699,21 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
                 return;
             }
             rememberAccount(result.data.username, !!result.data.isAdmin);
-            const redirectLoading = $('redirect-loading');
+            redirecting = true;
             if (redirectLoading) redirectLoading.classList.add('active');
             submitBtn.disabled = true;
             submitBtn.textContent = 'Opening Starfall…';
             window.location.href = 'starfall.html';
+        } catch (err) {
+            if (redirectLoading) redirectLoading.classList.remove('active');
+            showError('Could not reach the server. Please try again.');
         } finally {
             busy = false;
-            submitBtn.disabled = false;
+            if (!redirecting) {
+                if (redirectLoading) redirectLoading.classList.remove('active');
+                submitBtn.disabled = false;
+                submitBtn.textContent = isLoginMode ? 'Log in' : 'Sign up';
+            }
         }
     });
 })();
