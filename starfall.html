@@ -3233,27 +3233,62 @@
 }
 
 
-/* ===== Final mobile polish: rarity-colored category outlines and compact, centered header controls ===== */
+/* ===== Starfall rarity styling ===== */
 #offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat {
-  border: 1px solid #555 !important;
   box-sizing: border-box !important;
-  transition: border-color .16s ease, background-color .16s ease, color .16s ease;
+  border: 1.5px solid #858585 !important;
+  padding: 5px 8px !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+  transition: border-color .16s ease, background-color .16s ease, color .16s ease, box-shadow .16s ease;
 }
 #offer-cats .item-picker-cat[data-cat="All"], #item-picker-cats .item-picker-cat[data-cat="All"] { border-color: #858585 !important; }
-#offer-cats .item-picker-cat[data-cat="Uniques"], #item-picker-cats .item-picker-cat[data-cat="Uniques"] { border-color: #b66cff !important; }
-#offer-cats .item-picker-cat[data-cat="Ancients"], #item-picker-cats .item-picker-cat[data-cat="Ancients"] { border-color: #e74c5b !important; }
-#offer-cats .item-picker-cat[data-cat="Chromas"], #item-picker-cats .item-picker-cat[data-cat="Chromas"] { border-color: #dc75ff !important; }
+/* Uniques: warm amber-to-brown gradient inspired by the reference image. */
+#offer-cats .item-picker-cat[data-cat="Uniques"], #item-picker-cats .item-picker-cat[data-cat="Uniques"] {
+  border-color: #d28a36 !important;
+  background: linear-gradient(110deg, #e99b3b 0%, #c27a2b 55%, #8d541f 100%) !important;
+  color: #fffaf1 !important;
+  text-shadow: 0 1px 2px rgba(45, 24, 5, .55);
+}
+#offer-cats .item-picker-cat[data-cat="Pets"], #item-picker-cats .item-picker-cat[data-cat="Pets"] { border-color: #c8b89a !important; background-color: rgba(200,184,154,.12) !important; }
+#offer-cats .item-picker-cat[data-cat="Misc items"], #item-picker-cats .item-picker-cat[data-cat="Misc items"] { border-color: #f4f4f4 !important; }
+#offer-cats .item-picker-cat[data-cat="Uncommons"], #item-picker-cats .item-picker-cat[data-cat="Uncommons"] { border-color: #8bd8ff !important; }
+#offer-cats .item-picker-cat[data-cat="Rares"], #item-picker-cats .item-picker-cat[data-cat="Rares"] { border-color: #48c774 !important; }
+#offer-cats .item-picker-cat[data-cat="Legendaries"], #item-picker-cats .item-picker-cat[data-cat="Legendaries"] { border-color: #ff525e !important; }
+#offer-cats .item-picker-cat[data-cat="Chromas"], #item-picker-cats .item-picker-cat[data-cat="Chromas"] {
+  border: 1.5px solid transparent !important;
+  background: linear-gradient(#171923, #171923) padding-box, linear-gradient(100deg, #ff4f87, #ffb84d, #f7ed61, #5eea9b, #53cfff, #8d72ff, #ff4fcb) border-box !important;
+  background-size: 100% 100%, 300% 300% !important;
+  animation: starfall-chroma-rainbow 4s linear infinite !important;
+}
+@keyframes starfall-chroma-rainbow { 0% { background-position: 0 0, 0% 50%; } 100% { background-position: 0 0, 300% 50%; } }
+#offer-cats .item-picker-cat[data-cat="Ancients"], #item-picker-cats .item-picker-cat[data-cat="Ancients"] { border-color: #a879ff !important; }
 #offer-cats .item-picker-cat[data-cat="Godlies"], #item-picker-cats .item-picker-cat[data-cat="Godlies"] { border-color: #ff79c6 !important; }
-#offer-cats .item-picker-cat[data-cat="Legendaries"], #item-picker-cats .item-picker-cat[data-cat="Legendaries"] { border-color: #ff9d42 !important; }
-#offer-cats .item-picker-cat[data-cat="Rares"], #item-picker-cats .item-picker-cat[data-cat="Rares"] { border-color: #55a7ff !important; }
-#offer-cats .item-picker-cat[data-cat="Uncommons"], #item-picker-cats .item-picker-cat[data-cat="Uncommons"] { border-color: #65c979 !important; }
 #offer-cats .item-picker-cat[data-cat="Commons"], #item-picker-cats .item-picker-cat[data-cat="Commons"] { border-color: #a6a6a6 !important; }
 #offer-cats .item-picker-cat[data-cat="Vintages"], #item-picker-cats .item-picker-cat[data-cat="Vintages"] { border-color: #e8c95a !important; }
-#offer-cats .item-picker-cat[data-cat="Pets"], #item-picker-cats .item-picker-cat[data-cat="Pets"] { border-color: #55d4d4 !important; }
-#offer-cats .item-picker-cat[data-cat="Misc items"], #item-picker-cats .item-picker-cat[data-cat="Misc items"] { border-color: #9292a8 !important; }
-#offer-cats .item-picker-cat.active, #item-picker-cats .item-picker-cat.active {
-  box-shadow: 0 0 0 1px currentColor !important;
+#offer-cats .item-picker-cat.active, #item-picker-cats .item-picker-cat.active { box-shadow: inset 0 0 0 1px currentColor, 0 0 0 1px rgba(255,255,255,.12) !important; }
+@media (max-width: 760px) and (orientation: portrait) {
+  /* Three columns give long names and their counts enough breathing room. */
+  #offer-cats, #item-picker-cats {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+  #offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat {
+    min-width: 0 !important; width: 100% !important; min-height: 32px !important;
+    padding: 5px 6px !important; gap: 5px !important;
+    justify-content: center !important; overflow: visible !important;
+    font-size: clamp(9px, 2.8vw, 11px) !important; line-height: 1.15 !important;
+  }
+  #offer-cats .item-picker-cat span:first-child, #item-picker-cats .item-picker-cat span:first-child {
+    min-width: 0 !important; flex: 0 1 auto !important; overflow: visible !important;
+    text-overflow: clip !important; white-space: nowrap !important;
+  }
+  #offer-cats .item-picker-cat .cat-count, #item-picker-cats .item-picker-cat .cat-count {
+    flex: 0 0 auto !important; margin: 0 !important; padding: 2px 4px !important;
+    white-space: nowrap !important; font-size: 9px !important; line-height: 1.1 !important;
+  }
 }
+
 .auth-buttons .user-balance-box,
 .auth-buttons .user-profile-box,
 .auth-buttons .messages-icon-btn {
