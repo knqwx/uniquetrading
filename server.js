@@ -1,4 +1,4 @@
-// Unique Trading backend - stage 1: signup, login, sessions
+// Starfall backend - stage 1: signup, login, sessions
 // Env vars (set them in Render -> Environment):
 //   TURSO_URL    e.g. libsql://your-db.aws-eu-west-1.turso.io   (for local tests: file:local.db)
 //   TURSO_TOKEN  a NEW token (rotate the old one - it was public in the HTML files)
@@ -1360,9 +1360,9 @@ const WEBHOOK_TOLERANCE_S = 5 * 60;
 async function createCheckout(intent) {                    // returns { ref, url } from the gateway
   const form = new URLSearchParams({
     mode: 'payment', client_reference_id: intent.id, 'metadata[intentId]': intent.id,
-    success_url: `${publicUrl()}/uniquetrading.html?topup=success`, cancel_url: `${publicUrl()}/uniquetrading.html?topup=cancelled`,
+    success_url: `${publicUrl()}/starfall.html?topup=success`, cancel_url: `${publicUrl()}/starfall.html?topup=cancelled`,
     'line_items[0][quantity]': '1', 'line_items[0][price_data][currency]': intent.currency,
-    'line_items[0][price_data][unit_amount]': String(intent.amountCents), 'line_items[0][price_data][product_data][name]': 'Unique Trading wallet top-up'
+    'line_items[0][price_data][unit_amount]': String(intent.amountCents), 'line_items[0][price_data][product_data][name]': 'Starfall wallet top-up'
   });
   const r = await fetch('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST', headers: { Authorization: 'Bearer ' + stripeKey(), 'Content-Type': 'application/x-www-form-urlencoded', 'Idempotency-Key': 'topup-' + intent.id },
@@ -3234,7 +3234,7 @@ async function loadPage(file) {
   try { html = await fs.readFile(path.join(__dirname, file), 'utf8'); } catch (e) { console.warn(`Page ${file} not found next to server.js - it will not be served from here (API-only deployment?)`); return null; }
   return html.replace(/<script(?![^>]*\bsrc\s*=)(?![^>]*\bnonce\s*=)([^>]*)>/gi, (tag, attrs) => `<script${attrs} nonce="${NONCE_MARK}">`);
 }
-const PAGE_MAIN = await loadPage('uniquetrading.html');
+const PAGE_MAIN = await loadPage('starfall.html');
 const PAGE_LOGIN = await loadPage('login.html');
 const servePage = (html) => (req, res, next) => {
   if (html == null) return next();
@@ -3242,7 +3242,7 @@ const servePage = (html) => (req, res, next) => {
   res.type('html').send(html.split(NONCE_MARK).join(res.locals.cspNonce));
 };
 app.get('/', servePage(PAGE_MAIN));
-app.get('/uniquetrading.html', servePage(PAGE_MAIN));
+app.get('/starfall.html', servePage(PAGE_MAIN));
 app.get(['/login', '/login.html'], servePage(PAGE_LOGIN));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -3262,4 +3262,4 @@ app.use((err, req, res, next) => {
   try { await db.execute('CREATE TABLE IF NOT EXISTS _healthcheck (t INTEGER)'); await db.execute('DELETE FROM _healthcheck'); console.log('DB check: write OK'); } catch (e) { console.error('DB check: WRITE FAILED ->', e.message, '(is TURSO_TOKEN a read-write token?)'); }
 })();
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log('Unique Trading backend listening on ' + port));
+app.listen(port, () => console.log('Starfall backend listening on ' + port));
