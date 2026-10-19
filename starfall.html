@@ -3233,151 +3233,46 @@
 }
 
 
-/* ===== Starfall rarity styling ===== */
-#offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat {
+/* Starfall category tabs: rarity-colored outlines by default; fill only the active tab. */
+.item-picker-cat, .offer-cats .item-picker-cat {
+  background: transparent !important;
+  border: 1.5px solid var(--rarity-outline, #777) !important;
+  box-shadow: none !important;
+  padding: 9px 11px !important;
+  gap: 9px !important;
   box-sizing: border-box !important;
-  border: 1.5px solid #858585 !important;
-  padding: 5px 8px !important;
-  gap: 5px !important;
-  min-width: 0 !important;
-  transition: border-color .16s ease, background-color .16s ease, color .16s ease, box-shadow .16s ease;
 }
-#offer-cats .item-picker-cat[data-cat="All"], #item-picker-cats .item-picker-cat[data-cat="All"] { border-color: #858585 !important; }
-/* Uniques: warm amber-to-brown gradient inspired by the reference image. */
-#offer-cats .item-picker-cat[data-cat="Uniques"], #item-picker-cats .item-picker-cat[data-cat="Uniques"] {
-  border-color: #d28a36 !important;
-  background: linear-gradient(110deg, #e99b3b 0%, #c27a2b 55%, #8d541f 100%) !important;
-  color: #fffaf1 !important;
-  text-shadow: 0 1px 2px rgba(45, 24, 5, .55);
-}
-#offer-cats .item-picker-cat[data-cat="Pets"], #item-picker-cats .item-picker-cat[data-cat="Pets"] { border-color: #c8b89a !important; background-color: rgba(200,184,154,.12) !important; }
-#offer-cats .item-picker-cat[data-cat="Misc items"], #item-picker-cats .item-picker-cat[data-cat="Misc items"] { border-color: #f4f4f4 !important; }
-#offer-cats .item-picker-cat[data-cat="Uncommons"], #item-picker-cats .item-picker-cat[data-cat="Uncommons"] { border-color: #8bd8ff !important; }
-#offer-cats .item-picker-cat[data-cat="Rares"], #item-picker-cats .item-picker-cat[data-cat="Rares"] { border-color: #48c774 !important; }
-#offer-cats .item-picker-cat[data-cat="Legendaries"], #item-picker-cats .item-picker-cat[data-cat="Legendaries"] { border-color: #ff525e !important; }
-#offer-cats .item-picker-cat[data-cat="Chromas"], #item-picker-cats .item-picker-cat[data-cat="Chromas"] {
-  border: 1.5px solid transparent !important;
-  background: linear-gradient(#171923, #171923) padding-box, linear-gradient(100deg, #ff4f87, #ffb84d, #f7ed61, #5eea9b, #53cfff, #8d72ff, #ff4fcb) border-box !important;
-  background-size: 100% 100%, 300% 300% !important;
-  animation: starfall-chroma-rainbow 4s linear infinite !important;
-}
-@keyframes starfall-chroma-rainbow { 0% { background-position: 0 0, 0% 50%; } 100% { background-position: 0 0, 300% 50%; } }
-#offer-cats .item-picker-cat[data-cat="Ancients"], #item-picker-cats .item-picker-cat[data-cat="Ancients"] { border-color: #a879ff !important; }
-#offer-cats .item-picker-cat[data-cat="Godlies"], #item-picker-cats .item-picker-cat[data-cat="Godlies"] { border-color: #ff79c6 !important; }
-#offer-cats .item-picker-cat[data-cat="Commons"], #item-picker-cats .item-picker-cat[data-cat="Commons"] { border-color: #a6a6a6 !important; }
-#offer-cats .item-picker-cat[data-cat="Vintages"], #item-picker-cats .item-picker-cat[data-cat="Vintages"] { border-color: #e8c95a !important; }
-#offer-cats .item-picker-cat.active, #item-picker-cats .item-picker-cat.active { box-shadow: inset 0 0 0 1px currentColor, 0 0 0 1px rgba(255,255,255,.12) !important; }
-@media (max-width: 760px) and (orientation: portrait) {
-  /* Three columns give long names and their counts enough breathing room. */
-  #offer-cats, #item-picker-cats {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 6px !important;
-  }
-  #offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat {
-    min-width: 0 !important; width: 100% !important; min-height: 32px !important;
-    padding: 5px 6px !important; gap: 5px !important;
-    justify-content: center !important; overflow: visible !important;
-    font-size: clamp(9px, 2.8vw, 11px) !important; line-height: 1.15 !important;
-  }
-  #offer-cats .item-picker-cat span:first-child, #item-picker-cats .item-picker-cat span:first-child {
-    min-width: 0 !important; flex: 0 1 auto !important; overflow: visible !important;
-    text-overflow: clip !important; white-space: nowrap !important;
-  }
-  #offer-cats .item-picker-cat .cat-count, #item-picker-cats .item-picker-cat .cat-count {
-    flex: 0 0 auto !important; margin: 0 !important; padding: 2px 4px !important;
-    white-space: nowrap !important; font-size: 9px !important; line-height: 1.1 !important;
-  }
-}
-
-.auth-buttons .user-balance-box,
-.auth-buttons .user-profile-box,
-.auth-buttons .messages-icon-btn {
-  box-sizing: border-box !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-.auth-buttons .user-balance-box {
-  min-height: 36px !important;
-  padding: 6px 10px !important;
-  gap: 6px !important;
-}
-.auth-buttons .user-balance-box svg {
-  display: block !important;
+.item-picker-cat .cat-count {
+  margin-left: auto !important;
   flex: 0 0 auto !important;
-  width: 15px !important;
-  height: 15px !important;
-  margin: 0 !important;
+  background: rgba(0,0,0,.32) !important;
+  padding: 2px 6px !important;
 }
-.auth-buttons .messages-icon-btn {
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px !important;
-  min-height: 36px !important;
-  padding: 0 !important;
-  display: inline-flex !important;
+.item-picker-cat.active {
+  background: var(--rarity-fill, rgba(255,255,255,.12)) !important;
+  border-color: var(--rarity-outline, #aaa) !important;
+  box-shadow: none !important;
+  color: #fff !important;
 }
-.auth-buttons .messages-icon-btn svg {
-  display: block !important;
-  width: 16px !important;
-  height: 16px !important;
-  margin: 0 !important;
-  flex: 0 0 auto !important;
-}
-.auth-buttons .user-profile-box {
-  min-height: 36px !important;
-  padding: 3px 9px 3px 3px !important;
-  gap: 7px !important;
-}
-.auth-buttons .user-profile-box .user-avatar {
-  display: flex !important;
-  flex: 0 0 29px !important;
-  width: 29px !important;
-  height: 29px !important;
-  min-width: 29px !important;
-  min-height: 29px !important;
-  margin: 0 !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-sizing: border-box !important;
-}
-.auth-buttons .user-profile-box .user-name { align-self: center !important; line-height: 1.15 !important; }
-@media (max-width: 760px) and (orientation: portrait) {
-  /* 12 category buttons fit in a tidy 4-column × 3-row grid. */
-  #offer-cats, #item-picker-cats {
-    display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    grid-auto-rows: minmax(29px, auto) !important;
-    gap: 4px !important;
-    align-items: stretch !important;
-    justify-items: stretch !important;
-  }
-  #offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat {
-    width: 100% !important;
-    min-width: 0 !important;
-    min-height: 29px !important;
-    padding: 4px 2px !important;
-    gap: 3px !important;
-    font-size: clamp(8px, 2.5vw, 10px) !important;
-    line-height: 1 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    justify-content: center !important;
-  }
-  #offer-cats .item-picker-cat span:first-child, #item-picker-cats .item-picker-cat span:first-child {
-    min-width: 0 !important;
-    overflow: hidden !important;
-    text-overflow: clip !important;
-    white-space: nowrap !important;
-  }
-  #offer-cats .item-picker-cat .cat-count, #item-picker-cats .item-picker-cat .cat-count {
-    font-size: 9px !important;
-    padding: 1px 3px !important;
-  }
-  .auth-buttons .user-balance-box { min-height: 33px !important; padding: 5px 7px !important; gap: 4px !important; font-size: 12px !important; }
-  .auth-buttons .user-balance-amount { font-size: 13px !important; }
-  .auth-buttons .messages-icon-btn { width: 33px !important; height: 33px !important; min-width: 33px !important; min-height: 33px !important; }
-  .auth-buttons .user-profile-box { min-height: 33px !important; padding: 2px !important; gap: 0 !important; }
-  .auth-buttons .user-profile-box .user-avatar { width: 28px !important; height: 28px !important; min-width: 28px !important; min-height: 28px !important; flex-basis: 28px !important; }
+#offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat { color:#e7e7e7; }
+.item-picker-cat[data-category="Uniques"], .item-picker-cat[data-cat="Uniques"] { --rarity-outline:#d58a32; --rarity-fill:linear-gradient(110deg,#e89b3d,#9a591b); }
+.item-picker-cat[data-category="Pets"], .item-picker-cat[data-cat="Pets"] { --rarity-outline:#d7c3a0; --rarity-fill:rgba(215,195,160,.2); }
+.item-picker-cat[data-category="Misc items"], .item-picker-cat[data-cat="Misc items"] { --rarity-outline:#f4f4f4; --rarity-fill:rgba(255,255,255,.15); }
+.item-picker-cat[data-category="Uncommons"], .item-picker-cat[data-cat="Uncommons"] { --rarity-outline:#8edcff; --rarity-fill:rgba(142,220,255,.18); }
+.item-picker-cat[data-category="Rares"], .item-picker-cat[data-cat="Rares"] { --rarity-outline:#43d17a; --rarity-fill:rgba(67,209,122,.18); }
+.item-picker-cat[data-category="Legendaries"], .item-picker-cat[data-cat="Legendaries"] { --rarity-outline:#ff6262; --rarity-fill:rgba(255,98,98,.18); }
+.item-picker-cat[data-category="Ancients"], .item-picker-cat[data-cat="Ancients"] { --rarity-outline:#b77aff; --rarity-fill:rgba(183,122,255,.2); }
+.item-picker-cat[data-category="Chromas"], .item-picker-cat[data-cat="Chromas"] { --rarity-outline:transparent; --rarity-fill:linear-gradient(100deg,rgba(255,0,0,.27),rgba(255,130,0,.27),rgba(255,235,0,.27),rgba(0,220,70,.27),rgba(0,190,255,.27),rgba(65,70,255,.27),rgba(190,0,255,.27)); position:relative; isolation:isolate; }
+.item-picker-cat[data-category="Chromas"]::before, .item-picker-cat[data-cat="Chromas"]::before { content:""; position:absolute; inset:-1.5px; border-radius:inherit; padding:1.5px; background:linear-gradient(90deg,#ff2525,#ff8a00,#ffe600,#36df48,#00d7ff,#385bff,#b52cff,#ff2525); background-size:300% 100%; animation:starfallChromaRainbow 4s linear infinite; -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; z-index:-1; }
+@keyframes starfallChromaRainbow { to { background-position:300% 0; } }
+@media (max-width:760px) and (orientation:portrait) {
+  /* Keep the search field above the category/item list on tall phone layouts. */
+  #item-picker-modal .item-picker-body, #offer-modal .item-picker-body { display:flex !important; flex-direction:column !important; }
+  #item-picker-modal .item-picker-right, #offer-modal .item-picker-right { display:flex !important; flex-direction:column !important; min-width:0 !important; }
+  #item-picker-modal .item-picker-cat-title, #offer-modal .item-picker-cat-title { order:0; }
+  #item-picker-modal .item-picker-custom, #offer-modal .item-picker-custom { order:1; width:100% !important; margin:0 0 8px !important; }
+  #item-picker-modal .item-picker-list, #offer-modal .item-picker-list { order:2; }
+  #item-picker-modal .item-picker-cats, #offer-modal .item-picker-cats { order:0; }
 }
 
 </style>
