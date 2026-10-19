@@ -3535,6 +3535,38 @@
   #offer-modal #offer-sort [data-sort] { display:flex !important; width:100% !important; min-height:30px !important; justify-content:flex-start !important; text-align:left !important; padding:6px 9px !important; border:0 !important; border-radius:6px !important; background:transparent !important; color:#ddd !important; }
   #offer-modal #offer-sort [data-sort].active, #offer-modal #offer-sort [data-sort]:hover { background:#315b9c !important; color:#fff !important; }
 }
+
+/* Landscape mobile-only refinements: larger filter/social controls and fully visible categories */
+@media (orientation: landscape) and (max-height: 600px) {
+  #item-picker-modal #item-picker-cats {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    grid-auto-rows: minmax(20px, auto) !important;
+    gap: 2px 4px !important;
+    max-height: none !important; height: auto !important; overflow: visible !important;
+    flex: 0 0 auto !important; align-content: start !important; padding: 0 0 2px !important;
+  }
+  #item-picker-modal #item-picker-cats .item-picker-cat {
+    min-width: 0 !important; min-height: 20px !important; height: auto !important;
+    padding: 2px 4px !important; font-size: 10px !important; line-height: 1.05 !important;
+    white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+  }
+  #item-picker-modal .item-picker-filter-toggle {
+    flex: 0 0 44px !important; width: 44px !important; min-width: 44px !important;
+    height: 40px !important; min-height: 40px !important; padding: 0 !important;
+  }
+  #item-picker-modal .item-picker-filter-toggle svg { width: 24px !important; height: 24px !important; }
+  .header-right { gap: 4px !important; }
+  .header-right .social-link, .header-right .top-link.discord-link {
+    padding: 5px 6px !important; margin: 0 !important; min-width: 30px !important; min-height: 30px !important;
+  }
+  .header-right .social-link svg, .header-right .discord-link svg {
+    width: 22px !important; height: 22px !important;
+  }
+  .header-right .auth-buttons { margin-left: 5px !important; }
+}
+
 </style>
 
 </head>
