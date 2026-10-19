@@ -3524,6 +3524,17 @@
   #item-picker-modal .item-picker-filter-menu { position: absolute !important; top: calc(100% + 5px) !important; right: 0 !important; }
   #item-picker-modal #item-picker-list { flex: 1 1 0 !important; min-height: 0 !important; max-height: none !important; margin: 2px 0 0 !important; overflow-y: auto !important; }
 }
+
+/* Final override: horizontal-phone Select Item sorting must be a single dropdown button. */
+@media (orientation: landscape) and (max-height: 600px) {
+  #offer-modal .item-picker-toolbar { position:relative !important; overflow:visible !important; }
+  #offer-modal .offer-search-row { position:relative !important; display:flex !important; align-items:center !important; gap:5px !important; overflow:visible !important; }
+  #offer-modal #offer-filters-toggle { display:inline-flex !important; flex:0 0 34px !important; width:34px !important; height:34px !important; min-height:34px !important; align-items:center !important; justify-content:center !important; padding:0 !important; }
+  #offer-modal #offer-sort { display:none !important; position:absolute !important; top:calc(100% + 5px) !important; right:0 !important; left:auto !important; width:120px !important; min-width:120px !important; grid-template-columns:1fr !important; flex-direction:column !important; gap:3px !important; padding:5px !important; margin:0 !important; border:1px solid #414141 !important; border-radius:9px !important; background:#171717 !important; box-shadow:0 8px 24px #0009 !important; z-index:99999 !important; opacity:0 !important; visibility:hidden !important; transform:translateY(-7px) scale(.98) !important; transform-origin:top right !important; transition:opacity .16s ease, transform .16s ease, visibility .16s ease !important; pointer-events:none !important; }
+  #offer-modal #offer-sort.filters-open { display:flex !important; opacity:1 !important; visibility:visible !important; transform:translateY(0) scale(1) !important; pointer-events:auto !important; }
+  #offer-modal #offer-sort [data-sort] { display:flex !important; width:100% !important; min-height:30px !important; justify-content:flex-start !important; text-align:left !important; padding:6px 9px !important; border:0 !important; border-radius:6px !important; background:transparent !important; color:#ddd !important; }
+  #offer-modal #offer-sort [data-sort].active, #offer-modal #offer-sort [data-sort]:hover { background:#315b9c !important; color:#fff !important; }
+}
 </style>
 
 </head>
