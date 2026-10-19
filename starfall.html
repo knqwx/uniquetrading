@@ -3365,8 +3365,6 @@
   #offer-modal #offer-list { margin-top:0 !important; padding-top:0 !important; }
 }
 
-</style>
-
 /* Final mobile picker alignment fixes */
 @media (max-width:760px) and (orientation:portrait) {
   #offer-modal .item-picker-toolbar { position:relative !important; padding-top:0 !important; margin-top:0 !important; }
@@ -3385,7 +3383,31 @@
   #item-picker-modal .item-picker-right { gap:0 !important; padding-top:0 !important; margin-top:0 !important; }
   #item-picker-modal #item-picker-title { margin-bottom:5px !important; }
   #item-picker-modal #item-picker-list { margin-top:0 !important; padding-top:0 !important; }
+
+  /* Keep the sorting menu anchored to the search/filter row. */
+  #offer-modal .item-picker-toolbar { position:relative !important; display:block !important; flex:0 0 auto !important; overflow:visible !important; }
+  #offer-modal .offer-search-row { position:relative !important; display:flex !important; align-items:center !important; width:100% !important; min-height:42px !important; }
+  #offer-modal #offer-sort.filters-open { position:absolute !important; top:46px !important; right:0 !important; left:auto !important; width:148px !important; z-index:2000 !important; }
+
+  /* Collapse excess vertical space so categories, search, and item results stay near the top. */
+  #offer-modal .item-picker-body { display:flex !important; flex-direction:column !important; gap:2px !important; min-height:0 !important; overflow:visible !important; }
+  #offer-modal .item-picker-right { display:flex !important; flex-direction:column !important; gap:0 !important; min-height:0 !important; flex:1 1 auto !important; overflow:hidden !important; }
+  #offer-modal #offer-cat-title { display:none !important; margin:0 !important; padding:0 !important; }
+  #offer-modal #offer-cats { flex:0 0 auto !important; margin:0 0 2px !important; padding:0 0 2px !important; }
+  #offer-modal .item-picker-custom { margin:0 !important; padding:0 !important; }
+  #offer-modal #offer-list { flex:1 1 0 !important; min-height:0 !important; margin:2px 0 0 !important; padding:2px 2px 8px !important; }
+
+  #item-picker-modal .item-picker-body { display:flex !important; flex-direction:column !important; gap:2px !important; min-height:0 !important; overflow:hidden !important; flex:1 1 auto !important; }
+  #item-picker-modal #item-picker-cats { flex:0 0 auto !important; margin:0 0 2px !important; padding:0 0 2px !important; }
+  #item-picker-modal .item-picker-right { display:flex !important; flex-direction:column !important; flex:1 1 auto !important; min-height:0 !important; gap:0 !important; overflow:hidden !important; }
+  #item-picker-modal .item-picker-cat-title { display:none !important; margin:0 !important; padding:0 !important; }
+  #item-picker-modal .item-picker-custom { flex:0 0 auto !important; margin:0 !important; padding:0 !important; }
+  #item-picker-modal #item-picker-list { flex:1 1 0 !important; min-height:0 !important; margin:2px 0 0 !important; padding:2px 2px 8px !important; }
+  #offer-modal .item-picker-content, #item-picker-modal .item-picker-content { justify-content:flex-start !important; }
+  #offer-modal #offer-title, #item-picker-modal #item-picker-title { flex:0 0 auto !important; margin:0 0 5px !important; }
 }
+
+</style>
 
 </head>
 <body>
