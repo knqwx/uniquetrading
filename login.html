@@ -393,8 +393,15 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const tok = localStorage.getItem('ut_token');
         opts = Object.assign({}, opts);
         { const h = new Headers(opts.headers || {}); h.set('X-UT-Page', '2'); if (tok) h.set('X-Session', tok); opts.headers = h; }
-        const done = (r) => {
-          if (u.indexOf('/api/login') !== -1 || u.indexOf('/api/signup') !== -1) { r.clone().json().then(j => { if (j && j.token) localStorage.setItem('ut_token', j.token); }).catch(() => {}); }
+        const done = async (r) => {
+          // Persist the session token before the login handler can redirect to starfall.html.
+          // Saving it in a detached .then() can race with navigation on slower devices.
+          if (u.indexOf('/api/login') !== -1 || u.indexOf('/api/signup') !== -1) {
+            try {
+              const j = await r.clone().json();
+              if (j && j.token) localStorage.setItem('ut_token', j.token);
+            } catch (e) {}
+          }
           if (/\/api\/logout/.test(u)) localStorage.removeItem('ut_token');
           return r;
         };
