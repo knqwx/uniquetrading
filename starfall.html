@@ -3585,6 +3585,26 @@
 #checkout-overlay.active{display:flex !important}.cart-qty-btn:disabled{opacity:.35;cursor:not-allowed}.cart-max-label{font-size:10px;font-weight:800;color:#ffb56d;letter-spacing:.04em}
 </style>
 
+
+<style>
+/* Fix Select Item category list clipping: allow the left category column to scroll fully. */
+@media (min-width: 761px) {
+  #item-picker-modal .item-picker-content { min-height: 0 !important; }
+  #item-picker-modal .item-picker-body { min-height: 0 !important; overflow: hidden !important; }
+  #item-picker-modal #item-picker-cats {
+    min-height: 0 !important;
+    max-height: min(68vh, calc(100% - 72px)) !important;
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    flex: 0 1 230px !important;
+    align-self: stretch !important;
+    padding-bottom: 10px !important;
+    overscroll-behavior-y: contain !important;
+    scroll-padding-bottom: 10px !important;
+  }
+}
+</style>
 </head>
 <body>
 
@@ -10663,21 +10683,3 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
 </body>
 </html>
-
-/* Fix Select Item category list clipping: allow the left category column to scroll fully. */
-@media (min-width: 761px) {
-  #item-picker-modal .item-picker-content { min-height: 0 !important; }
-  #item-picker-modal .item-picker-body { min-height: 0 !important; overflow: hidden !important; }
-  #item-picker-modal #item-picker-cats {
-    min-height: 0 !important;
-    max-height: min(68vh, calc(100% - 72px)) !important;
-    height: auto !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    flex: 0 1 230px !important;
-    align-self: stretch !important;
-    padding-bottom: 10px !important;
-    overscroll-behavior-y: contain !important;
-    scroll-padding-bottom: 10px !important;
-  }
-}
