@@ -3567,6 +3567,40 @@
   .header-right .auth-buttons { margin-left: 5px !important; }
 }
 
+
+
+/* Fix Select Item category list clipping on short landscape screens: keep the category column independently scrollable. */
+@media (orientation: landscape) and (max-height: 800px) {
+  #item-picker-modal .item-picker-content {
+    min-height: 0 !important;
+    box-sizing: border-box !important;
+  }
+  #item-picker-modal .item-picker-body {
+    display: flex !important;
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+    align-items: stretch !important;
+  }
+  #item-picker-modal #item-picker-cats {
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    flex: 0 1 230px !important;
+    align-self: stretch !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 24px !important;
+    scroll-padding-bottom: 24px !important;
+    box-sizing: border-box !important;
+  }
+  #item-picker-modal .item-picker-right {
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+  }
+}
 </style>
 
 </head>
@@ -10530,21 +10564,3 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     </script>
 </body>
 </html>
-
-/* Fix Select Item category list clipping: allow the left category column to scroll fully. */
-@media (min-width: 761px) {
-  #item-picker-modal .item-picker-content { min-height: 0 !important; }
-  #item-picker-modal .item-picker-body { min-height: 0 !important; overflow: hidden !important; }
-  #item-picker-modal #item-picker-cats {
-    min-height: 0 !important;
-    max-height: min(68vh, calc(100% - 72px)) !important;
-    height: auto !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    flex: 0 1 230px !important;
-    align-self: stretch !important;
-    padding-bottom: 10px !important;
-    overscroll-behavior-y: contain !important;
-    scroll-padding-bottom: 10px !important;
-  }
-}
