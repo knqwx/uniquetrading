@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unique Trading - Auth</title>
+    <title>Starfall - Auth</title>
     <!-- Иконка сайта -->
-    <link rel="icon" href="unique.png" type="image/png">
+    <link rel="icon" href="starfall.png" type="image/png">
     <!-- Подключаем современный шрифт Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -245,13 +245,37 @@
         @media (max-width: 360px) { .pw-rules { grid-template-columns: 1fr; } }
         @media (max-height: 520px) and (orientation: landscape) { body { padding: 8px; } .auth-container { padding-top: 16px; padding-bottom: 16px; } .brand-header { margin-bottom: 10px; } }
         @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+        .redirect-loading {
+            position: fixed; inset: 0; z-index: 1000;
+            display: none; align-items: center; justify-content: center;
+            flex-direction: column; gap: 16px; padding: 24px;
+            background: rgba(18, 18, 18, .97); color: #fff;
+            text-align: center;
+        }
+        .redirect-loading.active { display: flex; }
+        .redirect-spinner {
+            width: 46px; height: 46px; border-radius: 50%;
+            border: 4px solid #343434; border-top-color: #ff7300;
+            animation: starfall-spin .8s linear infinite;
+        }
+        .redirect-loading strong { font-size: 17px; font-weight: 600; }
+        .redirect-loading span { color: #999; font-size: 13px; }
+        @keyframes starfall-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) { .redirect-spinner { animation-duration: 2s; } }
+
     </style>
 </head>
 <body>
 
+    <div class="redirect-loading" id="redirect-loading" role="status" aria-live="polite">
+        <div class="redirect-spinner" aria-hidden="true"></div>
+        <strong>Welcome to Starfall</strong>
+        <span>Signing you in and opening the marketplace…</span>
+    </div>
+
     <div class="auth-container" id="container">
         <div class="brand-header">
-            <img src="unique.png" alt="Unique Logo" class="brand-icon">
+            <img src="starfall.png" alt="Starfall Logo" class="brand-icon">
             <h2 id="form-title">Log in</h2>
         </div>
         
@@ -317,13 +341,13 @@
             <div class="terms-text"><b>Last updated: October 4, 2026</b>
 
 <b>1. Acceptance</b>
-By using Unique Trading you agree to these Terms of Service. If you do not agree, do not use the platform.
+By using Starfall you agree to these Terms of Service. If you do not agree, do not use the platform.
 
 <b>2. Minimum age</b>
-You must be at least 13 years old to use Unique Trading. If you are under the age of majority where you live, you must have permission from a parent or guardian. We may remove any account that belongs to someone under 13.
+You must be at least 13 years old to use Starfall. If you are under the age of majority where you live, you must have permission from a parent or guardian. We may remove any account that belongs to someone under 13.
 
 <b>3. Not affiliated with Roblox or any game developer</b>
-Unique Trading is an independent community marketplace. It is not affiliated with, endorsed by or sponsored by Roblox Corporation or any other game developer or publisher. All game names, item names, logos and images belong to their respective owners and are used only to identify items.
+Starfall is an independent community marketplace. It is not affiliated with, endorsed by or sponsored by Roblox Corporation or any other game developer or publisher. All game names, item names, logos and images belong to their respective owners and are used only to identify items.
 
 <b>4. Accounts</b>
 Give accurate information and keep your password safe. You are responsible for everything that happens on your account. One person may have one account. Only one account can be created per day. Do not use extra accounts to avoid a ban, a timeout or a rate limit.
@@ -347,7 +371,7 @@ Sending messages too quickly causes an automatic timeout. The first timeout last
 You can report items, users, middlemen and deals. Staff may remove listings, hold money, time out or ban accounts (temporarily or permanently) to protect the community. Banned users can send an appeal. Permanently banned accounts are deleted after 30 days.
 
 <b>11. No guarantees</b>
-The platform is provided as is. Trading virtual items carries risk and virtual items have no guaranteed real-world value. Unique Trading is not responsible for losses caused by other users, game updates, game bans or changes made by the game developers.
+The platform is provided as is. Trading virtual items carries risk and virtual items have no guaranteed real-world value. Starfall is not responsible for losses caused by other users, game updates, game bans or changes made by the game developers.
 
 <b>12. Changes</b>
 We may update these Terms at any time. Using the platform after a change means you accept the new Terms.
@@ -666,7 +690,11 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
                 return;
             }
             rememberAccount(result.data.username, !!result.data.isAdmin);
-            window.location.href = 'uniquetrading.html';
+            const redirectLoading = $('redirect-loading');
+            if (redirectLoading) redirectLoading.classList.add('active');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Opening Starfall…';
+            window.location.href = 'starfall.html';
         } finally {
             busy = false;
             submitBtn.disabled = false;
