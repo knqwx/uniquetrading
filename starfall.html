@@ -3567,6 +3567,18 @@
   .header-right .auth-buttons { margin-left: 5px !important; }
 }
 
+
+
+/* Shopping cart */
+.cart-fab{position:fixed;right:20px;bottom:22px;z-index:1200;display:flex;align-items:center;gap:9px;padding:12px 16px;border:1px solid #ff9b43;border-radius:999px;background:#ff7300;color:#fff;font:700 14px Inter,sans-serif;box-shadow:0 8px 26px #0007;cursor:pointer}
+.cart-fab svg{width:20px;height:20px;flex:none}.cart-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#202020;color:#fff;font-size:12px}
+.cart-add-btn{width:100%;margin-top:10px;padding:9px 10px;border:1px solid #ff8d2b;border-radius:8px;background:rgba(255,115,0,.12);color:#ffad69;font:700 13px Inter,sans-serif;cursor:pointer}.cart-add-btn:hover{background:#ff7300;color:#fff}
+#cart-overlay{position:fixed;inset:0;z-index:20000;display:none;align-items:center;justify-content:center;padding:16px;background:#000a}#cart-overlay.active{display:flex}
+.cart-panel{width:min(620px,100%);max-height:min(82vh,760px);display:flex;flex-direction:column;overflow:hidden;border:1px solid #414141;border-radius:16px;background:#202020;color:#f4f4f4;box-shadow:0 20px 70px #0009}
+.cart-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #393939}.cart-head h2{margin:0;font-size:22px}.cart-close{border:0;background:transparent;color:#bbb;font-size:28px;cursor:pointer;line-height:1}
+.cart-items{padding:12px 18px;overflow:auto;display:flex;flex-direction:column;gap:10px}.cart-empty{padding:36px 12px;text-align:center;color:#aaa}.cart-row{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px;border:1px solid #383838;border-radius:12px;background:#262626}.cart-row img{width:64px;height:64px;object-fit:contain;border-radius:8px;background:#1b1b1b}.cart-row-name{font-weight:700;overflow-wrap:anywhere}.cart-row-meta{margin-top:4px;color:#aaa;font-size:12px}.cart-row-price{margin-top:5px;color:#ff9a43;font-weight:700}.cart-row-controls{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:7px}.cart-qty-btn,.cart-remove-btn{border:1px solid #4a4a4a;border-radius:6px;background:#303030;color:#fff;min-width:27px;height:27px;cursor:pointer}.cart-remove-btn{padding:0 8px;color:#ff9a9a}.cart-foot{padding:16px 20px;border-top:1px solid #393939;display:flex;align-items:center;justify-content:space-between;gap:12px}.cart-total-label{color:#aaa;font-size:12px}.cart-total{font-size:23px;font-weight:800;color:#ff9a43}.cart-note{padding:0 20px 16px;color:#9b9b9b;font-size:12px}.detail-cart-btn{width:100%;margin:-12px 0 25px;padding:13px 16px;border:1px solid #ff8d2b;border-radius:10px;background:rgba(255,115,0,.12);color:#ffad69;font:700 16px Inter,sans-serif;cursor:pointer}.detail-cart-btn:hover{background:#ff7300;color:#fff}
+@media(max-width:600px){.cart-fab{right:12px;bottom:14px;padding:10px 12px}.cart-panel{max-height:88vh}.cart-row{grid-template-columns:50px minmax(0,1fr) auto;gap:8px;padding:8px}.cart-row img{width:50px;height:50px}.cart-head{padding:14px}.cart-items{padding:10px}.cart-foot{padding:13px 14px}}
+
 </style>
 
 </head>
@@ -3983,6 +3995,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 <div class="detail-time-val" id="detail-time-val" title="Click to toggle date format">Just now</div>
                 
                 <button class="buy-item-action-btn" id="buy-item-action-btn">Contact Seller</button>
+                <button class="detail-cart-btn" id="detail-cart-btn" type="button" style="display:none;">＋ Add to cart</button>
                 <button class="report-item-btn" id="report-item-btn" type="button" style="display:none;">Report item</button>
 
                 <div class="detail-seller-info" id="detail-seller-box" title="View Profile">
@@ -5190,6 +5203,70 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const buyItemActionBtn = document.getElementById('buy-item-action-btn');
 
         const globalItemsGrid = document.getElementById('global-items-grid');
+
+        // Local shopping cart: keeps selected selling listings on this device. Checkout/payment is not implied.
+        const cartFab = document.getElementById('cart-fab');
+        const cartOverlay = document.getElementById('cart-overlay');
+        const cartItemsEl = document.getElementById('cart-items');
+        const cartCountEl = document.getElementById('cart-count');
+        const cartTotalEl = document.getElementById('cart-total');
+        const detailCartBtn = document.getElementById('detail-cart-btn');
+        let shoppingCart = [];
+        try { const savedCart = JSON.parse(localStorage.getItem('starfall_cart_v1') || '[]'); if (Array.isArray(savedCart)) shoppingCart = savedCart.filter(x => x && x.id != null && x.tag === 'selling' && Number(x.price) >= 0).map(x => ({...x, qty: Math.max(1, Math.min(99, Number(x.qty) || 1))})); } catch (_) {}
+        function saveShoppingCart() { try { localStorage.setItem('starfall_cart_v1', JSON.stringify(shoppingCart)); } catch (_) {} }
+        function cartItemKey(item) { return String(item.id) + '|' + String(item.sellerUsername || item.owner || ''); }
+        function addToCart(item) {
+            if (!item || item.tag !== 'selling') { showToast('Only items listed for sale can be added to the cart.'); return; }
+            if (currentUser && currentUser === item.sellerUsername) { showToast('You cannot add your own listing to the cart.'); return; }
+            const stock = item.stock === undefined || item.stock === null || item.stock === '' ? 1 : Math.max(0, parseInt(item.stock, 10) || 0);
+            if (stock < 1) { showToast('This item is out of stock.'); return; }
+            const key = cartItemKey(item);
+            const existing = shoppingCart.find(x => cartItemKey(x) === key);
+            if (existing) {
+                if (existing.qty >= Math.min(stock, 99)) { showToast('You have added all available stock.'); return; }
+                existing.qty += 1;
+            } else {
+                shoppingCart.push({ id:item.id, name:item.name, game:item.game || 'Murder Mystery 2', category:item.category || '', price:Number(item.price) || 0, photo:item.photo || '', sellerUsername:item.sellerUsername || item.owner || '', sellerDisplayName:item.sellerDisplayName || item.owner || '', stock, tag:'selling', qty:1 });
+            }
+            saveShoppingCart(); renderShoppingCart(); showToast(`${item.name || 'Item'} added to cart.`);
+        }
+        function renderShoppingCart() {
+            const count = shoppingCart.reduce((n,x) => n + (Number(x.qty)||1), 0);
+            cartCountEl.textContent = String(count);
+            cartFab.setAttribute('aria-label', `Open shopping cart, ${count} item${count === 1 ? '' : 's'}`);
+            cartItemsEl.innerHTML = '';
+            if (!shoppingCart.length) cartItemsEl.innerHTML = '<div class="cart-empty">Your cart is empty.<br>Open a listing and choose Add to cart.</div>';
+            let total = 0;
+            shoppingCart.forEach((item, index) => {
+                const price = Math.max(0, Number(item.price) || 0), qty = Math.max(1, Number(item.qty) || 1); total += price * qty;
+                const row = document.createElement('div'); row.className = 'cart-row';
+                const img = document.createElement('img'); img.alt = ''; img.src = safeImgSrc(item.photo) || getGameThumb(item.game); img.onerror = () => { img.onerror = null; img.src = getGameThumb(item.game); };
+                const details = document.createElement('div');
+                details.innerHTML = `<div class="cart-row-name">${escapeHtml(item.name)}</div><div class="cart-row-meta">${escapeHtml(item.game || 'Murder Mystery 2')} · Seller: ${escapeHtml(item.sellerDisplayName || item.sellerUsername || 'Unknown')}</div><div class="cart-row-price">$${fmtPriceNum(price)} each</div><div class="cart-row-controls"><button class="cart-qty-btn" type="button" data-cart-action="minus" data-cart-index="${index}" aria-label="Decrease quantity">−</button><span>${qty}</span><button class="cart-qty-btn" type="button" data-cart-action="plus" data-cart-index="${index}" aria-label="Increase quantity">+</button><button class="cart-remove-btn" type="button" data-cart-action="remove" data-cart-index="${index}">Remove</button></div>`;
+                const line = document.createElement('div'); line.style.cssText='font-weight:800;white-space:nowrap;align-self:start;padding-top:3px;'; line.textContent = '$' + fmtPriceNum(price * qty);
+                row.append(img, details, line); cartItemsEl.appendChild(row);
+            });
+            cartTotalEl.textContent = '$' + fmtPriceNum(total);
+            saveShoppingCart();
+        }
+        function openShoppingCart() { renderShoppingCart(); cartOverlay.classList.add('active'); }
+        function closeShoppingCart() { cartOverlay.classList.remove('active'); }
+        cartFab.addEventListener('click', openShoppingCart);
+        document.getElementById('cart-close').addEventListener('click', closeShoppingCart);
+        document.getElementById('cart-continue-btn').addEventListener('click', closeShoppingCart);
+        cartOverlay.addEventListener('click', e => { if (e.target === cartOverlay) closeShoppingCart(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && cartOverlay.classList.contains('active')) closeShoppingCart(); });
+        cartItemsEl.addEventListener('click', e => {
+            const btn = e.target.closest('[data-cart-action]'); if (!btn) return;
+            const i = Number(btn.dataset.cartIndex), item = shoppingCart[i]; if (!item) return;
+            if (btn.dataset.cartAction === 'remove') shoppingCart.splice(i, 1);
+            else if (btn.dataset.cartAction === 'minus') { item.qty -= 1; if (item.qty <= 0) shoppingCart.splice(i, 1); }
+            else if (btn.dataset.cartAction === 'plus') { if (item.qty >= Math.min(99, Number(item.stock) || 1)) { showToast('You have added all available stock.'); return; } item.qty += 1; }
+            renderShoppingCart();
+        });
+        detailCartBtn.addEventListener('click', () => { if (currentActiveItem) addToCart(currentActiveItem); });
+        renderShoppingCart();
+
         const sortSelect = document.getElementById('sort-select');
         const tagsGroup = document.getElementById('tags-group');
 
@@ -5664,7 +5741,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         <div class="global-item-price">${escapeHtml(priceText)}</div>
                         <div class="global-item-time" data-ts="${Number(item.id) || 0}">${escapeHtml(timeAgo)}</div>
                     </div>
+                    ${item.tag === 'selling' && !(currentUser && currentUser === item.sellerUsername) ? '<button type="button" class="cart-add-btn">＋ Add to cart</button>' : ''}
                 `;
+                const cardCartBtn = card.querySelector('.cart-add-btn');
+                if (cardCartBtn) cardCartBtn.addEventListener('click', e => { e.stopPropagation(); addToCart(item); });
 
                 card.addEventListener('click', () => {
                     openItemDetailPage(item);
@@ -6123,7 +6203,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (item.tag === 'selling') {
                 detailPriceVal.textContent = `$${fmtPriceNum(item.price)}`;
                 buyItemActionBtn.textContent = (currentUser && currentUser === item.sellerUsername) ? 'Edit Item' : 'Contact Seller';
+                detailCartBtn.style.display = (currentUser && currentUser === item.sellerUsername) ? 'none' : 'block';
+                detailCartBtn.disabled = (item.stock === undefined || item.stock === null || item.stock === '' ? 1 : (parseInt(item.stock, 10) || 0)) < 1;
+                detailCartBtn.textContent = detailCartBtn.disabled ? 'Out of stock' : '＋ Add to cart';
             } else {
+                detailCartBtn.style.display = 'none';
                 detailPriceVal.textContent = item.tag === 'specific' ? 'Specific trade' : 'Looking for Offers';
                 buyItemActionBtn.textContent = (currentUser && currentUser === item.sellerUsername) ? 'Edit Item' : 'Make an Offer';
             }
@@ -10528,6 +10612,17 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
 
     </script>
+
+<button class="cart-fab" id="cart-fab" type="button" aria-label="Open shopping cart" title="Shopping cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg><span>Cart</span><span class="cart-count" id="cart-count">0</span></button>
+<div id="cart-overlay" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+  <section class="cart-panel">
+    <div class="cart-head"><h2 id="cart-title">Shopping cart</h2><button class="cart-close" id="cart-close" type="button" aria-label="Close cart">×</button></div>
+    <div class="cart-items" id="cart-items"></div>
+    <div class="cart-foot"><div><div class="cart-total-label">Subtotal</div><div class="cart-total" id="cart-total">$0</div></div><button class="buy-item-action-btn" id="cart-continue-btn" type="button" style="width:auto;margin:0;padding:12px 18px;font-size:14px;">Continue browsing</button></div>
+    <div class="cart-note">Cart items are saved on this device. Adding to cart does not purchase an item or reserve its stock.</div>
+  </section>
+</div>
+
 </body>
 </html>
 
