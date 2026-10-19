@@ -1,4 +1,4 @@
-// Starfall backend - stage 1: signup, login, sessions
+// Unique Trading backend - stage 1: signup, login, sessions
 // Env vars (set them in Render -> Environment):
 //   TURSO_URL    e.g. libsql://your-db.aws-eu-west-1.turso.io   (for local tests: file:local.db)
 //   TURSO_TOKEN  a NEW token (rotate the old one - it was public in the HTML files)
@@ -147,7 +147,7 @@ const ipOf = (req) => {
   const ip = String(req.ip || '').trim().replace(/^::ffff:/i, '').toLowerCase();
   return ip && ip.length <= 64 && !/[\s,]/.test(ip) ? ip : '';
 };
-const ipFingerprint = (ip) => crypto.createHmac('sha256', cleanEnv(process.env.IP_HASH_SECRET || TURSO_TOKEN || 'starfall-ip-guard-change-me')).update(String(ip || '')).digest('hex');
+const ipFingerprint = (ip) => crypto.createHmac('sha256', cleanEnv(process.env.IP_HASH_SECRET || TURSO_TOKEN || 'unique-trading-ip-guard-change-me')).update(String(ip || '')).digest('hex');
 
 // ---------- small helpers used by the schema/migration code (must exist before init() runs) ----------
 // session ids and admin tokens are stored as they are (plain), as in the original version
@@ -376,6 +376,9 @@ async function init() {
   await run('CREATE INDEX IF NOT EXISTS listings_owner ON listings (ownerId, id)');
   await run('CREATE INDEX IF NOT EXISTS listings_tag_game ON listings (tag, game, id)');
   await run('CREATE INDEX IF NOT EXISTS listings_updated ON listings (updatedAt)');
+  // Per-account shopping carts: rows are owned by the authenticated user, never by the device/browser.
+  await run(`CREATE TABLE IF NOT EXISTS cart_items (userId INTEGER NOT NULL, listingId INTEGER NOT NULL, quantity INTEGER NOT NULL DEFAULT 1, updatedAt INTEGER NOT NULL, PRIMARY KEY (userId, listingId))`);
+  await run('CREATE INDEX IF NOT EXISTS cart_items_user ON cart_items (userId, updatedAt)');
 
   // ---- media: pictures as separate binary blobs served from their own URL (never base64 inside JSON) ----
   await run(`CREATE TABLE IF NOT EXISTS media (
@@ -598,8 +601,8 @@ async function checkEmail(email) {
 }
 // Names that look like the staff / the service itself. Nobody can register or rename to them (comparison ignores case, . _ - and 0/1/3/4/5/7 look-alikes).
 const RESERVED_EXACT = new Set(['admin', 'administrator', 'support', 'staff', 'moderator', 'mod', 'mods', 'middleman', 'middlemen', 'owner', 'system', 'official', 'root', 'help', 'helpdesk', 'service', 'team',
-  'security', 'billing', 'verify', 'verified', 'starfall', 'knqw', 'null', 'undefined', 'anonymous', 'sysadmin', 'superuser', 'webmaster', 'contact', 'info', 'abuse', 'postmaster', 'noreply', 'escrow']);
-const RESERVED_PREFIX = ['admin', 'administrator', 'moderator', 'middleman', 'middlemen', 'starfall', 'officialsupport'];   // "admin_john", "middleman-bob" ...
+  'security', 'billing', 'verify', 'verified', 'uniquetrading', 'knqw', 'null', 'undefined', 'anonymous', 'sysadmin', 'superuser', 'webmaster', 'contact', 'info', 'abuse', 'postmaster', 'noreply', 'escrow']);
+const RESERVED_PREFIX = ['admin', 'administrator', 'moderator', 'middleman', 'middlemen', 'uniquetrading', 'officialsupport'];   // "admin_john", "middleman-bob" ...
 const RESERVED_AFFIX = ['the', 'real', 'official', 'im', 'iam', 'mr', 'ms', 'x', 'xx'];                                          // "theadmin", "real_support", "support_official"
 const LEET = { 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't' };
 const normalizeName = (name) => String(name || '').toLowerCase().replace(/[._-]/g, '').replace(/[013457]/g, (c) => LEET[c]);
@@ -811,7 +814,7 @@ async function verifyPassword(u, password) {
 // Somebody guessing at your account from their own IP therefore cannot lock YOU out (your IP has its own counter), and the counters survive restarts.
 // Names that do not exist are counted exactly like real ones, so the lock-out cannot be used to discover accounts.
 const LOCK_AFTER = 3, LOCK_FIRST_MS = 3 * 60 * 60 * 1000, LOCK_NEXT_MS = 24 * 60 * 60 * 1000, LOCK_FORGET_MS = 7 * DAY;
-const LOCK_SECRET = cleanEnv(process.env.IP_HASH_SECRET || TURSO_TOKEN || 'starfall-ip-guard-change-me');
+const LOCK_SECRET = cleanEnv(process.env.IP_HASH_SECRET || TURSO_TOKEN || 'unique-trading-ip-guard-change-me');
 const lockKey = (scope, ip, account) => crypto.createHmac('sha256', LOCK_SECRET).update(`${scope}|${ip}|${String(account).toLowerCase()}`).digest('hex');
 const lockText = (ms) => { const h = Math.floor(ms / 3600000), m = Math.max(1, Math.ceil((ms % 3600000) / 60000)); return h > 0 ? `${h}h ${m}m` : `${m}m`; };
 async function lockoutStatus(key) {                 // { locked, lockedUntil, retryAfterMs }
@@ -998,9 +1001,8 @@ app.post('/api/signup', async (req, res) => {
     if (ip) await db.execute({ sql: 'INSERT INTO signup_log (ip, createdAt) VALUES (?, ?)', args: [ip, now] });
     trackIp(username, ip);
     res.cookie('ut_su', String(now), cookieOpts(DAY));
-    const newSid = await startSession(res, { id: newId, username, isAdmin: false });
-    const crossPage = req.headers.origin && req.headers.origin !== `${req.protocol}://${req.headers.host}`;
-    res.json({ username, ...(crossPage ? { token: newSid } : {}) });
+    await startSession(res, { id: newId, username, isAdmin: false });
+    res.json({ username });
   } catch (e) {
     console.error('signup error:', e);
     fail('Server error during registration. Try again.', 500);
@@ -1024,9 +1026,7 @@ app.post('/api/login', async (req, res) => {
     console.log(`login ok for ${u.username}: origin ${req.headers.origin || '-'}, cookie flags ${CROSS_SITE ? 'SameSite=None; Secure (cross-site)' : (IS_SECURE ? 'SameSite=Lax; Secure' : 'SameSite=Lax')}`);
     // only for a page hosted on another site: it needs the token because its cookie may be blocked
     const crossPage = req.headers.origin && req.headers.origin !== `${req.protocol}://${req.headers.host}`;
-    // GitHub Pages cannot rely on third-party cookies. Return the session token for every account role;
-    // admin privileges still require separate password elevation and are never granted by this token alone.
-    res.json({ username: String(u.username), isAdmin, ...(crossPage ? { token: newSid } : {}) });
+    res.json({ username: String(u.username), isAdmin, ...(crossPage && !isAdmin ? { token: newSid } : {}) });
   } catch (e) {
     console.error('login error:', e);
     res.status(500).json({ error: 'Server error. Try again later.' });
@@ -1363,9 +1363,9 @@ const WEBHOOK_TOLERANCE_S = 5 * 60;
 async function createCheckout(intent) {                    // returns { ref, url } from the gateway
   const form = new URLSearchParams({
     mode: 'payment', client_reference_id: intent.id, 'metadata[intentId]': intent.id,
-    success_url: `${publicUrl()}/starfall.html?topup=success`, cancel_url: `${publicUrl()}/starfall.html?topup=cancelled`,
+    success_url: `${publicUrl()}/uniquetrading.html?topup=success`, cancel_url: `${publicUrl()}/uniquetrading.html?topup=cancelled`,
     'line_items[0][quantity]': '1', 'line_items[0][price_data][currency]': intent.currency,
-    'line_items[0][price_data][unit_amount]': String(intent.amountCents), 'line_items[0][price_data][product_data][name]': 'Starfall wallet top-up'
+    'line_items[0][price_data][unit_amount]': String(intent.amountCents), 'line_items[0][price_data][product_data][name]': 'Unique Trading wallet top-up'
   });
   const r = await fetch('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST', headers: { Authorization: 'Bearer ' + stripeKey(), 'Content-Type': 'application/x-www-form-urlencoded', 'Idempotency-Key': 'topup-' + intent.id },
@@ -1920,6 +1920,47 @@ app.get('/api/admin/directory', async (req, res) => {
   const rs = await db.execute(`SELECT ${ADMIN_USER_LIST_COLS} FROM users`);
   res.setHeader('Cache-Control', 'no-store');
   res.json({ users: rs.rows.map(lightAdminUser) });
+});
+
+// Account-scoped shopping cart. Listing details and stock are always read from the database.
+app.get('/api/cart', requireUser, async (req, res) => {
+  const rs = await db.execute({ sql: `SELECT c.quantity, l.*, u.username AS owner FROM cart_items c JOIN listings l ON l.id = c.listingId JOIN users u ON u.id = l.ownerId WHERE c.userId = ? AND l.tag = 'selling' ORDER BY c.updatedAt DESC`, args: [req.userId] });
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ items: rs.rows.map(r => ({ ...mapListing(r), qty: Number(r.quantity) || 1 })) });
+});
+app.post('/api/cart/items', requireUser, async (req, res) => {
+  const id = Number(req.body && req.body.listingId);
+  if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid listing.' });
+  const rs = await db.execute({ sql: `SELECT l.*, u.username AS owner FROM listings l JOIN users u ON u.id = l.ownerId WHERE l.id = ?`, args: [id] });
+  const listing = rs.rows[0];
+  if (!listing || listing.tag !== 'selling') return res.status(404).json({ error: 'Listing is no longer available.' });
+  if (Number(listing.ownerId) === req.userId) return res.status(400).json({ error: 'You cannot add your own listing to the cart.' });
+  const stock = Math.max(0, Number(listing.stock) || 0);
+  if (stock < 1) return res.status(409).json({ error: 'This item is out of stock.' });
+  const old = await db.execute({ sql: 'SELECT quantity FROM cart_items WHERE userId = ? AND listingId = ?', args: [req.userId, id] });
+  const qty = Math.min(stock, 99, (Number(old.rows[0]?.quantity) || 0) + 1);
+  await db.execute({ sql: `INSERT INTO cart_items (userId, listingId, quantity, updatedAt) VALUES (?, ?, ?, ?) ON CONFLICT(userId, listingId) DO UPDATE SET quantity = excluded.quantity, updatedAt = excluded.updatedAt`, args: [req.userId, id, qty, Date.now()] });
+  res.json({ ok: true, quantity: qty });
+});
+app.patch('/api/cart/items/:id', requireUser, async (req, res) => {
+  const id = Number(req.params.id), quantity = Number(req.body && req.body.quantity);
+  if (!Number.isSafeInteger(id) || id <= 0 || !Number.isInteger(quantity) || quantity < 0 || quantity > 99) return res.status(400).json({ error: 'Invalid cart quantity.' });
+  const own = await db.execute({ sql: 'SELECT c.listingId, l.stock, l.tag FROM cart_items c LEFT JOIN listings l ON l.id = c.listingId WHERE c.userId = ? AND c.listingId = ?', args: [req.userId, id] });
+  if (!own.rows.length) return res.status(404).json({ error: 'Cart item not found.' });
+  if (quantity === 0) await db.execute({ sql: 'DELETE FROM cart_items WHERE userId = ? AND listingId = ?', args: [req.userId, id] });
+  else {
+    if (own.rows[0].tag !== 'selling') return res.status(409).json({ error: 'Listing is no longer for sale.' });
+    const stock = Math.max(0, Number(own.rows[0].stock) || 0);
+    if (quantity > stock) return res.status(409).json({ error: 'Quantity exceeds available stock.', stock });
+    await db.execute({ sql: 'UPDATE cart_items SET quantity = ?, updatedAt = ? WHERE userId = ? AND listingId = ?', args: [quantity, Date.now(), req.userId, id] });
+  }
+  res.json({ ok: true });
+});
+app.delete('/api/cart/items/:id', requireUser, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid listing.' });
+  await db.execute({ sql: 'DELETE FROM cart_items WHERE userId = ? AND listingId = ?', args: [req.userId, id] });
+  res.json({ ok: true });
 });
 
 // Listings of everybody (the marketplace), kept out of /api/users on purpose. Newest first, paginated with a cursor:
@@ -3243,7 +3284,7 @@ async function loadPage(file) {
   try { html = await fs.readFile(path.join(__dirname, file), 'utf8'); } catch (e) { console.warn(`Page ${file} not found next to server.js - it will not be served from here (API-only deployment?)`); return null; }
   return html.replace(/<script(?![^>]*\bsrc\s*=)(?![^>]*\bnonce\s*=)([^>]*)>/gi, (tag, attrs) => `<script${attrs} nonce="${NONCE_MARK}">`);
 }
-const PAGE_MAIN = await loadPage('starfall.html');
+const PAGE_MAIN = await loadPage('uniquetrading.html');
 const PAGE_LOGIN = await loadPage('login.html');
 const servePage = (html) => (req, res, next) => {
   if (html == null) return next();
@@ -3251,7 +3292,7 @@ const servePage = (html) => (req, res, next) => {
   res.type('html').send(html.split(NONCE_MARK).join(res.locals.cspNonce));
 };
 app.get('/', servePage(PAGE_MAIN));
-app.get('/starfall.html', servePage(PAGE_MAIN));
+app.get('/uniquetrading.html', servePage(PAGE_MAIN));
 app.get(['/login', '/login.html'], servePage(PAGE_LOGIN));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -3271,4 +3312,4 @@ app.use((err, req, res, next) => {
   try { await db.execute('CREATE TABLE IF NOT EXISTS _healthcheck (t INTEGER)'); await db.execute('DELETE FROM _healthcheck'); console.log('DB check: write OK'); } catch (e) { console.error('DB check: WRITE FAILED ->', e.message, '(is TURSO_TOKEN a read-write token?)'); }
 })();
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log('Starfall backend listening on ' + port));
+app.listen(port, () => console.log('Unique Trading backend listening on ' + port));

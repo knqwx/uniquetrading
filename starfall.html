@@ -5228,7 +5228,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         const globalItemsGrid = document.getElementById('global-items-grid');
 
-        // Local shopping cart: keeps selected selling listings on this device; checkout UI is shown separately.
+        // Cart is account-scoped on the server; never persist cart contents in browser localStorage.
         const cartFab = document.getElementById('cart-fab');
         const cartOverlay = document.getElementById('cart-overlay');
         const cartItemsEl = document.getElementById('cart-items');
@@ -5240,23 +5240,26 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const checkoutPayBtn = document.getElementById('checkout-pay-btn');
         const detailCartBtn = document.getElementById('detail-cart-btn');
         let shoppingCart = [];
-        try { const savedCart = JSON.parse(localStorage.getItem('starfall_cart_v1') || '[]'); if (Array.isArray(savedCart)) shoppingCart = savedCart.filter(x => x && x.id != null && x.tag === 'selling' && Number(x.price) >= 0).map(x => ({...x, qty: Math.max(1, Math.min(99, Number(x.qty) || 1))})); } catch (_) {}
-        function saveShoppingCart() { try { localStorage.setItem('starfall_cart_v1', JSON.stringify(shoppingCart)); } catch (_) {} }
+        let cartLoadPromise = null;
+        async function loadShoppingCart() {
+            if (cartLoadPromise) return cartLoadPromise;
+            cartLoadPromise = (async () => {
+                const out = await srv('/api/cart', 'GET', undefined, { noRedirect: true });
+                if (out.ok && Array.isArray(out.data.items)) shoppingCart = out.data.items;
+                else if (out.status === 401) shoppingCart = [];
+                else showToast(out.data.error || 'Could not load your cart.');
+                renderShoppingCart();
+            })();
+            try { await cartLoadPromise; } finally { cartLoadPromise = null; }
+        }
         function cartItemKey(item) { return String(item.id) + '|' + String(item.sellerUsername || item.owner || ''); }
-        function addToCart(item) {
+        async function addToCart(item) {
             if (!item || item.tag !== 'selling') { showToast('Only items listed for sale can be added to the cart.'); return; }
-            if (currentUser && currentUser === item.sellerUsername) { showToast('You cannot add your own listing to the cart.'); return; }
-            const stock = item.stock === undefined || item.stock === null || item.stock === '' ? 1 : Math.max(0, parseInt(item.stock, 10) || 0);
-            if (stock < 1) { showToast('This item is out of stock.'); return; }
-            const key = cartItemKey(item);
-            const existing = shoppingCart.find(x => cartItemKey(x) === key);
-            if (existing) {
-                if (existing.qty >= Math.min(stock, 99)) { showToast('You have added all available stock.'); return; }
-                existing.qty += 1;
-            } else {
-                shoppingCart.push({ id:item.id, name:item.name, game:item.game || 'Murder Mystery 2', category:item.category || '', price:Number(item.price) || 0, photo:item.photo || '', sellerUsername:item.sellerUsername || item.owner || '', sellerDisplayName:item.sellerDisplayName || item.owner || '', stock, tag:'selling', qty:1 });
-            }
-            saveShoppingCart(); renderShoppingCart(); showToast(`${item.name || 'Item'} added to cart.`);
+            if (currentUser && currentUser === (item.sellerUsername || item.owner)) { showToast('You cannot add your own listing to the cart.'); return; }
+            const out = await srv('/api/cart/items', 'POST', { listingId: item.id }, { noRedirect: true });
+            if (!out.ok) { showToast(out.data.error || 'Could not add this item to your cart.'); return; }
+            await loadShoppingCart();
+            showToast(`${item.name || 'Item'} added to cart.`);
         }
         function renderShoppingCart() {
             const count = shoppingCart.reduce((n,x) => n + (Number(x.qty)||1), 0);
@@ -5275,9 +5278,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 row.append(img, details, line); cartItemsEl.appendChild(row);
             });
             cartTotalEl.textContent = '$' + fmtPriceNum(total);
-            saveShoppingCart();
         }
-        function openShoppingCart() { renderShoppingCart(); cartOverlay.classList.add('active'); }
+        async function openShoppingCart() { await loadShoppingCart(); cartOverlay.classList.add('active'); }
         function closeShoppingCart() { cartOverlay.classList.remove('active'); }
         function openCartCheckout() {
             if (!shoppingCart.length) { showToast('Your cart is empty.'); return; }
@@ -5308,16 +5310,22 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         if (cartContinueBtn) cartContinueBtn.addEventListener('click', closeShoppingCart);
         cartOverlay.addEventListener('click', e => { if (e.target === cartOverlay) closeShoppingCart(); });
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && cartOverlay.classList.contains('active')) closeShoppingCart(); });
-        cartItemsEl.addEventListener('click', e => {
+        cartItemsEl.addEventListener('click', async e => {
             const btn = e.target.closest('[data-cart-action]'); if (!btn) return;
             const i = Number(btn.dataset.cartIndex), item = shoppingCart[i]; if (!item) return;
-            if (btn.dataset.cartAction === 'remove') shoppingCart.splice(i, 1);
-            else if (btn.dataset.cartAction === 'minus') { item.qty -= 1; if (item.qty <= 0) shoppingCart.splice(i, 1); }
-            else if (btn.dataset.cartAction === 'plus') { if (item.qty >= Math.min(99, Number(item.stock) || 1)) { showToast('You have added all available stock.'); return; } item.qty += 1; }
-            renderShoppingCart();
+            let quantity = Math.max(1, Number(item.qty) || 1);
+            if (btn.dataset.cartAction === 'remove') {
+                const out = await srv('/api/cart/items/' + encodeURIComponent(item.id), 'DELETE', undefined, { noRedirect: true });
+                if (!out.ok) { showToast(out.data.error || 'Could not remove item.'); return; }
+            } else {
+                quantity += btn.dataset.cartAction === 'plus' ? 1 : -1;
+                const out = await srv('/api/cart/items/' + encodeURIComponent(item.id), 'PATCH', { quantity: Math.max(0, quantity) }, { noRedirect: true });
+                if (!out.ok) { showToast(out.data.error || 'Could not update quantity.'); return; }
+            }
+            await loadShoppingCart();
         });
         detailCartBtn.addEventListener('click', () => { if (currentActiveItem) addToCart(currentActiveItem); });
-        renderShoppingCart();
+        loadShoppingCart();
 
         const sortSelect = document.getElementById('sort-select');
         const tagsGroup = document.getElementById('tags-group');
@@ -10671,7 +10679,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     <div class="cart-head"><h2 id="cart-title">Shopping cart</h2><button class="cart-close" id="cart-close" type="button" aria-label="Close cart">×</button></div>
     <div class="cart-items" id="cart-items"></div>
     <div class="cart-foot"><div><div class="cart-total-label">Subtotal</div><div class="cart-total" id="cart-total">$0</div></div><button class="checkout-pay" id="cart-checkout-btn" type="button">Continue to payment</button></div>
-    <div class="cart-note">Cart items are saved on this device. Items are not purchased or reserved until a supported checkout is completed.</div>
+    <div class="cart-note">Your cart is saved to your Starfall account and follows you across devices. Items are not purchased or reserved until checkout is completed.</div>
   </section>
 </div>
 <div id="checkout-overlay" role="dialog" aria-modal="true" aria-labelledby="checkout-title" style="position:fixed;inset:0;z-index:20010;display:none;align-items:center;justify-content:center;padding:16px;background:#000b;">
