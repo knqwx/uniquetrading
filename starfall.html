@@ -3128,6 +3128,33 @@
 @media (max-width: 300px) {
   .header-right > .top-link { display: none; }
 }
+
+
+/* ===== Starfall polish: negotiation sliders and mobile header/game picker alignment ===== */
+.price-range-slider-group .setting-label { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.price-range-slider-group .setting-label strong { color:#ff7300; font-size:15px; font-variant-numeric:tabular-nums; }
+.price-range-slider { display:block; width:100%; height:28px; margin:10px 0 4px; padding:0; accent-color:#ff7300; cursor:pointer; background:transparent; }
+.price-range-slider-hint { color:#999; font-size:12px; line-height:1.45; margin-top:-3px; }
+@media (max-width:760px) and (orientation:portrait) {
+  /* Let the social links occupy the left side of the header row while account controls stay right. */
+  .header-right { width:calc(100% - 46px); flex:1 1 calc(100% - 46px); min-width:0; margin-left:0 !important; justify-content:flex-start; gap:3px !important; }
+  .header-right .auth-buttons { margin-left:auto !important; flex:0 0 auto; gap:4px !important; }
+  .social-link, .top-link.discord-link { padding:4px 5px !important; }
+  .auth-buttons .user-balance-box { font-size:14px !important; padding:7px 10px !important; gap:6px; }
+  .auth-buttons .user-balance-amount { font-size:16px !important; }
+  .auth-buttons .user-balance-box svg { width:17px; height:17px; }
+  .auth-buttons .messages-icon-btn { width:36px !important; height:36px !important; }
+  .auth-buttons .messages-icon-btn svg { width:16px !important; height:16px !important; }
+  .auth-buttons .user-profile-box { padding:4px 9px 4px 4px !important; gap:7px !important; }
+  .auth-buttons .user-profile-box .user-avatar { width:30px !important; height:30px !important; }
+}
+@media (max-width:600px) and (orientation:landscape) {
+  #select-game-modal .select-game-grid { justify-items:center; align-items:stretch; }
+  #select-game-modal .game-card-item { width:100%; align-items:center !important; text-align:center; box-sizing:border-box; }
+  #select-game-modal .game-card-thumb { display:block; width:76px !important; height:76px !important; max-width:76px !important; margin:0 auto; flex:0 0 auto; object-fit:contain !important; object-position:center; }
+  #select-game-modal .game-card-name { width:100%; text-align:center; }
+}
+
 </style>
 </head>
 <body>
@@ -3847,14 +3874,15 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             <button class="close-modal" id="close-price-range-modal" type="button" aria-label="Close">&times;</button>
             <div class="settings-title" id="price-range-title">Ask for a lower price</div>
             <div class="info-modal-text" id="price-range-item-label" style="margin-bottom:14px;"></div>
-            <div class="setting-group">
-                <label class="setting-label" for="price-range-min">Minimum price ($)</label>
-                <input class="setting-input" id="price-range-min" type="number" min="0.01" step="0.01" inputmode="decimal" required>
+            <div class="setting-group price-range-slider-group">
+                <label class="setting-label" for="price-range-min">Minimum price <strong>$<span id="price-range-min-value">0.00</span></strong></label>
+                <input class="price-range-slider" id="price-range-min" type="range" min="0.01" max="100" step="0.01" value="80" aria-label="Minimum requested price">
             </div>
-            <div class="setting-group">
-                <label class="setting-label" for="price-range-max">Maximum price ($)</label>
-                <input class="setting-input" id="price-range-max" type="number" min="0.01" step="0.01" inputmode="decimal" required>
+            <div class="setting-group price-range-slider-group">
+                <label class="setting-label" for="price-range-max">Maximum price <strong>$<span id="price-range-max-value">0.00</span></strong></label>
+                <input class="price-range-slider" id="price-range-max" type="range" min="0.01" max="100" step="0.01" value="90" aria-label="Maximum requested price">
             </div>
+            <div class="price-range-slider-hint">Drag the sliders to choose the price range you'd like to offer.</div>
             <button class="save-settings-btn" id="send-price-range-btn" type="button">Send price range in chat</button>
         </div>
     </div>
@@ -6915,13 +6943,30 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const price = Number(context.ctxItem.price);
             const minInput = document.getElementById('price-range-min');
             const maxInput = document.getElementById('price-range-max');
-            minInput.value = (Math.max(0.01, price * 0.8)).toFixed(2);
-            maxInput.value = (Math.max(0.01, price * 0.9)).toFixed(2);
-            minInput.max = price.toFixed(2);
-            maxInput.max = price.toFixed(2);
+            const sliderMax = Math.max(0.02, Math.floor((price - 0.01) * 100) / 100);
+            minInput.min = '0.01'; maxInput.min = '0.01';
+            minInput.max = sliderMax.toFixed(2); maxInput.max = sliderMax.toFixed(2);
+            minInput.step = '0.01'; maxInput.step = '0.01';
+            minInput.value = Math.min(sliderMax, Math.max(0.01, price * 0.8)).toFixed(2);
+            maxInput.value = Math.min(sliderMax, Math.max(Number(minInput.value), price * 0.9)).toFixed(2);
+            syncPriceRangeSliders('init');
             document.getElementById('price-range-item-label').textContent = `${context.ctxItem.name} — current price $${fmtPriceNum(price)}`;
             document.getElementById('price-range-modal').classList.add('active');
         }
+
+        function syncPriceRangeSliders(changed = '') {
+            const minInput = document.getElementById('price-range-min');
+            const maxInput = document.getElementById('price-range-max');
+            if (!minInput || !maxInput) return;
+            let min = Number(minInput.value), max = Number(maxInput.value);
+            if (changed === 'min' && min > max) { max = min; maxInput.value = max.toFixed(2); }
+            if (changed === 'max' && max < min) { min = max; minInput.value = min.toFixed(2); }
+            if (changed === 'init' && min > max) { max = min; maxInput.value = max.toFixed(2); }
+            document.getElementById('price-range-min-value').textContent = fmtPriceNum(min);
+            document.getElementById('price-range-max-value').textContent = fmtPriceNum(max);
+        }
+        document.getElementById('price-range-min').addEventListener('input', () => syncPriceRangeSliders('min'));
+        document.getElementById('price-range-max').addEventListener('input', () => syncPriceRangeSliders('max'));
 
         document.getElementById('close-price-range-modal').addEventListener('click', () => {
             document.getElementById('price-range-modal').classList.remove('active');
