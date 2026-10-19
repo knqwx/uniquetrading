@@ -3265,6 +3265,16 @@
 .item-picker-cat[data-category="Chromas"], .item-picker-cat[data-cat="Chromas"] { --rarity-outline:transparent; --rarity-fill:linear-gradient(100deg,rgba(255,0,0,.27),rgba(255,130,0,.27),rgba(255,235,0,.27),rgba(0,220,70,.27),rgba(0,190,255,.27),rgba(65,70,255,.27),rgba(190,0,255,.27)); position:relative; isolation:isolate; }
 .item-picker-cat[data-category="Chromas"]::before, .item-picker-cat[data-cat="Chromas"]::before { content:""; position:absolute; inset:-1.5px; border-radius:inherit; padding:1.5px; background:linear-gradient(90deg,#ff2525,#ff8a00,#ffe600,#36df48,#00d7ff,#385bff,#b52cff,#ff2525); background-size:300% 100%; animation:starfallChromaRainbow 12s linear infinite; -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0); -webkit-mask-composite:xor; mask-composite:exclude; pointer-events:none; z-index:-1; }
 @keyframes starfallChromaRainbow { to { background-position:300% 0; } }
+/* Brighter, more saturated rarity outlines; preserve the existing special colors. */
+.item-picker-cat[data-category="Uncommons"], .item-picker-cat[data-cat="Uncommons"] { --rarity-outline:#54d8ff; --rarity-fill:rgba(54,216,255,.42); }
+.item-picker-cat[data-category="Rares"], .item-picker-cat[data-cat="Rares"] { --rarity-outline:#20f078; --rarity-fill:rgba(32,240,120,.42); }
+.item-picker-cat[data-category="Legendaries"], .item-picker-cat[data-cat="Legendaries"] { --rarity-outline:#ff4545; --rarity-fill:rgba(255,69,69,.42); }
+.item-picker-cat[data-category="Ancients"], .item-picker-cat[data-cat="Ancients"] { --rarity-outline:#bd65ff; --rarity-fill:rgba(189,101,255,.44); }
+.item-picker-cat[data-category="Godlies"], .item-picker-cat[data-cat="Godlies"] { --rarity-outline:#ff55c8; --rarity-fill:rgba(255,85,200,.44); }
+.item-picker-cat[data-category="Vintages"], .item-picker-cat[data-cat="Vintages"] { --rarity-outline:#ffd52a; --rarity-fill:rgba(255,213,42,.44); }
+/* The selected category should be vivid, not a faint wash. */
+.item-picker-cat.active { background:var(--rarity-fill, rgba(255,255,255,.3)) !important; filter:brightness(1.22); }
+
 @media (max-width:760px) and (orientation:portrait) {
   /* Keep the search field above the category/item list on tall phone layouts. */
   #item-picker-modal .item-picker-body, #offer-modal .item-picker-body { display:flex !important; flex-direction:column !important; }
@@ -3273,6 +3283,13 @@
   #item-picker-modal .item-picker-custom, #offer-modal .item-picker-custom { order:1; width:100% !important; margin:0 0 8px !important; }
   #item-picker-modal .item-picker-list, #offer-modal .item-picker-list { order:2; }
   #item-picker-modal .item-picker-cats, #offer-modal .item-picker-cats { order:0; }
+  /* On portrait phones, use the sort controls' space for the search field. */
+  #offer-sort { display:none !important; }
+  #offer-modal .item-picker-toolbar { display:flex !important; flex-direction:column !important; width:100% !important; gap:0 !important; }
+  #offer-modal .item-picker-custom { display:block !important; width:100% !important; order:0 !important; margin:0 0 8px !important; }
+  #offer-modal #offer-custom-input { width:100% !important; box-sizing:border-box !important; }
+  #item-picker-modal .item-picker-custom { width:100% !important; }
+  #item-picker-modal #item-picker-custom-input { width:100% !important; box-sizing:border-box !important; }
 }
 
 </style>
