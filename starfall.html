@@ -3366,6 +3366,27 @@
 }
 
 </style>
+
+/* Final mobile picker alignment fixes */
+@media (max-width:760px) and (orientation:portrait) {
+  #offer-modal .item-picker-toolbar { position:relative !important; padding-top:0 !important; margin-top:0 !important; }
+  #offer-modal .offer-search-row { position:relative !important; margin-top:0 !important; margin-bottom:2px !important; }
+  #offer-modal #offer-sort.filters-open {
+    top:46px !important; right:0 !important; left:auto !important;
+    transform-origin:top right !important;
+  }
+  #offer-modal .item-picker-body { gap:2px !important; padding-top:0 !important; margin-top:0 !important; }
+  #offer-modal #offer-cats { margin-top:0 !important; margin-bottom:0 !important; padding-top:0 !important; }
+  #offer-modal .item-picker-right { gap:0 !important; padding-top:0 !important; margin-top:0 !important; }
+  #offer-modal #offer-list { margin-top:0 !important; padding-top:0 !important; }
+  #offer-modal #offer-title { margin-bottom:5px !important; }
+  #item-picker-modal .item-picker-body { gap:2px !important; padding-top:0 !important; margin-top:0 !important; }
+  #item-picker-modal #item-picker-cats { margin-top:0 !important; margin-bottom:0 !important; padding-top:0 !important; }
+  #item-picker-modal .item-picker-right { gap:0 !important; padding-top:0 !important; margin-top:0 !important; }
+  #item-picker-modal #item-picker-title { margin-bottom:5px !important; }
+  #item-picker-modal #item-picker-list { margin-top:0 !important; padding-top:0 !important; }
+}
+
 </head>
 <body>
 
@@ -8178,8 +8199,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 suggestions.innerHTML = matches.length ? matches.map(item => {
                     const name = escapeHtml(String(item.name || ''));
                     const price = item.tag === 'selling' && item.price != null ? `<span class="suggestion-price">$${escapeHtml(String(item.price))}</span>` : '<span class="suggestion-price">Trading</span>';
-                    const iconSrc = item.imageUrl || item.image || item.iconUrl || item.icon || '';
-                    const icon = iconSrc ? `<img class="suggestion-icon" src="${escapeHtml(String(iconSrc))}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="suggestion-icon suggestion-icon-placeholder" aria-hidden="true"></span>';
+                    const iconSrc = (item.game === 'Murder Mystery 2' || !item.game) ? itemImageCandidates(String(item.name || ''), item.cat || item.category || '')[0] : (item.imageUrl || item.image || item.iconUrl || item.icon || '');
+                    const icon = iconSrc ? `<img class="suggestion-icon" src="${escapeHtml(String(iconSrc).replace(/\.(png|jpe?g|gif)(\?.*)?$/i, '.webp'))}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${ITEM_IMG_DIR}${itemImageFile(String(item.name || ''))}';}else{this.style.display='none';}">` : '<span class="suggestion-icon suggestion-icon-placeholder" aria-hidden="true"></span>'; 
                     return `<button type="button" class="listing-search-suggestion" data-suggestion-name="${name}">${icon}<span class="suggestion-name">${name}</span>${price}</button>`;
                 }).join('') : '<div class="listing-search-suggestion-empty">No matching listings found</div>';
                 suggestions.hidden = false;
