@@ -29,7 +29,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Starfall</title>
     <!-- Иконка сайта (favicon) -->
-    <link rel="icon" type="image/png" href="starfall.png">
+    <link rel="icon" type="image/webp" href="Starfall.webp">
     <!-- Подключаем современный шрифт Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -3156,20 +3156,21 @@
 }
 
 
-/* ===== Portrait-phone corrections: compact navigation, centered avatars/game art, single-line category tabs ===== */
+/* ===== Portrait-phone corrections: centered avatars/game art, two-row navigation, fully visible category tabs ===== */
 @media (max-width: 760px) and (orientation: portrait) {
-  /* Keep all six main navigation tabs visible without horizontal scrolling. */
   .top-bar { padding-left: 7px !important; padding-right: 7px !important; }
+  /* Six main navigation tabs fit in two rows of three, without horizontal scrolling. */
   .nav-left {
-    width: 100% !important; min-width: 0 !important; display: flex !important;
-    flex-wrap: nowrap !important; overflow: hidden !important; gap: 1px !important;
-    justify-content: space-between !important; align-items: stretch !important;
+    width: 100% !important; min-width: 0 !important; display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-auto-rows: minmax(30px, auto) !important; overflow: visible !important;
+    gap: 2px 4px !important; justify-content: stretch !important; align-items: stretch !important;
   }
   .nav-left > * {
-    flex: 1 1 0 !important; min-width: 0 !important; width: 0 !important;
-    padding: 7px 1px !important; font-size: clamp(9px, 2.7vw, 11px) !important;
-    line-height: 1.1 !important; text-align: center !important; letter-spacing: -0.2px;
-    white-space: nowrap !important; overflow: hidden !important; text-overflow: clip !important;
+    min-width: 0 !important; width: 100% !important; box-sizing: border-box !important;
+    padding: 6px 2px !important; font-size: clamp(10px, 3vw, 12px) !important;
+    line-height: 1.15 !important; text-align: center !important; letter-spacing: -0.1px;
+    white-space: nowrap !important; overflow: visible !important; text-overflow: clip !important;
   }
   /* Center the profile control and keep the avatar optically centered inside it. */
   .auth-buttons .user-profile-box {
@@ -3204,21 +3205,21 @@
   #select-game-modal .game-card-name,
   #offer-games .game-card-name { width: 100% !important; text-align: center !important; }
 
-  /* Each category name and its count stay on one line; the tab strip scrolls horizontally. */
+  /* Show every category tab at once; each category name and count remain on the same line. */
   #offer-cats, #item-picker-cats {
-    display: flex !important; flex-flow: row nowrap !important; align-items: center !important;
-    justify-content: flex-start !important; gap: 6px !important; width: 100% !important;
-    max-width: 100% !important; min-width: 0 !important; overflow-x: auto !important;
-    overflow-y: hidden !important; white-space: nowrap !important; padding: 2px 1px 7px !important;
-    scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; box-sizing: border-box !important;
+    display: flex !important; flex-flow: row wrap !important; align-items: center !important;
+    justify-content: flex-start !important; gap: 5px !important; width: 100% !important;
+    max-width: 100% !important; min-width: 0 !important; overflow: visible !important;
+    white-space: normal !important; padding: 2px 1px 7px !important;
+    box-sizing: border-box !important;
   }
   #offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat {
     display: inline-flex !important; flex: 0 0 auto !important; flex-flow: row nowrap !important;
-    align-items: center !important; justify-content: center !important; gap: 5px !important;
-    width: auto !important; min-width: max-content !important; max-width: none !important;
-    min-height: 32px !important; padding: 6px 9px !important; white-space: nowrap !important;
+    align-items: center !important; justify-content: center !important; gap: 4px !important;
+    width: auto !important; min-width: 0 !important; max-width: 100% !important;
+    min-height: 30px !important; padding: 5px 7px !important; white-space: nowrap !important;
     overflow: visible !important; overflow-wrap: normal !important; word-break: keep-all !important;
-    font-size: 11px !important; line-height: 1 !important; scroll-snap-align: start;
+    font-size: 11px !important; line-height: 1 !important;
   }
   #offer-cats .item-picker-cat span:first-child, #item-picker-cats .item-picker-cat span:first-child {
     display: inline !important; flex: 0 0 auto !important; min-width: 0 !important;
@@ -3238,7 +3239,7 @@
     <!-- Верхняя линия -->
     <header class="top-bar">
         <a class="site-brand" id="home-brand-link" title="Home">
-            <img src="starfall.png" alt="Starfall">
+            <img src="Starfall.webp" alt="Starfall">
         </a>
         
         <div class="nav-left">
