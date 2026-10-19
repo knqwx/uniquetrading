@@ -1,4 +1,4 @@
-// Unique Trading backend - stage 1: signup, login, sessions
+// Starfall backend - stage 1: signup, login, sessions
 // Env vars (set them in Render -> Environment):
 //   TURSO_URL    e.g. libsql://your-db.aws-eu-west-1.turso.io   (for local tests: file:local.db)
 //   TURSO_TOKEN  a NEW token (rotate the old one - it was public in the HTML files)
@@ -147,7 +147,7 @@ const ipOf = (req) => {
   const ip = String(req.ip || '').trim().replace(/^::ffff:/i, '').toLowerCase();
   return ip && ip.length <= 64 && !/[\s,]/.test(ip) ? ip : '';
 };
-const ipFingerprint = (ip) => crypto.createHmac('sha256', cleanEnv(process.env.IP_HASH_SECRET || TURSO_TOKEN || 'unique-trading-ip-guard-change-me')).update(String(ip || '')).digest('hex');
+const ipFingerprint = (ip) => crypto.createHmac('sha256', cleanEnv(process.env.IP_HASH_SECRET || TURSO_TOKEN || 'starfall-ip-guard-change-me')).update(String(ip || '')).digest('hex');
 
 // ---------- small helpers used by the schema/migration code (must exist before init() runs) ----------
 // session ids and admin tokens are stored as they are (plain), as in the original version
@@ -598,8 +598,8 @@ async function checkEmail(email) {
 }
 // Names that look like the staff / the service itself. Nobody can register or rename to them (comparison ignores case, . _ - and 0/1/3/4/5/7 look-alikes).
 const RESERVED_EXACT = new Set(['admin', 'administrator', 'support', 'staff', 'moderator', 'mod', 'mods', 'middleman', 'middlemen', 'owner', 'system', 'official', 'root', 'help', 'helpdesk', 'service', 'team',
-  'security', 'billing', 'verify', 'verified', 'uniquetrading', 'knqw', 'null', 'undefined', 'anonymous', 'sysadmin', 'superuser', 'webmaster', 'contact', 'info', 'abuse', 'postmaster', 'noreply', 'escrow']);
-const RESERVED_PREFIX = ['admin', 'administrator', 'moderator', 'middleman', 'middlemen', 'uniquetrading', 'officialsupport'];   // "admin_john", "middleman-bob" ...
+  'security', 'billing', 'verify', 'verified', 'starfall', 'knqw', 'null', 'undefined', 'anonymous', 'sysadmin', 'superuser', 'webmaster', 'contact', 'info', 'abuse', 'postmaster', 'noreply', 'escrow']);
+const RESERVED_PREFIX = ['admin', 'administrator', 'moderator', 'middleman', 'middlemen', 'starfall', 'officialsupport'];   // "admin_john", "middleman-bob" ...
 const RESERVED_AFFIX = ['the', 'real', 'official', 'im', 'iam', 'mr', 'ms', 'x', 'xx'];                                          // "theadmin", "real_support", "support_official"
 const LEET = { 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't' };
 const normalizeName = (name) => String(name || '').toLowerCase().replace(/[._-]/g, '').replace(/[013457]/g, (c) => LEET[c]);
@@ -811,7 +811,7 @@ async function verifyPassword(u, password) {
 // Somebody guessing at your account from their own IP therefore cannot lock YOU out (your IP has its own counter), and the counters survive restarts.
 // Names that do not exist are counted exactly like real ones, so the lock-out cannot be used to discover accounts.
 const LOCK_AFTER = 3, LOCK_FIRST_MS = 3 * 60 * 60 * 1000, LOCK_NEXT_MS = 24 * 60 * 60 * 1000, LOCK_FORGET_MS = 7 * DAY;
-const LOCK_SECRET = cleanEnv(process.env.IP_HASH_SECRET || TURSO_TOKEN || 'unique-trading-ip-guard-change-me');
+const LOCK_SECRET = cleanEnv(process.env.IP_HASH_SECRET || TURSO_TOKEN || 'starfall-ip-guard-change-me');
 const lockKey = (scope, ip, account) => crypto.createHmac('sha256', LOCK_SECRET).update(`${scope}|${ip}|${String(account).toLowerCase()}`).digest('hex');
 const lockText = (ms) => { const h = Math.floor(ms / 3600000), m = Math.max(1, Math.ceil((ms % 3600000) / 60000)); return h > 0 ? `${h}h ${m}m` : `${m}m`; };
 async function lockoutStatus(key) {                 // { locked, lockedUntil, retryAfterMs }
@@ -1360,9 +1360,9 @@ const WEBHOOK_TOLERANCE_S = 5 * 60;
 async function createCheckout(intent) {                    // returns { ref, url } from the gateway
   const form = new URLSearchParams({
     mode: 'payment', client_reference_id: intent.id, 'metadata[intentId]': intent.id,
-    success_url: `${publicUrl()}/uniquetrading.html?topup=success`, cancel_url: `${publicUrl()}/uniquetrading.html?topup=cancelled`,
+    success_url: `${publicUrl()}/starfall.html?topup=success`, cancel_url: `${publicUrl()}/starfall.html?topup=cancelled`,
     'line_items[0][quantity]': '1', 'line_items[0][price_data][currency]': intent.currency,
-    'line_items[0][price_data][unit_amount]': String(intent.amountCents), 'line_items[0][price_data][product_data][name]': 'Unique Trading wallet top-up'
+    'line_items[0][price_data][unit_amount]': String(intent.amountCents), 'line_items[0][price_data][product_data][name]': 'Starfall wallet top-up'
   });
   const r = await fetch('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST', headers: { Authorization: 'Bearer ' + stripeKey(), 'Content-Type': 'application/x-www-form-urlencoded', 'Idempotency-Key': 'topup-' + intent.id },
@@ -3240,7 +3240,7 @@ async function loadPage(file) {
   try { html = await fs.readFile(path.join(__dirname, file), 'utf8'); } catch (e) { console.warn(`Page ${file} not found next to server.js - it will not be served from here (API-only deployment?)`); return null; }
   return html.replace(/<script(?![^>]*\bsrc\s*=)(?![^>]*\bnonce\s*=)([^>]*)>/gi, (tag, attrs) => `<script${attrs} nonce="${NONCE_MARK}">`);
 }
-const PAGE_MAIN = await loadPage('uniquetrading.html');
+const PAGE_MAIN = await loadPage('starfall.html');
 const PAGE_LOGIN = await loadPage('login.html');
 const servePage = (html) => (req, res, next) => {
   if (html == null) return next();
@@ -3248,7 +3248,7 @@ const servePage = (html) => (req, res, next) => {
   res.type('html').send(html.split(NONCE_MARK).join(res.locals.cspNonce));
 };
 app.get('/', servePage(PAGE_MAIN));
-app.get('/uniquetrading.html', servePage(PAGE_MAIN));
+app.get('/starfall.html', servePage(PAGE_MAIN));
 app.get(['/login', '/login.html'], servePage(PAGE_LOGIN));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -3268,4 +3268,4 @@ app.use((err, req, res, next) => {
   try { await db.execute('CREATE TABLE IF NOT EXISTS _healthcheck (t INTEGER)'); await db.execute('DELETE FROM _healthcheck'); console.log('DB check: write OK'); } catch (e) { console.error('DB check: WRITE FAILED ->', e.message, '(is TURSO_TOKEN a read-write token?)'); }
 })();
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log('Unique Trading backend listening on ' + port));
+app.listen(port, () => console.log('Starfall backend listening on ' + port));
