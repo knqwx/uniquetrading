@@ -469,6 +469,22 @@
             font-size: 12px;
         }
 
+        .listing-new-badge {
+            display: inline-flex;
+            align-items: center;
+            margin: 0 0 7px 0;
+            padding: 3px 7px;
+            border-radius: 5px;
+            background: #ff7300;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            line-height: 1.2;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            width: fit-content;
+        }
+
         .global-item-name {
             color: #ffffff;
             font-size: 15px;
@@ -3526,7 +3542,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 <div class="detail-time-val" id="detail-time-val" title="Click to toggle date format">Just now</div>
                 
                 <button class="buy-item-action-btn" id="buy-item-action-btn">Contact Seller</button>
-                <button class="ask-lower-price-btn" id="ask-lower-price-btn" type="button">Ask for a lower price</button>
                 <button class="report-item-btn" id="report-item-btn" type="button" style="display:none;">Report item</button>
 
                 <div class="detail-seller-info" id="detail-seller-box" title="View Profile">
@@ -3811,11 +3826,36 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             <div class="settings-title">Create a Ticket</div>
 
             <div class="setting-group">
+                <label class="setting-label" for="ticket-partner-select">Who are you trading with?</label>
+                <select class="setting-select" id="ticket-partner-select" required>
+                    <option value="">Select a user</option>
+                </select>
+            </div>
+
+            <div class="setting-group">
                 <label class="setting-label">Description (optional)</label>
                 <textarea class="setting-textarea" id="ticket-desc-input" placeholder="What items are involved in the trade? (you can leave this empty)"></textarea>
             </div>
 
             <button class="save-settings-btn" id="submit-ticket-btn">Send Ticket</button>
+        </div>
+    </div>
+
+    <!-- Price negotiation modal; the selected range is sent as a normal chat message. -->
+    <div class="modal-overlay" id="price-range-modal">
+        <div class="modal-content settings-modal-content" role="dialog" aria-modal="true" aria-labelledby="price-range-title">
+            <button class="close-modal" id="close-price-range-modal" type="button" aria-label="Close">&times;</button>
+            <div class="settings-title" id="price-range-title">Ask for a lower price</div>
+            <div class="info-modal-text" id="price-range-item-label" style="margin-bottom:14px;"></div>
+            <div class="setting-group">
+                <label class="setting-label" for="price-range-min">Minimum price ($)</label>
+                <input class="setting-input" id="price-range-min" type="number" min="0.01" step="0.01" inputmode="decimal" required>
+            </div>
+            <div class="setting-group">
+                <label class="setting-label" for="price-range-max">Maximum price ($)</label>
+                <input class="setting-input" id="price-range-max" type="number" min="0.01" step="0.01" inputmode="decimal" required>
+            </div>
+            <button class="save-settings-btn" id="send-price-range-btn" type="button">Send price range in chat</button>
         </div>
     </div>
 
@@ -5161,8 +5201,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 let priceText = item.tag === 'selling' ? `$${fmtPriceNum(item.price)}` : (item.tag === 'specific' ? 'Trade' : 'Offers');
                 let timeAgo = getTimeAgo(item.id);
 
+                const isNewListing = Number(item.id) > 0 && (Date.now() - Number(item.id)) >= 0 && (Date.now() - Number(item.id)) < 3 * 24 * 60 * 60 * 1000;
                 card.innerHTML = `
                     ${imgHtml}
+                    ${isNewListing ? '<span class="listing-new-badge">New</span>' : ''}
                     <div class="global-item-name">${escapeHtml(item.name)}</div>
                     <div class="global-item-footer">
                         <div class="global-item-price">${escapeHtml(priceText)}</div>
@@ -5632,9 +5674,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 buyItemActionBtn.textContent = (currentUser && currentUser === item.sellerUsername) ? 'Edit Item' : 'Make an Offer';
             }
 
-            const askPriceBtn = document.getElementById('ask-lower-price-btn');
-            if (askPriceBtn) askPriceBtn.style.display = item.tag === 'selling' && currentUser !== item.sellerUsername ? '' : 'none';
-
             detailTimeVal.textContent = getTimeAgo(currentItemTimestamp);
 
             const stockParsed = parseInt(item.stock, 10);
@@ -5698,23 +5737,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             itemDetailPage.classList.remove('active');
             renderGlobalItems();
             refreshProfileItems();
-        });
-
-        const askLowerPriceBtn = document.getElementById('ask-lower-price-btn');
-        askLowerPriceBtn.addEventListener('click', async () => {
-            const item = currentActiveItem;
-            if (!item) return;
-            if (!currentUser) { showToast('Please log in to message the seller.'); return; }
-            if (currentUser === item.sellerUsername) { showToast('You cannot negotiate with yourself.'); return; }
-            if (item.tag !== 'selling') { showToast('Price negotiation is only available for items listed for sale.'); return; }
-            const message = `Hi! Would you be willing to lower the price of "${item.name}"?`;
-            await openMessagesPage(item.sellerUsername, item);
-            const input = document.getElementById('chat-message-input');
-            const send = document.getElementById('chat-send-btn');
-            if (!input || !send) { showToast('Chat could not be opened. Please try again.'); return; }
-            input.value = message;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            send.click();
         });
 
         buyItemActionBtn.addEventListener('click', () => {
@@ -6573,7 +6595,8 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 ? (ctxItem.owner === currentUser && (me.items || []).some(i => String(i.id) === itemId && i.tag === 'selling'))
                 : (me.items || []).some(i => i.tag === 'selling'));
             const canOffer = !!(ctxItem && !ctxItem.gone && (ctxItem.tag === 'offers' || ctxItem.tag === 'specific') && ctxItem.owner !== currentUser && ctxItem.game && targetUsername !== currentUser);
-            const askBtnHtml = (canAskPayment || canOffer) ? '<div class="deal-toolbar">' + (canOffer ? '<button class="ask-payment-btn" id="make-offer-btn" type="button">Make an offer</button>' : '') + (canAskPayment ? '<button class="ask-payment-btn" id="ask-payment-btn" type="button">Ask for payment</button>' : '') + '</div>' : '';
+            const canAskLowerPrice = !!(ctxItem && !ctxItem.gone && ctxItem.tag === 'selling' && ctxItem.owner !== currentUser && targetUsername !== currentUser && Number(ctxItem.price) > 0);
+            const askBtnHtml = (canAskPayment || canOffer || canAskLowerPrice) ? '<div class="deal-toolbar">' + (canOffer ? '<button class="ask-payment-btn" id="make-offer-btn" type="button">Make an offer</button>' : '') + (canAskPayment ? '<button class="ask-payment-btn" id="ask-payment-btn" type="button">Ask for payment</button>' : '') + (canAskLowerPrice ? '<button class="ask-payment-btn" id="ask-lower-price-chat-btn" type="button">Ask for a lower price</button>' : '') + '</div>' : '';
             const msgEntries = chatMsgs.map(m => ({ t: m.timestamp, html: (() => {
                 const ref = (m.itemRef && !itemId) ? `<div class="msg-item-ref"><b>${miniItemIconHtml(m.itemRef.game, m.itemRef.name)}${escapeHtml(m.itemRef.name)}</b><span>${escapeHtml(fmtPriceText(m.itemRef.price))}</span></div>` : '';
                 return chatBubbleHtml(m, ref);
@@ -6880,7 +6903,53 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
             const offerBtn = document.getElementById('make-offer-btn');
             if (offerBtn) offerBtn.addEventListener('click', () => openOfferDialog({ targetUsername, threadKey, itemId, ctxItem }));
+
+            const askLowerChatBtn = document.getElementById('ask-lower-price-chat-btn');
+            if (askLowerChatBtn) askLowerChatBtn.addEventListener('click', () => openPriceRangeModal({ targetUsername, threadKey, ctxItem }));
         }
+
+        let activePriceRangeContext = null;
+        function openPriceRangeModal(context) {
+            if (!context || !context.ctxItem || !Number(context.ctxItem.price)) return;
+            activePriceRangeContext = context;
+            const price = Number(context.ctxItem.price);
+            const minInput = document.getElementById('price-range-min');
+            const maxInput = document.getElementById('price-range-max');
+            minInput.value = (Math.max(0.01, price * 0.8)).toFixed(2);
+            maxInput.value = (Math.max(0.01, price * 0.9)).toFixed(2);
+            minInput.max = price.toFixed(2);
+            maxInput.max = price.toFixed(2);
+            document.getElementById('price-range-item-label').textContent = `${context.ctxItem.name} — current price $${fmtPriceNum(price)}`;
+            document.getElementById('price-range-modal').classList.add('active');
+        }
+
+        document.getElementById('close-price-range-modal').addEventListener('click', () => {
+            document.getElementById('price-range-modal').classList.remove('active');
+            activePriceRangeContext = null;
+        });
+
+        document.getElementById('send-price-range-btn').addEventListener('click', async () => {
+            const ctx = activePriceRangeContext;
+            if (!ctx || !ctx.ctxItem) return;
+            const min = Number(document.getElementById('price-range-min').value);
+            const max = Number(document.getElementById('price-range-max').value);
+            const currentPrice = Number(ctx.ctxItem.price);
+            if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max < min) {
+                showToast('Enter a valid minimum and maximum price.'); return;
+            }
+            if (max >= currentPrice) {
+                showToast('The maximum price must be lower than the current listing price.'); return;
+            }
+            const input = document.getElementById('chat-message-input');
+            const send = document.getElementById('chat-send-btn');
+            if (!input || !send) { showToast('Chat is not ready. Please try again.'); return; }
+            const minText = fmtPriceNum(min), maxText = fmtPriceNum(max);
+            input.value = `Hi! Would you consider lowering the price of "${ctx.ctxItem.name}" from $${fmtPriceNum(currentPrice)} to a range of $${minText}–$${maxText}?`;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            document.getElementById('price-range-modal').classList.remove('active');
+            activePriceRangeContext = null;
+            send.click();
+        });
 
         async function editMessageInDB(targetUsername, timestamp, newText) {
             const r = await srv('/api/chat/edit', 'POST', { receiver: targetUsername, timestamp, text: newText });
@@ -7475,6 +7544,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         const middlemenListEl = document.getElementById('middlemen-list');
         const mmCountEl = document.getElementById('mm-count');
         const ticketDescInput = document.getElementById('ticket-desc-input');
+        const ticketPartnerSelect = document.getElementById('ticket-partner-select');
         const submitTicketBtn = document.getElementById('submit-ticket-btn');
         const ticketsPanel = document.getElementById('mm-tickets-panel');
         const ticketListEl = document.getElementById('mm-ticket-list');
@@ -7576,7 +7646,26 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 return;
             }
             ticketDescInput.value = '';
+            ticketPartnerSelect.innerHTML = '<option value="">Loading users...</option>';
             ticketModal.classList.add('active');
+            try {
+                const users = await getAllUsersFromDB(false);
+                ticketPartnerSelect.innerHTML = '<option value="">Select a user</option>';
+                users.filter(u => u.username && u.username !== currentUser && !isBanned(u))
+                    .sort((a, b) => ticketUserName(a).localeCompare(ticketUserName(b), undefined, { sensitivity: 'base' }))
+                    .forEach(u => {
+                        const opt = document.createElement('option');
+                        opt.value = u.username;
+                        opt.textContent = ticketUserName(u);
+                        ticketPartnerSelect.appendChild(opt);
+                    });
+                if (ticketPartnerSelect.options.length <= 1) {
+                    ticketPartnerSelect.innerHTML = '<option value="">No other users found</option>';
+                }
+            } catch (e) {
+                ticketPartnerSelect.innerHTML = '<option value="">Could not load users</option>';
+                showToast('Could not load users. Please try again.');
+            }
         }
 
         document.getElementById('create-ticket-btn').addEventListener('click', openTicketModal);
@@ -7587,11 +7676,14 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         submitTicketBtn.addEventListener('click', async () => {
             if (!currentUser) { showToast('Please log in to create a ticket.'); return; }
+            const partner = ticketPartnerSelect.value;
             const desc = ticketDescInput.value.trim();
+            if (!partner) { showToast('Select who you are trading with.'); ticketPartnerSelect.focus(); return; }
+            if (partner === currentUser) { showToast('You cannot trade with yourself.'); return; }
 
             submitTicketBtn.disabled = true;
             try {
-                const tr = await srv('/api/tickets', 'POST', { description: desc });
+                const tr = await srv('/api/tickets', 'POST', { partner, description: desc });
                 if (!tr.ok) { srvFail(tr); return; }
                 ticketModal.classList.remove('active');
                 showToast('Ticket created! A middleman will pick it up.');
@@ -7954,8 +8046,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
                 let priceText = item.tag === 'selling' ? `$${fmtPriceNum(item.price)}` : (item.tag === 'specific' ? 'Trade' : 'Offers');
 
+                const isNewListing = Number(item.id) > 0 && (Date.now() - Number(item.id)) >= 0 && (Date.now() - Number(item.id)) < 3 * 24 * 60 * 60 * 1000;
                 card.innerHTML = `
                     <img class="item-card-img" ${itemImgAttrs(item)} alt="Item">
+                    ${isNewListing ? '<span class="listing-new-badge">New</span>' : ''}
                     <div class="item-card-name">${escapeHtml(item.name)}</div>
                     <div class="item-card-price">${escapeHtml(priceText)}</div>
                 `;
