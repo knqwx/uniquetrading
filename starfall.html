@@ -3327,13 +3327,16 @@
   border-radius:10px; background:#171d27; box-shadow:0 12px 32px rgba(0,0,0,.45);
 }
 .listing-search-suggestion {
-  width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px;
-  padding:10px 13px; border:0; border-bottom:1px solid rgba(255,255,255,.07);
+  width:100%; display:flex; align-items:center; justify-content:flex-start; gap:10px;
+  padding:9px 12px; border:0; border-bottom:1px solid rgba(255,255,255,.07);
   background:transparent; color:#edf2fa; text-align:left; cursor:pointer; font:inherit;
 }
 .listing-search-suggestion:last-child { border-bottom:0; }
 .listing-search-suggestion:hover, .listing-search-suggestion:focus-visible { background:#293445; outline:none; }
-.listing-search-suggestion .suggestion-price { color:#aebbd0; font-size:12px; white-space:nowrap; }
+.listing-search-suggestion .suggestion-icon { width:34px; height:34px; flex:0 0 34px; object-fit:contain; border-radius:6px; background:#222b38; }
+.listing-search-suggestion .suggestion-icon-placeholder { display:inline-block; }
+.listing-search-suggestion .suggestion-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.listing-search-suggestion .suggestion-price { color:#eaf0fa; font-size:13px; font-weight:700; white-space:nowrap; margin-left:auto; }
 .listing-search-suggestion-empty { padding:12px; color:#9aa6b8; font-size:13px; }
 @media (max-width:760px) and (orientation:portrait) {
   /* Four columns = up to three rows for the twelve item categories. */
@@ -3344,8 +3347,22 @@
   #item-picker-modal #item-picker-cats .item-picker-cat { min-height:27px !important; padding:3px 2px !important; font-size:10px !important; gap:2px !important; }
   #item-picker-modal #item-picker-cats .cat-count { padding:1px 3px !important; font-size:9px !important; }
   /* Sort choices expand as a vertical dropdown list. */
-  #offer-modal #offer-sort.filters-open { display:flex !important; flex-direction:column !important; gap:4px !important; }
-  #offer-modal #offer-sort.filters-open [data-sort] { width:100% !important; text-align:left !important; justify-content:flex-start !important; }
+  /* The filters list animates out directly below the filter button, rather than reflowing the picker. */
+  #offer-modal .item-picker-toolbar { position:relative !important; }
+  #offer-modal #offer-sort.filters-open {
+    display:flex !important; flex-direction:column !important; gap:3px !important;
+    position:absolute !important; top:calc(100% + 4px) !important; right:0 !important; left:auto !important;
+    width:148px !important; z-index:1500 !important; padding:6px !important; margin:0 !important;
+    background:#171d27 !important; border:1px solid #525b6b !important; border-radius:10px !important;
+    box-shadow:0 12px 28px rgba(0,0,0,.48) !important; transform-origin:top right;
+    animation:starfallFilterDrop .18s ease-out both;
+  }
+  #offer-modal #offer-sort.filters-open [data-sort] { width:100% !important; min-height:36px !important; padding:0 10px !important; text-align:left !important; justify-content:flex-start !important; }
+  @keyframes starfallFilterDrop { from { opacity:0; transform:translateY(-7px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+  /* Keep the item grid tucked directly under the search/category controls on portrait phones. */
+  #offer-modal #offer-cat-title { display:none !important; }
+  #offer-modal #offer-cats { margin-bottom:2px !important; }
+  #offer-modal #offer-list { margin-top:0 !important; padding-top:0 !important; }
 }
 
 </style>
@@ -8160,8 +8177,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 matches = [...unique.values()].slice(0, 8);
                 suggestions.innerHTML = matches.length ? matches.map(item => {
                     const name = escapeHtml(String(item.name || ''));
-                    const price = item.tag === 'selling' && item.price != null ? `<span class="suggestion-price">${escapeHtml(String(item.price))} coins</span>` : '<span class="suggestion-price">Trading</span>';
-                    return `<button type="button" class="listing-search-suggestion" data-suggestion-name="${name}"><span>${name}</span>${price}</button>`;
+                    const price = item.tag === 'selling' && item.price != null ? `<span class="suggestion-price">$${escapeHtml(String(item.price))}</span>` : '<span class="suggestion-price">Trading</span>';
+                    const iconSrc = item.imageUrl || item.image || item.iconUrl || item.icon || '';
+                    const icon = iconSrc ? `<img class="suggestion-icon" src="${escapeHtml(String(iconSrc))}" alt="" loading="lazy" onerror="this.style.display='none'">` : '<span class="suggestion-icon suggestion-icon-placeholder" aria-hidden="true"></span>';
+                    return `<button type="button" class="listing-search-suggestion" data-suggestion-name="${name}">${icon}<span class="suggestion-name">${name}</span>${price}</button>`;
                 }).join('') : '<div class="listing-search-suggestion-empty">No matching listings found</div>';
                 suggestions.hidden = false;
                 suggestions.querySelectorAll('[data-suggestion-name]').forEach(btn => btn.addEventListener('click', () => {
