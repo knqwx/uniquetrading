@@ -3567,107 +3567,6 @@
   .header-right .auth-buttons { margin-left: 5px !important; }
 }
 
-
-
-/* Fix Select Item category list clipping on short landscape screens: keep the category column independently scrollable. */
-@media (orientation: landscape) and (max-height: 800px) {
-  #item-picker-modal .item-picker-content {
-    min-height: 0 !important;
-    box-sizing: border-box !important;
-  }
-  #item-picker-modal .item-picker-body {
-    display: flex !important;
-    min-height: 0 !important;
-    flex: 1 1 auto !important;
-    overflow: hidden !important;
-    align-items: stretch !important;
-  }
-  #item-picker-modal #item-picker-cats {
-    min-height: 0 !important;
-    height: auto !important;
-    max-height: none !important;
-    flex: 0 1 230px !important;
-    align-self: stretch !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    overscroll-behavior-y: contain !important;
-    -webkit-overflow-scrolling: touch !important;
-    padding-bottom: 24px !important;
-    scroll-padding-bottom: 24px !important;
-    box-sizing: border-box !important;
-  }
-  #item-picker-modal .item-picker-right {
-    min-height: 0 !important;
-    flex: 1 1 auto !important;
-  }
-}
-
-/* Expand the category panel to use the available height in the Select Item window. */
-@media (orientation: landscape) and (max-height: 800px) {
-  #item-picker-modal .item-picker-body {
-    align-items: stretch !important;
-    min-height: 0 !important;
-    height: 100% !important;
-  }
-  #item-picker-modal #item-picker-cats {
-    height: 100% !important;
-    max-height: none !important;
-    min-height: 0 !important;
-    flex: 1 1 230px !important;
-    align-self: stretch !important;
-    overflow-y: auto !important;
-    box-sizing: border-box !important;
-    padding-bottom: 8px !important;
-  }
-}
-/* ===== Landscape phones: item picker = categories on the left (own scroll), search + items on the right (own scroll), actions pinned at the bottom ===== */
-@media (orientation: landscape) and (max-height: 600px) {
-  #offer-modal, #item-picker-modal { padding: 0 !important; align-items: center !important; justify-content: center !important; }
-  #offer-modal .item-picker-content, #item-picker-modal .item-picker-content {
-    display: flex !important; flex-direction: column !important; width: 94vw !important; max-width: 940px !important;
-    height: 94dvh !important; max-height: 94dvh !important; padding: 8px 12px !important; margin: 0 !important;
-    overflow: hidden !important; box-sizing: border-box !important;
-  }
-  #offer-title, #item-picker-title { flex: 0 0 auto !important; font-size: 15px !important; margin: 0 0 6px !important; padding-right: 34px !important; }
-  #offer-step-game { flex: 1 1 auto !important; min-height: 0 !important; overflow-y: auto !important; }
-  #offer-step-items { flex: 1 1 auto !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }
-  #offer-modal .item-picker-body, #item-picker-modal .item-picker-body {
-    flex: 1 1 auto !important; min-height: 0 !important; height: auto !important; display: flex !important;
-    flex-direction: row !important; align-items: stretch !important; gap: 10px !important; overflow: hidden !important;
-  }
-  #offer-cats, #item-picker-cats {
-    flex: 0 0 150px !important; width: 150px !important; min-height: 0 !important; height: auto !important; max-height: none !important;
-    display: flex !important; flex-direction: column !important; flex-wrap: nowrap !important; gap: 4px !important;
-    overflow-y: auto !important; overflow-x: hidden !important; overscroll-behavior: contain !important;
-    -webkit-overflow-scrolling: touch !important; padding: 0 4px 6px 0 !important; margin: 0 !important;
-  }
-  #offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat {
-    flex: 0 0 auto !important; width: 100% !important; min-height: 30px !important; height: auto !important;
-    display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between !important;
-    padding: 5px 8px !important; font-size: 12px !important; line-height: 1.1 !important; white-space: nowrap !important;
-  }
-  #offer-modal .item-picker-right, #item-picker-modal .item-picker-right {
-    flex: 1 1 0 !important; min-width: 0 !important; min-height: 0 !important; display: flex !important;
-    flex-direction: column !important; gap: 6px !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important;
-  }
-  #offer-cat-title, #item-picker-cat-title { display: none !important; }
-  #offer-modal .item-picker-toolbar { flex: 0 0 auto !important; position: relative !important; display: block !important; }
-  #offer-modal .offer-search-row, #item-picker-modal .item-picker-custom { flex: 0 0 auto !important; display: flex !important; flex-direction: row !important; align-items: center !important; gap: 6px !important; margin: 0 !important; padding: 0 !important; position: relative !important; }
-  #offer-custom-input, #item-picker-custom-input { flex: 1 1 auto !important; width: 0 !important; min-width: 0 !important; height: 34px !important; min-height: 34px !important; padding: 5px 8px !important; font-size: 14px !important; box-sizing: border-box !important; }
-  #offer-list, #item-picker-list {
-    flex: 1 1 0 !important; min-height: 0 !important; max-height: none !important; height: auto !important; margin: 0 !important;
-    overflow-y: auto !important; overscroll-behavior: contain !important; padding: 2px 2px 6px !important; gap: 8px !important;
-  }
-  #offer-list.cards, #item-picker-list.cards { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)) !important; align-content: start !important; grid-auto-rows: max-content !important; }
-  #offer-list .item-picker-card, #item-picker-list .item-picker-card { width: auto !important; min-width: 0 !important; min-height: 64px !important; height: auto !important; overflow: visible !important; flex-direction: column !important; text-align: center !important; padding: 6px 4px !important; font-size: 11px !important; }
-  #offer-list .item-picker-card .card-img, #item-picker-list .item-picker-card .card-img { width: 100% !important; max-width: 64px !important; height: auto !important; aspect-ratio: 1 / 1 !important; flex: 0 0 auto !important; }
-  #offer-step-items .offer-selected-head { flex: 0 0 auto !important; margin: 4px 0 2px !important; }
-  #offer-selected { flex: 0 0 auto !important; max-height: 38px !important; overflow-y: auto !important; }
-  #offer-warn { flex: 0 0 auto !important; margin: 2px 0 !important; padding: 4px 8px !important; }
-  #offer-step-items .offer-actions { flex: 0 0 auto !important; position: static !important; margin: 4px 0 0 !important; padding: 0 !important; display: flex !important; gap: 8px !important; }
-  #offer-step-items .offer-actions .deal-btn { min-height: 36px !important; padding: 6px 18px !important; font-size: 14px !important; }
-  #offer-modal .close-modal, #item-picker-modal .close-modal { top: 4px !important; right: 8px !important; width: 28px !important; height: 28px !important; padding: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; line-height: 1 !important; font-size: 24px !important; }
-}
 </style>
 
 </head>
@@ -10631,3 +10530,21 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     </script>
 </body>
 </html>
+
+/* Fix Select Item category list clipping: allow the left category column to scroll fully. */
+@media (min-width: 761px) {
+  #item-picker-modal .item-picker-content { min-height: 0 !important; }
+  #item-picker-modal .item-picker-body { min-height: 0 !important; overflow: hidden !important; }
+  #item-picker-modal #item-picker-cats {
+    min-height: 0 !important;
+    max-height: min(68vh, calc(100% - 72px)) !important;
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    flex: 0 1 230px !important;
+    align-self: stretch !important;
+    padding-bottom: 10px !important;
+    overscroll-behavior-y: contain !important;
+    scroll-padding-bottom: 10px !important;
+  }
+}
