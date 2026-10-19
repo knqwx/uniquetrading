@@ -3232,6 +3232,119 @@
   }
 }
 
+
+/* ===== Final mobile polish: rarity-colored category outlines and compact, centered header controls ===== */
+#offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat {
+  border: 1px solid #555 !important;
+  box-sizing: border-box !important;
+  transition: border-color .16s ease, background-color .16s ease, color .16s ease;
+}
+#offer-cats .item-picker-cat[data-cat="All"], #item-picker-cats .item-picker-cat[data-cat="All"] { border-color: #858585 !important; }
+#offer-cats .item-picker-cat[data-cat="Uniques"], #item-picker-cats .item-picker-cat[data-cat="Uniques"] { border-color: #b66cff !important; }
+#offer-cats .item-picker-cat[data-cat="Ancients"], #item-picker-cats .item-picker-cat[data-cat="Ancients"] { border-color: #e74c5b !important; }
+#offer-cats .item-picker-cat[data-cat="Chromas"], #item-picker-cats .item-picker-cat[data-cat="Chromas"] { border-color: #dc75ff !important; }
+#offer-cats .item-picker-cat[data-cat="Godlies"], #item-picker-cats .item-picker-cat[data-cat="Godlies"] { border-color: #ff79c6 !important; }
+#offer-cats .item-picker-cat[data-cat="Legendaries"], #item-picker-cats .item-picker-cat[data-cat="Legendaries"] { border-color: #ff9d42 !important; }
+#offer-cats .item-picker-cat[data-cat="Rares"], #item-picker-cats .item-picker-cat[data-cat="Rares"] { border-color: #55a7ff !important; }
+#offer-cats .item-picker-cat[data-cat="Uncommons"], #item-picker-cats .item-picker-cat[data-cat="Uncommons"] { border-color: #65c979 !important; }
+#offer-cats .item-picker-cat[data-cat="Commons"], #item-picker-cats .item-picker-cat[data-cat="Commons"] { border-color: #a6a6a6 !important; }
+#offer-cats .item-picker-cat[data-cat="Vintages"], #item-picker-cats .item-picker-cat[data-cat="Vintages"] { border-color: #e8c95a !important; }
+#offer-cats .item-picker-cat[data-cat="Pets"], #item-picker-cats .item-picker-cat[data-cat="Pets"] { border-color: #55d4d4 !important; }
+#offer-cats .item-picker-cat[data-cat="Misc items"], #item-picker-cats .item-picker-cat[data-cat="Misc items"] { border-color: #9292a8 !important; }
+#offer-cats .item-picker-cat.active, #item-picker-cats .item-picker-cat.active {
+  box-shadow: 0 0 0 1px currentColor !important;
+}
+.auth-buttons .user-balance-box,
+.auth-buttons .user-profile-box,
+.auth-buttons .messages-icon-btn {
+  box-sizing: border-box !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.auth-buttons .user-balance-box {
+  min-height: 36px !important;
+  padding: 6px 10px !important;
+  gap: 6px !important;
+}
+.auth-buttons .user-balance-box svg {
+  display: block !important;
+  flex: 0 0 auto !important;
+  width: 15px !important;
+  height: 15px !important;
+  margin: 0 !important;
+}
+.auth-buttons .messages-icon-btn {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+}
+.auth-buttons .messages-icon-btn svg {
+  display: block !important;
+  width: 16px !important;
+  height: 16px !important;
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+}
+.auth-buttons .user-profile-box {
+  min-height: 36px !important;
+  padding: 3px 9px 3px 3px !important;
+  gap: 7px !important;
+}
+.auth-buttons .user-profile-box .user-avatar {
+  display: flex !important;
+  flex: 0 0 29px !important;
+  width: 29px !important;
+  height: 29px !important;
+  min-width: 29px !important;
+  min-height: 29px !important;
+  margin: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+.auth-buttons .user-profile-box .user-name { align-self: center !important; line-height: 1.15 !important; }
+@media (max-width: 760px) and (orientation: portrait) {
+  /* 12 category buttons fit in a tidy 4-column × 3-row grid. */
+  #offer-cats, #item-picker-cats {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    grid-auto-rows: minmax(29px, auto) !important;
+    gap: 4px !important;
+    align-items: stretch !important;
+    justify-items: stretch !important;
+  }
+  #offer-cats .item-picker-cat, #item-picker-cats .item-picker-cat {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 29px !important;
+    padding: 4px 2px !important;
+    gap: 3px !important;
+    font-size: clamp(8px, 2.5vw, 10px) !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    justify-content: center !important;
+  }
+  #offer-cats .item-picker-cat span:first-child, #item-picker-cats .item-picker-cat span:first-child {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+  }
+  #offer-cats .item-picker-cat .cat-count, #item-picker-cats .item-picker-cat .cat-count {
+    font-size: 9px !important;
+    padding: 1px 3px !important;
+  }
+  .auth-buttons .user-balance-box { min-height: 33px !important; padding: 5px 7px !important; gap: 4px !important; font-size: 12px !important; }
+  .auth-buttons .user-balance-amount { font-size: 13px !important; }
+  .auth-buttons .messages-icon-btn { width: 33px !important; height: 33px !important; min-width: 33px !important; min-height: 33px !important; }
+  .auth-buttons .user-profile-box { min-height: 33px !important; padding: 2px !important; gap: 0 !important; }
+  .auth-buttons .user-profile-box .user-avatar { width: 28px !important; height: 28px !important; min-width: 28px !important; min-height: 28px !important; flex-basis: 28px !important; }
+}
+
 </style>
 </head>
 <body>
