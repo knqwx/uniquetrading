@@ -3578,9 +3578,33 @@
 .cart-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #393939}.cart-head h2{margin:0;font-size:22px}.cart-close{border:0;background:transparent;color:#bbb;font-size:28px;cursor:pointer;line-height:1}
 .cart-items{padding:12px 18px;overflow:auto;display:flex;flex-direction:column;gap:10px}.cart-empty{padding:36px 12px;text-align:center;color:#aaa}.cart-row{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px;border:1px solid #383838;border-radius:12px;background:#262626}.cart-row img{width:64px;height:64px;object-fit:contain;border-radius:8px;background:#1b1b1b}.cart-row-name{font-weight:700;overflow-wrap:anywhere}.cart-row-meta{margin-top:4px;color:#aaa;font-size:12px}.cart-row-price{margin-top:5px;color:#ff9a43;font-weight:700}.cart-row-controls{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:7px}.cart-qty-btn,.cart-remove-btn{border:1px solid #4a4a4a;border-radius:6px;background:#303030;color:#fff;min-width:27px;height:27px;cursor:pointer}.cart-remove-btn{padding:0 8px;color:#ff9a9a}.cart-foot{padding:16px 20px;border-top:1px solid #393939;display:flex;align-items:center;justify-content:space-between;gap:12px}.cart-total-label{color:#aaa;font-size:12px}.cart-total{font-size:23px;font-weight:800;color:#ff9a43}.cart-note{padding:0 20px 16px;color:#9b9b9b;font-size:12px}.detail-cart-btn{width:100%;margin:-12px 0 25px;padding:13px 16px;border:1px solid #ff8d2b;border-radius:10px;background:rgba(255,115,0,.12);color:#ffad69;font:700 16px Inter,sans-serif;cursor:pointer}.detail-cart-btn:hover{background:#ff7300;color:#fff}
 @media(max-width:600px){.cart-fab{right:12px;bottom:14px;padding:10px 12px}.cart-panel{max-height:88vh}.cart-row{grid-template-columns:50px minmax(0,1fr) auto;gap:8px;padding:8px}.cart-row img{width:50px;height:50px}.cart-head{padding:14px}.cart-items{padding:10px}.cart-foot{padding:13px 14px}}
+.checkout-panel{width:min(560px,100%);max-height:min(86vh,780px);display:flex;flex-direction:column;overflow:hidden;border:1px solid #414141;border-radius:16px;background:#202020;color:#f4f4f4;box-shadow:0 20px 70px #0009}.checkout-content{padding:18px 20px;overflow:auto}.checkout-title{margin:0 0 8px;font-size:21px}.checkout-subtitle{margin:0 0 18px;color:#aaa;font-size:13px}.checkout-summary{display:flex;flex-direction:column;gap:9px}.checkout-summary-row{display:flex;justify-content:space-between;gap:12px;padding-bottom:9px;border-bottom:1px solid #383838}.checkout-summary-row span:first-child{overflow-wrap:anywhere}.checkout-grand-total{display:flex;justify-content:space-between;align-items:center;padding-top:16px;font-weight:800;font-size:20px}.checkout-secure-note{margin-top:16px;padding:12px;border:1px solid #414141;border-radius:9px;color:#bdbdbd;font-size:12px;line-height:1.5}.checkout-actions{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid #393939}.checkout-secondary{border:1px solid #494949;border-radius:9px;background:#2c2c2c;color:#eee;padding:11px 15px;cursor:pointer}.checkout-pay{border:1px solid #ff8d2b;border-radius:9px;background:#ff7300;color:#fff;font-weight:800;padding:11px 17px;cursor:pointer}.checkout-pay:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:600px){.checkout-content{padding:14px}.checkout-actions{padding:12px 14px}.checkout-title{font-size:19px}}
 
+
+#checkout-overlay.active{display:flex !important}.cart-qty-btn:disabled{opacity:.35;cursor:not-allowed}.cart-max-label{font-size:10px;font-weight:800;color:#ffb56d;letter-spacing:.04em}
 </style>
 
+
+<style>
+/* Fix Select Item category list clipping: allow the left category column to scroll fully. */
+@media (min-width: 761px) {
+  #item-picker-modal .item-picker-content { min-height: 0 !important; }
+  #item-picker-modal .item-picker-body { min-height: 0 !important; overflow: hidden !important; }
+  #item-picker-modal #item-picker-cats {
+    min-height: 0 !important;
+    max-height: min(68vh, calc(100% - 72px)) !important;
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    flex: 0 1 230px !important;
+    align-self: stretch !important;
+    padding-bottom: 10px !important;
+    overscroll-behavior-y: contain !important;
+    scroll-padding-bottom: 10px !important;
+  }
+}
+</style>
 </head>
 <body>
 
@@ -5204,12 +5228,16 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
         const globalItemsGrid = document.getElementById('global-items-grid');
 
-        // Local shopping cart: keeps selected selling listings on this device. Checkout/payment is not implied.
+        // Local shopping cart: keeps selected selling listings on this device; checkout UI is shown separately.
         const cartFab = document.getElementById('cart-fab');
         const cartOverlay = document.getElementById('cart-overlay');
         const cartItemsEl = document.getElementById('cart-items');
         const cartCountEl = document.getElementById('cart-count');
         const cartTotalEl = document.getElementById('cart-total');
+        const checkoutOverlay = document.getElementById('checkout-overlay');
+        const checkoutSummary = document.getElementById('checkout-summary');
+        const checkoutTotal = document.getElementById('checkout-total');
+        const checkoutPayBtn = document.getElementById('checkout-pay-btn');
         const detailCartBtn = document.getElementById('detail-cart-btn');
         let shoppingCart = [];
         try { const savedCart = JSON.parse(localStorage.getItem('starfall_cart_v1') || '[]'); if (Array.isArray(savedCart)) shoppingCart = savedCart.filter(x => x && x.id != null && x.tag === 'selling' && Number(x.price) >= 0).map(x => ({...x, qty: Math.max(1, Math.min(99, Number(x.qty) || 1))})); } catch (_) {}
@@ -5242,7 +5270,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const row = document.createElement('div'); row.className = 'cart-row';
                 const img = document.createElement('img'); img.alt = ''; img.src = safeImgSrc(item.photo) || getGameThumb(item.game); img.onerror = () => { img.onerror = null; img.src = getGameThumb(item.game); };
                 const details = document.createElement('div');
-                details.innerHTML = `<div class="cart-row-name">${escapeHtml(item.name)}</div><div class="cart-row-meta">${escapeHtml(item.game || 'Murder Mystery 2')} · Seller: ${escapeHtml(item.sellerDisplayName || item.sellerUsername || 'Unknown')}</div><div class="cart-row-price">$${fmtPriceNum(price)} each</div><div class="cart-row-controls"><button class="cart-qty-btn" type="button" data-cart-action="minus" data-cart-index="${index}" aria-label="Decrease quantity">−</button><span>${qty}</span><button class="cart-qty-btn" type="button" data-cart-action="plus" data-cart-index="${index}" aria-label="Increase quantity">+</button><button class="cart-remove-btn" type="button" data-cart-action="remove" data-cart-index="${index}">Remove</button></div>`;
+                details.innerHTML = `<div class="cart-row-name">${escapeHtml(item.name)}</div><div class="cart-row-meta">${escapeHtml(item.game || 'Murder Mystery 2')} · Seller: ${escapeHtml(item.sellerDisplayName || item.sellerUsername || 'Unknown')}</div><div class="cart-row-price">$${fmtPriceNum(price)} each</div><div class="cart-row-controls"><button class="cart-qty-btn" type="button" data-cart-action="minus" data-cart-index="${index}" aria-label="Decrease quantity">−</button><span>${qty}</span><button class="cart-qty-btn" type="button" data-cart-action="plus" data-cart-index="${index}" aria-label="Increase quantity" ${qty >= Math.min(99, Number(item.stock) || 1) ? 'disabled title="Maximum available quantity added"' : ''}>+</button>${qty >= Math.min(99, Number(item.stock) || 1) ? '<span class="cart-max-label">MAX</span>' : ''}<button class="cart-remove-btn" type="button" data-cart-action="remove" data-cart-index="${index}">Remove</button></div>`;
                 const line = document.createElement('div'); line.style.cssText='font-weight:800;white-space:nowrap;align-self:start;padding-top:3px;'; line.textContent = '$' + fmtPriceNum(price * qty);
                 row.append(img, details, line); cartItemsEl.appendChild(row);
             });
@@ -5251,6 +5279,29 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         }
         function openShoppingCart() { renderShoppingCart(); cartOverlay.classList.add('active'); }
         function closeShoppingCart() { cartOverlay.classList.remove('active'); }
+        function openCartCheckout() {
+            if (!shoppingCart.length) { showToast('Your cart is empty.'); return; }
+            checkoutSummary.innerHTML = '';
+            let total = 0;
+            shoppingCart.forEach(item => {
+                const qty = Math.max(1, Number(item.qty) || 1), price = Math.max(0, Number(item.price) || 0);
+                total += qty * price;
+                const row = document.createElement('div'); row.className = 'checkout-summary-row';
+                const name = document.createElement('span'); name.textContent = `${item.name} × ${qty}`;
+                const amount = document.createElement('strong'); amount.textContent = '$' + fmtPriceNum(price * qty);
+                row.append(name, amount); checkoutSummary.appendChild(row);
+            });
+            checkoutTotal.textContent = '$' + fmtPriceNum(total);
+            checkoutOverlay.classList.add('active');
+        }
+        function closeCartCheckout() { checkoutOverlay.classList.remove('active'); }
+        document.getElementById('cart-checkout-btn').addEventListener('click', openCartCheckout);
+        document.getElementById('checkout-close').addEventListener('click', closeCartCheckout);
+        document.getElementById('checkout-back-btn').addEventListener('click', closeCartCheckout);
+        checkoutOverlay.addEventListener('click', e => { if (e.target === checkoutOverlay) closeCartCheckout(); });
+        checkoutPayBtn.addEventListener('click', () => {
+            showToast('Marketplace cart payments are not connected yet. No payment was taken.');
+        });
         cartFab.addEventListener('click', openShoppingCart);
         document.getElementById('cart-close').addEventListener('click', closeShoppingCart);
         document.getElementById('cart-continue-btn').addEventListener('click', closeShoppingCart);
@@ -10618,28 +10669,17 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
   <section class="cart-panel">
     <div class="cart-head"><h2 id="cart-title">Shopping cart</h2><button class="cart-close" id="cart-close" type="button" aria-label="Close cart">×</button></div>
     <div class="cart-items" id="cart-items"></div>
-    <div class="cart-foot"><div><div class="cart-total-label">Subtotal</div><div class="cart-total" id="cart-total">$0</div></div><button class="buy-item-action-btn" id="cart-continue-btn" type="button" style="width:auto;margin:0;padding:12px 18px;font-size:14px;">Continue browsing</button></div>
-    <div class="cart-note">Cart items are saved on this device. Adding to cart does not purchase an item or reserve its stock.</div>
+    <div class="cart-foot"><div><div class="cart-total-label">Subtotal</div><div class="cart-total" id="cart-total">$0</div></div><button class="checkout-pay" id="cart-checkout-btn" type="button">Continue to payment</button></div>
+    <div class="cart-note">Cart items are saved on this device. Items are not purchased or reserved until a supported checkout is completed.</div>
+  </section>
+</div>
+<div id="checkout-overlay" role="dialog" aria-modal="true" aria-labelledby="checkout-title" style="position:fixed;inset:0;z-index:20010;display:none;align-items:center;justify-content:center;padding:16px;background:#000b;">
+  <section class="checkout-panel">
+    <div class="cart-head"><h2 id="checkout-title">Checkout</h2><button class="cart-close" id="checkout-close" type="button" aria-label="Close checkout">×</button></div>
+    <div class="checkout-content"><h3 class="checkout-title">Order summary</h3><p class="checkout-subtitle">Review everything in your cart before paying.</p><div class="checkout-summary" id="checkout-summary"></div><div class="checkout-grand-total"><span>Total</span><span id="checkout-total">$0</span></div><div class="checkout-secure-note">Payment for marketplace cart orders is not connected yet. This screen will not collect card details or charge you until secure checkout is implemented on the server.</div></div>
+    <div class="checkout-actions"><button class="checkout-secondary" id="checkout-back-btn" type="button">Back to cart</button><button class="checkout-pay" id="checkout-pay-btn" type="button">Pay securely</button></div>
   </section>
 </div>
 
 </body>
 </html>
-
-/* Fix Select Item category list clipping: allow the left category column to scroll fully. */
-@media (min-width: 761px) {
-  #item-picker-modal .item-picker-content { min-height: 0 !important; }
-  #item-picker-modal .item-picker-body { min-height: 0 !important; overflow: hidden !important; }
-  #item-picker-modal #item-picker-cats {
-    min-height: 0 !important;
-    max-height: min(68vh, calc(100% - 72px)) !important;
-    height: auto !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    flex: 0 1 230px !important;
-    align-self: stretch !important;
-    padding-bottom: 10px !important;
-    overscroll-behavior-y: contain !important;
-    scroll-padding-bottom: 10px !important;
-  }
-}
