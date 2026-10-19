@@ -3292,6 +3292,31 @@
   #item-picker-modal #item-picker-custom-input { width:100% !important; box-sizing:border-box !important; }
 }
 
+
+/* Mobile portrait picker refinements */
+.item-picker-cat[data-category="Commons"], .item-picker-cat[data-cat="Commons"] { --rarity-outline:#cbd0d8; --rarity-fill:rgba(203,208,216,.48); }
+.item-picker-cat[data-category="Chromas"].active, .item-picker-cat[data-cat="Chromas"].active {
+  background:linear-gradient(100deg,rgba(255,35,35,.55),rgba(255,145,0,.55),rgba(255,235,0,.55),rgba(0,230,90,.55),rgba(0,205,255,.55),rgba(65,80,255,.55),rgba(210,30,255,.55),rgba(255,35,35,.55)) !important;
+  background-size:300% 100% !important; animation:starfallChromaRainbow 12s linear infinite;
+}
+#offer-filters-toggle { display:none; flex:0 0 42px; width:42px; height:42px; padding:0; align-items:center; justify-content:center; border:1px solid #525b6b; border-radius:10px; color:#eaf0fa; background:#252c37; }
+#offer-filters-toggle svg { width:21px; height:21px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+@media (max-width:760px) and (orientation:portrait) {
+  #offer-modal .close-modal, #item-picker-modal .close-modal { top:5px !important; right:8px !important; width:32px !important; height:32px !important; padding:0 !important; display:flex !important; align-items:center !important; justify-content:center !important; line-height:1 !important; font-size:27px !important; }
+  #offer-modal #offer-title, #item-picker-modal #item-picker-title { padding-right:34px; }
+  #offer-modal .offer-search-row { display:flex !important; flex-direction:row !important; align-items:stretch !important; gap:7px !important; margin-bottom:5px !important; }
+  #offer-modal #offer-custom-input { flex:1 1 auto !important; min-width:0 !important; }
+  #offer-filters-toggle { display:flex !important; }
+  #offer-modal #offer-sort { display:none !important; width:100% !important; grid-template-columns:repeat(3,minmax(0,1fr)) !important; }
+  #offer-modal #offer-sort.filters-open { display:grid !important; }
+  #offer-modal .item-picker-toolbar { gap:4px !important; }
+  #offer-modal #offer-cats { grid-template-columns:repeat(4,minmax(0,1fr)) !important; grid-auto-rows:minmax(27px,auto) !important; gap:3px !important; padding:0 0 3px !important; }
+  #offer-modal #offer-cats .item-picker-cat { min-height:27px !important; padding:3px 2px !important; font-size:10px !important; gap:2px !important; }
+  #offer-modal #offer-cats .cat-count { padding:1px 3px !important; font-size:9px !important; }
+  #offer-modal #offer-cat-title { margin:0 0 1px !important; line-height:1.1 !important; }
+  #offer-modal #offer-list { min-height:0 !important; flex:1 1 0 !important; margin-top:0 !important; padding-top:0 !important; }
+}
+
 </style>
 </head>
 <body>
@@ -3939,8 +3964,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                     <div class="item-picker-right">
                         <div class="item-picker-cat-title" id="offer-cat-title"></div>
                         <div class="item-picker-toolbar">
-                            <div class="item-picker-custom">
+                            <div class="item-picker-custom offer-search-row">
                                 <input type="text" class="setting-input" id="offer-custom-input" maxlength="80" placeholder="Search items, or type a custom name" autocomplete="off">
+                                <button type="button" id="offer-filters-toggle" aria-label="Show sorting filters" aria-expanded="false" title="Filters"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4"/></svg></button>
                             </div>
                             <div class="item-sort" id="offer-sort" role="group" aria-label="Sort items">
                                 <button type="button" data-sort="value" class="active" title="Rarest / most valuable first">Value</button>
@@ -6617,6 +6643,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             document.getElementById('offer-warn').style.display = (st.listingGame && st.items.length && offerNeedsMiddleman(st.listingGame, st.game, st.items.length)) ? '' : 'none';
         }
         document.querySelectorAll('#offer-sort [data-sort]').forEach(b => b.addEventListener('click', () => { if (itemsDlg) { itemsDlg.sort = b.dataset.sort; renderItemsDialog(); } }));
+        document.getElementById('offer-filters-toggle').addEventListener('click', () => { const sort = document.getElementById('offer-sort'); const open = !sort.classList.contains('filters-open'); sort.classList.toggle('filters-open', open); document.getElementById('offer-filters-toggle').setAttribute('aria-expanded', String(open)); });
         document.getElementById('offer-close').addEventListener('click', () => offerModal.classList.remove('active'));
         offerModal.addEventListener('click', (e) => { if (e.target === offerModal) offerModal.classList.remove('active'); });
         document.getElementById('offer-back').addEventListener('click', () => { if (itemsDlg) showGameStep(); });
