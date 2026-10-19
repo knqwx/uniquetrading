@@ -3317,6 +3317,37 @@
   #offer-modal #offer-list { min-height:0 !important; flex:1 1 0 !important; margin-top:0 !important; padding-top:0 !important; }
 }
 
+
+/* Search suggestions for marketplace/trading listings */
+#listing-search-row { position:relative; }
+#listing-search-field { position:relative; }
+.listing-search-suggestions {
+  position:absolute; z-index:1200; top:calc(100% + 5px); left:0; right:0;
+  max-height: min(360px, 55vh); overflow:auto; border:1px solid #394454;
+  border-radius:10px; background:#171d27; box-shadow:0 12px 32px rgba(0,0,0,.45);
+}
+.listing-search-suggestion {
+  width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:10px 13px; border:0; border-bottom:1px solid rgba(255,255,255,.07);
+  background:transparent; color:#edf2fa; text-align:left; cursor:pointer; font:inherit;
+}
+.listing-search-suggestion:last-child { border-bottom:0; }
+.listing-search-suggestion:hover, .listing-search-suggestion:focus-visible { background:#293445; outline:none; }
+.listing-search-suggestion .suggestion-price { color:#aebbd0; font-size:12px; white-space:nowrap; }
+.listing-search-suggestion-empty { padding:12px; color:#9aa6b8; font-size:13px; }
+@media (max-width:760px) and (orientation:portrait) {
+  /* Four columns = up to three rows for the twelve item categories. */
+  #offer-modal #offer-cats, #item-picker-modal #item-picker-cats {
+    display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+    grid-auto-rows:minmax(27px,auto) !important; gap:3px !important;
+  }
+  #item-picker-modal #item-picker-cats .item-picker-cat { min-height:27px !important; padding:3px 2px !important; font-size:10px !important; gap:2px !important; }
+  #item-picker-modal #item-picker-cats .cat-count { padding:1px 3px !important; font-size:9px !important; }
+  /* Sort choices expand as a vertical dropdown list. */
+  #offer-modal #offer-sort.filters-open { display:flex !important; flex-direction:column !important; gap:4px !important; }
+  #offer-modal #offer-sort.filters-open [data-sort] { width:100% !important; text-align:left !important; justify-content:flex-start !important; }
+}
+
 </style>
 </head>
 <body>
@@ -3407,6 +3438,7 @@
                         <input type="text" id="listing-search-input" placeholder="Search items by name..." autocomplete="off">
                         <button type="button" class="search-clear" id="listing-search-clear" title="Clear">&times;</button>
                     </div>
+                    <div class="listing-search-suggestions" id="listing-search-suggestions" hidden></div>
                 </div>
                 <div class="games-tags-group" id="tags-group">
                     <button class="game-tag-btn active" data-tag="All">All items</button>
@@ -8107,15 +8139,50 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const input = document.getElementById('listing-search-input');
             const field = document.getElementById('listing-search-field');
             const clear = document.getElementById('listing-search-clear');
+            const suggestions = document.getElementById('listing-search-suggestions');
             let timer = null;
+            const hideSuggestions = () => { if (suggestions) suggestions.hidden = true; };
+            const renderSuggestions = () => {
+                if (!suggestions) return;
+                const q = input.value.trim().toLowerCase();
+                if (!q) { hideSuggestions(); suggestions.innerHTML = ''; return; }
+                let matches = (listingsState && Array.isArray(listingsState.items) ? listingsState.items : [])
+                    .filter(item => {
+                        const name = String(item.name || '');
+                        if (!name.toLowerCase().includes(q)) return false;
+                        if (activeGameTag !== 'All' && (item.game || 'Murder Mystery 2') !== activeGameTag) return false;
+                        if (listingMode === 'marketplace' && item.tag !== 'selling') return false;
+                        if (listingMode === 'trading' && item.tag === 'selling') return false;
+                        return true;
+                    });
+                const unique = new Map();
+                matches.forEach(item => { const key = String(item.name || '').toLowerCase(); if (key && !unique.has(key)) unique.set(key, item); });
+                matches = [...unique.values()].slice(0, 8);
+                suggestions.innerHTML = matches.length ? matches.map(item => {
+                    const name = escapeHtml(String(item.name || ''));
+                    const price = item.tag === 'selling' && item.price != null ? `<span class="suggestion-price">${escapeHtml(String(item.price))} coins</span>` : '<span class="suggestion-price">Trading</span>';
+                    return `<button type="button" class="listing-search-suggestion" data-suggestion-name="${name}"><span>${name}</span>${price}</button>`;
+                }).join('') : '<div class="listing-search-suggestion-empty">No matching listings found</div>';
+                suggestions.hidden = false;
+                suggestions.querySelectorAll('[data-suggestion-name]').forEach(btn => btn.addEventListener('click', () => {
+                    input.value = btn.getAttribute('data-suggestion-name') || '';
+                    field.classList.toggle('has-value', input.value.length > 0);
+                    hideSuggestions(); renderGlobalItems();
+                }));
+            };
             input.addEventListener('input', () => {
                 field.classList.toggle('has-value', input.value.length > 0);
+                renderSuggestions();
                 clearTimeout(timer);
                 timer = setTimeout(renderGlobalItems, 150);
             });
+            input.addEventListener('focus', renderSuggestions);
+            document.addEventListener('click', e => { if (!e.target.closest('#listing-search-row')) hideSuggestions(); });
+            input.addEventListener('keydown', e => { if (e.key === 'Escape') hideSuggestions(); });
             clear.addEventListener('click', () => {
                 input.value = '';
                 field.classList.remove('has-value');
+                hideSuggestions();
                 renderGlobalItems();
                 input.focus();
             });
