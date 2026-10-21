@@ -3277,23 +3277,23 @@ setInterval(() => { runCleanup().catch(() => {}); }, 15 * 60 * 1000);
 
 // ---------- the site itself ----------
 // The pages are read from disk ONCE, at start-up, and served from memory. Every inline <script> gets the CSP nonce of the response it is sent in
-// (the markers are put in at start-up; the real nonce is swapped in per request), so no 'unsafe-inline' is needed for scripts and login.html works too.
+// (the markers are put in at start-up; the real nonce is swapped in per request), so no 'unsafe-inline' is needed for scripts and unique-login.html works too.
 const NONCE_MARK = '@@CSP_NONCE@@';
 async function loadPage(file) {
   let html;
   try { html = await fs.readFile(path.join(__dirname, file), 'utf8'); } catch (e) { console.warn(`Page ${file} not found next to server.js - it will not be served from here (API-only deployment?)`); return null; }
   return html.replace(/<script(?![^>]*\bsrc\s*=)(?![^>]*\bnonce\s*=)([^>]*)>/gi, (tag, attrs) => `<script${attrs} nonce="${NONCE_MARK}">`);
 }
-const PAGE_MAIN = await loadPage('uniquetrading.html');
-const PAGE_LOGIN = await loadPage('login.html');
+const PAGE_MAIN = await loadPage('unique.html');
+const PAGE_LOGIN = await loadPage('unique-login.html');
 const servePage = (html) => (req, res, next) => {
   if (html == null) return next();
   res.setHeader('Cache-Control', 'no-store');
   res.type('html').send(html.split(NONCE_MARK).join(res.locals.cspNonce));
 };
 app.get('/', servePage(PAGE_MAIN));
-app.get('/uniquetrading.html', servePage(PAGE_MAIN));
-app.get(['/login', '/login.html'], servePage(PAGE_LOGIN));
+app.get(['/unique.html', '/uniquetrading.html'], servePage(PAGE_MAIN));
+app.get(['/login', '/login.html', '/unique-login.html'], servePage(PAGE_LOGIN));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // unknown API paths answer with JSON, never with an HTML page
