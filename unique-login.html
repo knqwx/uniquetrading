@@ -45,8 +45,8 @@
         }
 
         .brand-icon {
-            width: 28px;
-            height: 28px;
+            width: 44px;
+            height: 44px;
             object-fit: contain;
         }
 
@@ -269,7 +269,7 @@
 
     <div class="redirect-loading" id="redirect-loading" role="status" aria-live="polite">
         <div class="redirect-spinner" aria-hidden="true"></div>
-        <strong>Welcome to unique</strong>
+        <strong>Welcome to Unique Marketplace!</strong>
         <span>Signing you in and opening the marketplace…</span>
     </div>
 
@@ -314,15 +314,6 @@
 
             <div class="signup-only" id="age-wrap">
                 <label class="age-check"><input type="checkbox" id="age-checkbox"> <span>I am at least 13 years old and I agree to the <a href="#" id="terms-open-link">Terms of Service</a>.</span></label>
-            </div>
-
-            <!-- Математическая капча -->
-            <div class="captcha-group">
-                <label>Security verification</label>
-                <div class="captcha-box">
-                    <div class="captcha-question" id="captcha-question">? + ? =</div>
-                    <input type="text" id="captcha-input" placeholder="Answer">
-                </div>
             </div>
 
             <button type="submit" class="submit-btn" id="submit-btn">Log in</button>
@@ -421,8 +412,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     const mainLabel = $('main-label');
     const mainInput = $('main-input');
     const passwordInput = $('password-input');
-    const captchaQuestion = $('captcha-question');
-    const captchaInput = $('captcha-input');
     const submitBtn = $('submit-btn');
     const footerText = $('footer-text');
     const toggleBtn = $('toggle-btn');
@@ -432,7 +421,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
     const emailStatus = $('email-status');
 
     let isLoginMode = true;
-    let correctAnswer = 0;
     let busy = false;
 
 // ===== API helper (the session cookie is set by the server; JS never sees it) =====
@@ -455,26 +443,15 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
             return { ok: false, status: 0, data: { error: 'Cannot reach the server. Check your connection and try again.' } };
         }
     }
-    // ===== Captcha (UI-only speed bump; the server enforces the real limits) =====
-    function generateCaptcha() {
-        const a = Math.floor(Math.random() * 10) + 1;
-        const b = Math.floor(Math.random() * 10) + 1;
-        correctAnswer = a + b;
-        captchaQuestion.textContent = `${a} + ${b} =`;
-        captchaInput.value = '';
-    }
-    generateCaptcha();
 
     function showError(msg) {
         errorMsg.textContent = msg;
         errorMsg.style.display = 'block';
-        generateCaptcha();
     }
 
     function setMode(loginMode) {
         isLoginMode = loginMode;
         errorMsg.style.display = 'none';
-        generateCaptcha();
         if (!isLoginMode) {
             formTitle.textContent = 'Sign up';
             usernameGroup.classList.remove('collapsed');
@@ -622,7 +599,6 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
         if (!usernameGroup.classList.contains('collapsed')) list.push(usernameInput);
         list.push(mainInput, passwordInput);
         if (!isLoginMode) list.push($('age-checkbox'));
-        list.push(captchaInput);
         return list;
     }
     const fieldEmpty = (el) => (el.type === 'checkbox' ? !el.checked : !el.value.trim());
@@ -659,11 +635,6 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
         if (busy) return;
         errorMsg.style.display = 'none';
 
-        const answer = parseInt(captchaInput.value.trim(), 10);
-        if (isNaN(answer) || answer !== correctAnswer) {
-            showError('Incorrect security answer. Please try again.');
-            return;
-        }
 
         const password = passwordInput.value;
         let result;
