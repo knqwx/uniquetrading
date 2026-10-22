@@ -2083,16 +2083,6 @@
         .balance-container.admin-wallet { max-width: none; }
         .balance-container.admin-wallet { margin-top: 24px; border-color: rgba(255,115,0,0.35); }
         .wallet-card-title { color: #ffffff; font-size: 20px; font-weight: 700; margin-bottom: 18px; }
-        .topup-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-        .topup-preset {
-            background-color: #2a2a2a; color: #cccccc; border: 1px solid #3d3d3d;
-            border-radius: 8px; padding: 12px 0; font-family: 'Inter', sans-serif;
-            font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
-        }
-        .topup-preset:hover { color: #ffffff; border-color: #666; background-color: #333; }
-        .topup-preset.active {
-            background-color: rgba(255,115,0,0.15); color: #ff7300; border-color: #ff7300;
-        }
         .admin-row { display: flex; gap: 10px; }
         .admin-row .setting-input { flex: 1; }
         .admin-btn {
@@ -3604,9 +3594,35 @@
     scroll-padding-bottom: 10px !important;
   }
 }
-</style>
+        /* Render cold-start screen */
+        #render-wake-screen{position:fixed;inset:0;z-index:1000000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(12,12,12,.97);color:#f5f5f5;opacity:1;visibility:visible;transition:opacity .2s ease,visibility .2s ease}
+        #render-wake-screen.hidden{opacity:0;visibility:hidden;pointer-events:none}
+        .render-wake-card{width:min(360px,100%);text-align:center;padding:30px 24px;border:1px solid #333;border-radius:18px;background:#1b1b1b;box-shadow:0 20px 70px #0008}
+        .render-wake-spinner{width:42px;height:42px;border:4px solid #454545;border-top-color:#ff8a24;border-radius:50%;margin:0 auto 18px;animation:renderWakeSpin .8s linear infinite}
+        @keyframes renderWakeSpin{to{transform:rotate(360deg)}}
+        #render-wake-title{font-size:19px;font-weight:800;margin-bottom:8px}#render-wake-message{font-size:13px;line-height:1.5;color:#aaa}
+        #render-wake-retry{display:none;margin-top:18px;padding:10px 18px;border:0;border-radius:9px;background:#ff8a24;color:#171717;font-weight:800;cursor:pointer}
+        .notifications-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:38px;height:38px;padding:0 9px;border:1px solid #383838;border-radius:10px;background:#202020;color:#eee;cursor:pointer;font:600 13px Inter,sans-serif;flex:0 0 auto}
+        .notifications-btn:hover{background:#2b2b2b;border-color:#555}.notifications-btn svg{width:20px;height:20px;display:block}
+        .notifications-badge{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:#ff7300;color:white;font-size:10px;font-weight:800;line-height:17px;text-align:center;box-sizing:border-box}
+        #notifications-overlay{position:fixed;inset:0;z-index:80000;background:#0009;display:none;align-items:flex-start;justify-content:flex-end;padding:82px 22px 20px}
+        #notifications-overlay.active{display:flex}.notifications-panel{width:min(420px,100%);max-height:min(75vh,650px);display:flex;flex-direction:column;overflow:hidden;border:1px solid #414141;border-radius:15px;background:#202020;color:#f5f5f5;box-shadow:0 18px 60px #0009}
+        .notifications-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #393939;gap:12px}.notifications-head h2{font-size:19px;margin:0}.notifications-head-actions{display:flex;align-items:center;gap:12px}.notifications-mark-all{border:0;background:transparent;color:#ffad69;font-size:12px;cursor:pointer}.notifications-close{border:0;background:transparent;color:#aaa;font-size:25px;cursor:pointer;line-height:1}
+        #notifications-list{overflow:auto;padding:8px;display:flex;flex-direction:column;gap:6px}.notification-row{display:flex;gap:11px;padding:12px;border-radius:10px;background:#272727;border:1px solid #333}.notification-row.unread{border-color:#71431f;background:#30271f}.notification-icon{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#39302a;color:#ffad69;font-size:17px}.notification-copy{min-width:0;flex:1}.notification-title{font-size:13px;font-weight:800;margin-bottom:4px}.notification-body{font-size:12px;color:#c4c4c4;line-height:1.45;overflow-wrap:anywhere}.notification-time{font-size:10px;color:#888;margin-top:6px}.notifications-empty{padding:35px 12px;text-align:center;color:#999;font-size:13px}
+        @media(max-width:600px){#notifications-overlay{padding:76px 10px 12px}.notifications-btn{height:34px;min-width:34px;padding:0 7px}.notifications-btn .notifications-label{display:none}.notifications-panel{max-height:78vh}}
+    </style>
 </head>
 <body>
+    <div id="render-wake-screen" class="hidden" role="status" aria-live="polite">
+        <div class="render-wake-card"><div class="render-wake-spinner" id="render-wake-spinner"></div><div id="render-wake-title">Waking up the server…</div><div id="render-wake-message">Render may need a moment to start. Please wait while we reconnect.</div><button id="render-wake-retry" type="button" onclick="location.reload()">Try again</button></div>
+    </div>
+    <script>
+      (function(){
+        const screen=document.getElementById('render-wake-screen'), title=document.getElementById('render-wake-title'), message=document.getElementById('render-wake-message'), retry=document.getElementById('render-wake-retry'), spinner=document.getElementById('render-wake-spinner');
+        let shown=false; const reveal=setTimeout(()=>{screen.classList.remove('hidden');shown=true;},550);
+        window.__renderWakeScreen={show:function(){clearTimeout(reveal);screen.classList.remove('hidden');shown=true;},hide:function(){clearTimeout(reveal);screen.classList.add('hidden');},failed:function(){screen.classList.remove('hidden');title.textContent='Server is taking longer than usual';message.textContent='The site could not reconnect yet. You can retry the connection.';spinner.style.display='none';retry.style.display='inline-block';}};
+      })();
+    </script>
 
     <!-- Верхняя линия -->
     <header class="top-bar">
@@ -3626,6 +3642,9 @@
             <a class="top-link discord-link" id="discord-link" href="https://discord.gg/q95aZVCn5" target="_blank" rel="noopener noreferrer" title="Join our Discord" aria-label="Join our Discord"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg></a>
             <a class="top-link social-link tg-link" id="telegram-link" href="https://t.me/wuniquew" target="_blank" rel="noopener noreferrer" title="Telegram" aria-label="Telegram"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M23.9 3.6a1.3 1.3 0 00-1.8-1.2L1.4 10.4c-1 .4-1 1.8.1 2.1l5.1 1.6 2 6.2c.2.7 1.1.9 1.6.4l2.8-2.6 5.3 3.9c.7.5 1.6.1 1.8-.7l3.8-16.1zM9.5 13.4l9.3-5.8-7.4 7-.3 3.6-1.6-4.8z"/></svg></a>
             <a class="top-link social-link yt-link" id="youtube-link" href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer" title="YouTube" aria-label="YouTube"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 00.5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 002.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 002.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg></a>
+            <button class="notifications-btn" id="notifications-btn" type="button" aria-label="Notifications" title="Notifications" style="display:none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="notifications-label">Notifications</span><span class="notifications-badge" id="notifications-badge" style="display:none">0</span>
+            </button>
             <div class="auth-buttons" id="auth-container">
             <a href="unique-login.html" class="btn btn-login">Log in</a>
             <a href="unique-login.html?mode=signup" class="btn btn-signup">Sign up</a>
@@ -3740,30 +3759,6 @@
             </div>
 
             <div class="wallet-grid">
-                <!-- Левая колонка: покупка валюты -->
-                <div class="balance-container">
-                    <div class="wallet-card-title">Buy Currency</div>
-
-                    <div class="setting-label">Choose amount</div>
-                    <div class="topup-presets" id="topup-presets">
-                        <button type="button" class="topup-preset" data-amount="5">$5</button>
-                        <button type="button" class="topup-preset" data-amount="10">$10</button>
-                        <button type="button" class="topup-preset" data-amount="25">$25</button>
-                        <button type="button" class="topup-preset" data-amount="50">$50</button>
-                        <button type="button" class="topup-preset" data-amount="100">$100</button>
-                        <button type="button" class="topup-preset" data-amount="250">$250</button>
-                    </div>
-
-                    <div class="setting-group">
-                        <label class="setting-label">Or enter your own amount ($)</label>
-                        <input type="number" step="0.01" min="1" class="setting-input" id="topup-amount-input" placeholder="0.00">
-                        <div class="setting-hint">Min $1 &middot; Max $10,000</div>
-                    </div>
-
-                    <button class="save-settings-btn" id="topup-buy-btn">Buy</button>
-                    <div class="setting-hint" id="topup-secure-hint" style="margin-top: 8px;">You pay on our payment provider's secure page. This site never sees or stores your card number.</div>
-                </div>
-
                 <!-- Правая колонка: вывод -->
                 <div class="balance-container">
                     <div class="wallet-card-title">Withdrawal</div>
@@ -4345,6 +4340,13 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         </div>
     </div>
 
+    <div id="notifications-overlay" aria-hidden="true">
+        <section class="notifications-panel" role="dialog" aria-modal="true" aria-labelledby="notifications-title">
+            <div class="notifications-head"><h2 id="notifications-title">Notifications</h2><div class="notifications-head-actions"><button class="notifications-mark-all" id="notifications-mark-all" type="button">Mark all read</button><button class="notifications-close" id="notifications-close" type="button" aria-label="Close notifications">×</button></div></div>
+            <div id="notifications-list"><div class="notifications-empty">Loading notifications…</div></div>
+        </section>
+    </div>
+
     <!-- Тост-уведомление -->
     <div class="toast-notification" id="toast-notification">Notification</div>
 
@@ -4712,6 +4714,23 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         // Empty when this page is served by the same server as the API; otherwise (e.g. GitHub Pages) it calls the Render server directly.
         const SERVER_URL = 'https://unique-pdee.onrender.com';
         const API_BASE = (location.hostname.endsWith('.onrender.com') || location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '' : SERVER_URL;
+        // Wait for Render to wake before the app starts its normal authenticated requests.
+        async function waitForRenderWake() {
+            const started = Date.now();
+            while (Date.now() - started < 90000) {
+                try {
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 9000);
+                    const r = await fetch(API_BASE + '/api/health', { cache: 'no-store', credentials: 'include', signal: controller.signal });
+                    clearTimeout(timeout);
+                    if (r.ok) { window.__renderWakeScreen?.hide(); return true; }
+                } catch (e) {}
+                await new Promise(resolve => setTimeout(resolve, 1800));
+            }
+            window.__renderWakeScreen?.failed();
+            return false;
+        }
+        await waitForRenderWake();
         // ===== Server API helper (session cookie; all private data and all writes go through the server) =====
         // opts.noRedirect: a 401 here means "wrong password", not "your session ended" (add-account), so the page must NOT bounce to the login page.
         // opts.noElevate: background calls never pop up the admin password window.
@@ -4909,6 +4928,54 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 toast.classList.remove('active');
             }, 3000);
         }
+
+        // Notifications are stored server-side so they remain available across devices and reloads.
+        const notificationsBtn = document.getElementById('notifications-btn');
+        const notificationsBadge = document.getElementById('notifications-badge');
+        const notificationsOverlay = document.getElementById('notifications-overlay');
+        const notificationsList = document.getElementById('notifications-list');
+        let notificationRows = [];
+        function notificationIcon(type) { return ({cart:'🛒',message:'✉',deal:'💰',sale:'✓'})[type] || '•'; }
+        function updateNotificationBadge(count) {
+            const n = Math.max(0, Number(count) || 0);
+            notificationsBadge.textContent = n > 99 ? '99+' : String(n);
+            notificationsBadge.style.display = n ? 'inline-block' : 'none';
+            notificationsBtn.setAttribute('aria-label', n ? `Notifications, ${n} unread` : 'Notifications');
+        }
+        async function refreshNotifications(renderPanel) {
+            if (!currentUser) return;
+            const out = await srv('/api/notifications', 'GET', undefined, { noRedirect: true });
+            if (!out.ok) return;
+            notificationRows = Array.isArray(out.data.notifications) ? out.data.notifications : [];
+            updateNotificationBadge(out.data.unread);
+            if (renderPanel || notificationsOverlay.classList.contains('active')) renderNotifications();
+        }
+        function renderNotifications() {
+            notificationsList.innerHTML = '';
+            if (!notificationRows.length) { notificationsList.innerHTML = '<div class="notifications-empty">You are all caught up. New activity will appear here.</div>'; return; }
+            notificationRows.forEach(n => {
+                const row = document.createElement('div'); row.className = 'notification-row' + (n.readAt ? '' : ' unread');
+                const icon = document.createElement('div'); icon.className = 'notification-icon'; icon.textContent = notificationIcon(n.type);
+                const copy = document.createElement('div'); copy.className = 'notification-copy';
+                const title = document.createElement('div'); title.className = 'notification-title'; title.textContent = n.title || 'Notification';
+                const body = document.createElement('div'); body.className = 'notification-body'; body.textContent = n.body || '';
+                const time = document.createElement('div'); time.className = 'notification-time'; time.textContent = getTimeAgo(Number(n.createdAt) || 0);
+                copy.append(title, body, time); row.append(icon, copy);
+                row.addEventListener('click', async () => { if (!n.readAt) { await srv('/api/notifications/read', 'POST', { id: n.id }, { noRedirect: true }); n.readAt = Date.now(); updateNotificationBadge(Math.max(0, Number(notificationsBadge.textContent.replace('+','')) - 1)); row.classList.remove('unread'); } });
+                notificationsList.appendChild(row);
+            });
+        }
+        notificationsBtn.addEventListener('click', async () => {
+            if (!currentUser) { showToast('Log in to view notifications.'); return; }
+            notificationsOverlay.classList.add('active'); notificationsOverlay.setAttribute('aria-hidden', 'false');
+            await refreshNotifications(true);
+        });
+        document.getElementById('notifications-close').addEventListener('click', () => { notificationsOverlay.classList.remove('active'); notificationsOverlay.setAttribute('aria-hidden', 'true'); });
+        notificationsOverlay.addEventListener('click', e => { if (e.target === notificationsOverlay) { notificationsOverlay.classList.remove('active'); notificationsOverlay.setAttribute('aria-hidden', 'true'); } });
+        document.getElementById('notifications-mark-all').addEventListener('click', async () => {
+            const out = await srv('/api/notifications/read', 'POST', { all: true }, { noRedirect: true });
+            if (out.ok) { notificationRows.forEach(n => n.readAt = n.readAt || Date.now()); updateNotificationBadge(0); renderNotifications(); }
+        });
 
         function getTimeAgo(timestamp) {
             if (!timestamp) return 'Just now';
@@ -5121,6 +5188,13 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             }
         } catch (e) {
             currentUser = localStorage.getItem('currentUser');       // offline / server unreachable
+        }
+        if (currentUser) {
+            notificationsBtn.style.display = 'inline-flex';
+            refreshNotifications(false);
+            setInterval(() => refreshNotifications(false), 30000);
+        } else {
+            notificationsBtn.style.display = 'none';
         }
         // single account: signs out the account in use. (The Manage Accounts window decides between this and "log out of all sessions".)
         async function logoutAndReload(all) {
@@ -5843,7 +5917,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             document.getElementById('withdraw-amount-input').value = '';
             refreshWithdrawHint();
             loadWalletExtras();
-            resetTopUpForm();
             document.getElementById('admin-amount-input').value = '';
             adminUserSearch.value = '';
             balancePage.classList.add('active');
@@ -5858,7 +5931,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         function heldLineText(held) {
             return `On hold for you: ${fmtMoney(Number(held) || 0)} (money from your sales, released when the buyer confirms delivery or after 7 days)`;
         }
-        let topupAvailable = true;
         function fmtDateTime(ms) { return new Date(ms).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
         function fmtDuration(ms) {
             ms = Math.max(0, ms);
@@ -5902,17 +5974,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             try {
                 const w = await srv('/api/wallet');
                 if (!w.ok) return;
-                topupAvailable = w.data.topupAvailable !== false;
-                const buy = document.getElementById('topup-buy-btn');
-                if (buy) buy.disabled = !topupAvailable;
-                const sh = document.getElementById('topup-secure-hint');
-                if (sh) sh.textContent = topupAvailable ? "You pay on our payment provider's secure page. This site never sees or stores your card number." : 'Wallet top-ups are not available yet: the payment provider is still being connected.';
                 applyLiveBalance(w.data.balance, w.data.held);
                 renderEscrow(w.data.escrow);
                 const hint = document.getElementById('withdraw-limit-hint');
                 const next = Number(w.data.nextWithdrawAt) || 0;
                 let hintText = next > Date.now() ? `Limit: 1 withdrawal per hour. You can withdraw again in ${Math.ceil((next - Date.now()) / 60000)} min.` : 'Limit: 1 withdrawal per hour.';
-                if (typeof w.data.withdrawable === 'number' && w.data.withdrawable < w.data.balance) hintText += ` Withdrawable now: ${fmtMoney(w.data.withdrawable)} (money added by card can be withdrawn ${Number(w.data.topupHoldDays) || 7} days after it was added).`;
                 hint.textContent = hintText;
             } catch (e) {}
         }
@@ -5933,15 +5999,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             switchToHome();
         });
 
-        // ===== Wallet top-up =====
-        // There is NO card form on this site. "Buy" asks the server for a hosted checkout page of the payment provider and sends the browser
-        // there; the card is typed on the provider's page, and the balance is credited by the provider's signed webhook, never by this page.
-        const MIN_TOPUP = 1;
-        const MAX_TOPUP = 10000;
-
-        const topupInput = document.getElementById('topup-amount-input');
-        const topupBuyBtn = document.getElementById('topup-buy-btn');
-        const topupPresetBtns = document.querySelectorAll('.topup-preset');
         const adminUserSelect = document.getElementById('admin-user-select');
         const adminAmountInput = document.getElementById('admin-amount-input');
         const adminAddBtn = document.getElementById('admin-add-btn');
@@ -5974,74 +6031,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             setBal(document.getElementById('balance-page-amount'), value);
             setBal(document.getElementById('header-balance-amount'), value);
         }
-
-        function updateBuyButtonLabel() {
-            const v = parseFloat(topupInput.value);
-            topupBuyBtn.textContent = (v > 0) ? `Buy ${fmtMoney(v)}` : 'Buy';
-        }
-
-        function resetTopUpForm() {
-            topupInput.value = '';
-            topupPresetBtns.forEach(b => b.classList.remove('active'));
-            updateBuyButtonLabel();
-        }
-
-        topupPresetBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                topupPresetBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                topupInput.value = btn.getAttribute('data-amount');
-                updateBuyButtonLabel();
-            });
-        });
-
-        topupInput.addEventListener('input', () => {
-            const v = parseFloat(topupInput.value);
-            topupPresetBtns.forEach(b => b.classList.toggle('active', parseFloat(b.getAttribute('data-amount')) === v));
-            updateBuyButtonLabel();
-        });
-
-        topupBuyBtn.addEventListener('click', async () => {
-            if (!currentUser) { showToast('Please log in first.'); return; }
-
-            const amount = Math.round(parseFloat(topupInput.value) * 100) / 100;
-            if (!amount || isNaN(amount)) { showToast('Choose or enter an amount.'); return; }
-            if (amount < MIN_TOPUP) { showToast(`Minimum purchase is ${fmtMoney(MIN_TOPUP)}.`); return; }
-            if (amount > MAX_TOPUP) { showToast(`Maximum purchase is ${fmtMoney(MAX_TOPUP)}.`); return; }
-            if (!topupAvailable) { showToast('Wallet top-ups are not available yet.'); return; }
-
-            topupBuyBtn.disabled = true;
-            try {
-                const tr = await srv('/api/wallet/topup', 'POST', { amount });
-                if (tr.status === 503 || tr.data.topupAvailable === false) { topupAvailable = false; showToast('Wallet top-ups are not available yet.'); return; }
-                if (!tr.ok) { srvFail(tr); return; }
-                const url = String(tr.data.checkoutUrl || '');
-                if (!/^https:\/\//i.test(url)) { showToast('The payment page could not be opened. Try again.'); return; }
-                showToast('Taking you to the secure payment page...');
-                location.href = url;
-            } catch (e) {
-                console.error(e);
-                showToast('Purchase failed. Try again.');
-            } finally {
-                topupBuyBtn.disabled = !topupAvailable;
-            }
-        });
-
-        // back from the provider's checkout page: ?topup=success|cancelled. The credit itself arrives through the signed webhook (can be a few seconds later).
-        (function handleTopupReturn() {
-            let state = '';
-            try { state = new URLSearchParams(location.search).get('topup') || ''; } catch (e) {}
-            if (state !== 'success' && state !== 'cancelled') return;
-            try { const u = new URL(location.href); u.searchParams.delete('topup'); history.replaceState(null, '', u.pathname + (u.search || '') + u.hash); } catch (e) {}
-            setTimeout(() => {
-                if (!currentUser) return;
-                if (state === 'cancelled') { showToast('Payment cancelled. Nothing was charged.'); return; }
-                showToast('Thanks! Your balance updates as soon as the payment is confirmed.');
-                let tries = 0;
-                const t = setInterval(() => { loadWalletExtras(); if (++tries >= 6) clearInterval(t); }, 4000);
-                loadWalletExtras();
-            }, 600);
-        })();
 
         let adminUsersCache = [];
         const adminUserSearch = document.getElementById('admin-user-search');
@@ -9789,7 +9778,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             list.innerHTML = rows.map(r => {
                 const rk = r.risk, isPending = r.status === 'pending';
                 const riskHtml = rk ? `<div class="money-tx-note">${rk.flags.length ? '<b>Check before paying:</b> ' + rk.flags.map(escapeHtml).join(' &middot; ') : 'No risk flags.'}<br>` +
-                    `Account age: ${rk.accountAgeDays === null ? '?' : rk.accountAgeDays + ' d'} &middot; Added by card (30 d): ${fmtMoney(rk.topups30d)} &middot; Sales (14 d): ${fmtMoney(rk.sales14d)} from ${rk.buyers14d} buyer${rk.buyers14d === 1 ? '' : 's'}` +
+                    `Account age: ${rk.accountAgeDays === null ? '?' : rk.accountAgeDays + ' d'} &middot; Sales (14 d): ${fmtMoney(rk.sales14d)} from ${rk.buyers14d} buyer${rk.buyers14d === 1 ? '' : 's'}` +
                     ` &middot; From buyers who just topped up: ${fmtMoney(rk.freshBuyerSales14d)}${rk.chargebacks > 0 ? ' &middot; Refunded/disputed: ' + fmtMoney(rk.chargebacks) : ''}</div>` : '';
                 const label = ({ pending: 'Pending', paid: 'Paid', rejected: 'Rejected' })[r.status] || r.status;
                 return `<div class="mm-ticket">

@@ -368,7 +368,7 @@ async function init() {
 
   // A table with this name but an unexpected shape can only be left over from an interrupted earlier deploy (the original site never had these tables):
   // drop it so it is rebuilt correctly instead of crashing the start-up on a missing column.
-  for (const [t, col] of [['messages', 'senderId'], ['listings', 'ownerId'], ['media', 'kind'], ['group_members', 'userId'], ['login_lockouts', 'lockedUntil'], ['topup_intents', 'userId'], ['payment_events', 'eventId']]) {
+  for (const [t, col] of [['messages', 'senderId'], ['listings', 'ownerId'], ['media', 'kind'], ['group_members', 'userId'], ['login_lockouts', 'lockedUntil']]) {
     try {
       const info = await db.execute(`PRAGMA table_info(${t})`);
       if (info.rows.length && !info.rows.some(r => String(r.name) === col)) { console.warn(`Rebuilding table ${t}: it had an old layout`); await db.execute(`DROP TABLE ${t}`); }
@@ -402,6 +402,8 @@ async function init() {
   // Per-account shopping carts: rows are owned by the authenticated user, never by the device/browser.
   await run(`CREATE TABLE IF NOT EXISTS cart_items (userId INTEGER NOT NULL, listingId INTEGER NOT NULL, quantity INTEGER NOT NULL DEFAULT 1, updatedAt INTEGER NOT NULL, PRIMARY KEY (userId, listingId))`);
   await run('CREATE INDEX IF NOT EXISTS cart_items_user ON cart_items (userId, updatedAt)');
+  await run(`CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, type TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT '', actorId INTEGER, refId TEXT, createdAt INTEGER NOT NULL, readAt INTEGER)`);
+  await run('CREATE INDEX IF NOT EXISTS notifications_user_created ON notifications (userId, createdAt DESC)');
 
   // ---- media: pictures as separate binary blobs served from their own URL (never base64 inside JSON) ----
   await run(`CREATE TABLE IF NOT EXISTS media (
@@ -419,17 +421,6 @@ async function init() {
   // ---- login lock-outs, keyed by (IP + account) and stored in the database so a restart does not clear them ----
   await run(`CREATE TABLE IF NOT EXISTS login_lockouts (k TEXT PRIMARY KEY, fails INTEGER NOT NULL DEFAULT 0, level INTEGER NOT NULL DEFAULT 0, lockedUntil INTEGER NOT NULL DEFAULT 0, lastFailAt INTEGER NOT NULL DEFAULT 0)`);
   await run('CREATE INDEX IF NOT EXISTS login_lockouts_last ON login_lockouts (lastFailAt)');
-
-  // ---- wallet top-ups through an external payment gateway (card data never touches this server) ----
-  await run(`CREATE TABLE IF NOT EXISTS topup_intents (id TEXT PRIMARY KEY, userId INTEGER NOT NULL, amountCents INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'usd', provider TEXT, providerRef TEXT, status TEXT NOT NULL DEFAULT 'pending', createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, expiresAt INTEGER NOT NULL)`);
-  await run('ALTER TABLE topup_intents ADD COLUMN paymentIntent TEXT');
-  await run('ALTER TABLE topup_intents ADD COLUMN completedAt INTEGER');
-  await run('ALTER TABLE topup_intents ADD COLUMN reversedCents INTEGER NOT NULL DEFAULT 0');
-  await run('CREATE INDEX IF NOT EXISTS topup_payment_intent ON topup_intents (paymentIntent)');
-  await run('CREATE UNIQUE INDEX IF NOT EXISTS topup_provider_ref ON topup_intents (provider, providerRef) WHERE providerRef IS NOT NULL');
-  await run('CREATE INDEX IF NOT EXISTS topup_user ON topup_intents (userId, createdAt)');
-  await run('CREATE INDEX IF NOT EXISTS topup_status ON topup_intents (status, expiresAt)');
-  await run(`CREATE TABLE IF NOT EXISTS payment_events (eventId TEXT PRIMARY KEY, provider TEXT NOT NULL, type TEXT, intentId TEXT, outcome TEXT, receivedAt INTEGER NOT NULL)`);
 
   // ---- indexes for the columns the queries actually filter and sort on ----
   for (const ix of [
@@ -937,6 +928,13 @@ async function requireAdmin(req, res, next) {
   } catch (e) { console.error('admin session validation failed:', e); res.status(500).json({ error: 'Server error' }); }
 }
 const isElevatedAdmin = async (req) => !!(req.isAdminAccount && await adminElevation(req));
+async function addNotification(userId, type, title, body, actorId = null, refId = null) {
+  if (!Number.isSafeInteger(Number(userId)) || Number(userId) <= 0) return;
+  await db.execute({
+    sql: 'INSERT INTO notifications (userId, type, title, body, actorId, refId, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    args: [Number(userId), String(type || 'general').slice(0, 32), String(title || 'Notification').slice(0, 120), String(body || '').slice(0, 500), actorId == null ? null : Number(actorId), refId == null ? null : String(refId).slice(0, 100), Date.now()]
+  });
+}
 
 // ---------- API ----------
 app.get('/api/health', async (req, res) => {
@@ -1198,7 +1196,6 @@ app.post('/api/logout-all', async (req, res) => {
 const ADMIN_MAX_ADJUST = Number(process.env.ADMIN_MAX_ADJUST) || 10000, ADMIN_DAILY_CAP = Number(process.env.ADMIN_DAILY_CAP) || 100000;   // set these in Render to change the limits
 const SELLER_SHARE = 0.9;
 const MIN_DEAL = 0.01, MAX_DEAL = 1000000;
-const MIN_TOPUP = 1, MAX_TOPUP = 10000;
 const round2 = (n) => Math.round(Number(n) * 100) / 100;
 const toCents = (v) => Math.round(Number(v) * 100);
 const fromCents = (v) => (Number(v) || 0) / 100;
@@ -1333,18 +1330,11 @@ async function escrowFor(username) {
     timeoutDays: ESCROW_TIMEOUT_MS / DAY
   };
 }
-// Money added by card can only be withdrawn TOPUP_HOLD_DAYS (default 7) after it was added, so a stolen-card top-up cannot be cashed out before the card owner reacts.
-const TOPUP_HOLD_MS = (process.env.TOPUP_HOLD_DAYS && Number(process.env.TOPUP_HOLD_DAYS) >= 0 ? Number(process.env.TOPUP_HOLD_DAYS) : 7) * DAY;
-async function lockedTopupCents(q, userId) {
-  const r = await q.execute({ sql: "SELECT COALESCE(SUM(MAX(0, amountCents - COALESCE(reversedCents, 0))), 0) AS c FROM topup_intents WHERE userId = ? AND status = 'completed' AND COALESCE(completedAt, updatedAt) > ?", args: [userId, Date.now() - TOPUP_HOLD_MS] });
-  return Number(r.rows[0].c) || 0;
-}
 app.get('/api/wallet', requireUser, async (req, res) => {
   const r = await db.execute({ sql: 'SELECT balanceCents, heldBalanceCents, lastWithdrawAt FROM users WHERE id = ?', args: [req.userId] });
   if (!r.rows.length) return res.status(401).json({ error: 'Please log in.' });
   const last = Number(r.rows[0].lastWithdrawAt) || 0;
-  const locked = await lockedTopupCents(db, req.userId);
-  res.json({ balance: fromCents(r.rows[0].balanceCents), withdrawable: fromCents(Math.max(0, (Number(r.rows[0].balanceCents) || 0) - locked)), topupHoldDays: TOPUP_HOLD_MS / DAY, held: fromCents(r.rows[0].heldBalanceCents), nextWithdrawAt: last ? last + WITHDRAW_COOLDOWN : 0, escrow: await escrowFor(req.user), topupAvailable: paymentsEnabled() });
+  res.json({ balance: fromCents(r.rows[0].balanceCents), withdrawable: fromCents(r.rows[0].balanceCents), held: fromCents(r.rows[0].heldBalanceCents), nextWithdrawAt: last ? last + WITHDRAW_COOLDOWN : 0, escrow: await escrowFor(req.user) });
 });
 
 // Withdrawals: one per hour per account, enforced here (not in the page). The request is saved in the withdrawals table; the amount is deducted from the balance immediately and refunded if the admin rejects it.
@@ -1365,9 +1355,8 @@ app.post('/api/wallet/withdraw', requireUser, async (req, res) => {
       if (until === -1 || until > Date.now()) throw new Abort('Your account is banned.', 403);
       const wait = (Number(u.lastWithdrawAt) || 0) + WITHDRAW_COOLDOWN - now;
       if (wait > 0) throw new Abort(`You can only withdraw once per hour. Try again in ${Math.max(1, Math.ceil(wait / 60000))} min.`, 429);
-      const locked = await lockedTopupCents(tx, req.userId);
-      const free = Math.max(0, (Number(u.balanceCents) || 0) - locked);
-      if (amountCents > free) throw new Abort(locked ? `Money you added by card can be withdrawn ${TOPUP_HOLD_MS / DAY} days after it was added. You can withdraw up to $${fromCents(free).toFixed(2)} right now.` : 'You do not have enough balance for this withdrawal.', 400);
+      const free = Math.max(0, Number(u.balanceCents) || 0);
+      if (amountCents > free) throw new Abort('You do not have enough balance for this withdrawal.', 400);
       // atomic: the balance is deducted in the same transaction as the request, and only if enough is left
       const upd = await tx.execute({ sql: 'UPDATE users SET balanceCents = balanceCents - ?, balance = (balanceCents - ?) / 100.0, lastWithdrawAt = ? WHERE username = ? AND balanceCents >= ?', args: [amountCents, amountCents, now, req.user, amountCents] });
       if (!upd.rowsAffected) throw new Abort('You do not have enough balance for this withdrawal.', 400);
@@ -1390,10 +1379,9 @@ app.get('/api/admin/withdrawals', async (req, res) => {
     const uid = Number(u.uid) || 0;
     const sales = (await db.execute({ sql: "SELECT COUNT(*) AS n, COALESCE(SUM(sellerAmountCents), 0) AS c, COUNT(DISTINCT buyer) AS b FROM deals WHERE seller = ? AND status IN ('completed','released') AND COALESCE(completedAt, updatedAt) > ?", args: [name, W14] })).rows[0];
     const fresh = (await db.execute({ sql: `SELECT COALESCE(SUM(d.sellerAmountCents), 0) AS c FROM deals d WHERE d.seller = ? AND d.status IN ('completed','released') AND COALESCE(d.completedAt, d.updatedAt) > ?
-      AND EXISTS (SELECT 1 FROM topup_intents t JOIN users b ON b.id = t.userId WHERE b.username = d.buyer AND t.status = 'completed' AND COALESCE(t.completedAt, t.updatedAt) > d.createdAt - ? AND COALESCE(t.completedAt, t.updatedAt) <= COALESCE(d.paidAt, d.updatedAt))`, args: [name, W14, 14 * DAY] })).rows[0];
-    const tp = (await db.execute({ sql: "SELECT COALESCE(SUM(CASE WHEN COALESCE(completedAt, updatedAt) > ? THEN amountCents ELSE 0 END), 0) AS recent, COALESCE(SUM(reversedCents), 0) AS rev FROM topup_intents WHERE userId = ? AND status = 'completed'", args: [now - 30 * DAY, uid] })).rows[0];
+      AND EXISTS (SELECT 1 FROM users b WHERE b.username = d.buyer AND b.joinedAt > d.createdAt - ? AND b.joinedAt <= COALESCE(d.paidAt, d.updatedAt))`, args: [name, W14] })).rows[0];
     const ageDays = u.joinedAt ? Math.floor((now - Number(u.joinedAt)) / DAY) : null;
-    const r = { accountAgeDays: ageDays, topups30d: fromCents(tp.recent), chargebacks: fromCents(tp.rev), sales14d: fromCents(sales.c), salesCount14d: Number(sales.n), buyers14d: Number(sales.b), freshBuyerSales14d: fromCents(fresh.c), flags: [] };
+    const r = { accountAgeDays: ageDays, sales14d: fromCents(sales.c), salesCount14d: Number(sales.n), buyers14d: Number(sales.b), freshBuyerSales14d: fromCents(fresh.c), flags: [] };
     if (ageDays !== null && ageDays < 7) r.flags.push('New account (under 7 days old)');
     if (Number(tp.rev) > 0) r.flags.push('Has had a card payment refunded or disputed');
     if ((Number(u.balanceCents) || 0) < 0) r.flags.push('Negative balance');
@@ -1427,134 +1415,6 @@ app.post('/api/admin/withdrawals/:id/status', async (req, res) => {
   res.json({ ok: true });
 });
 
-// ---------- wallet top-ups through a payment gateway (hosted checkout + signed webhook) ----------
-// This site and this server NEVER see card numbers or CVVs: the old in-page card form is gone. A top-up works like this:
-//   1. POST /api/wallet/topup {amount}  stores a pending "intent" (amount decided HERE) and asks the gateway for a hosted checkout page.
-//      The browser is redirected to that page and the customer types the card into the GATEWAY's site.
-//   2. The gateway calls POST /api/webhooks/payments. The call is signed (HMAC-SHA256 over the raw body, Stripe-style "Stripe-Signature: t=...,v1=...").
-//      Only a verified event credits the wallet, once per event id, for the amount stored in OUR intent (never an amount that came from the browser).
-// Reference adapter: Stripe Checkout. Set STRIPE_SECRET_KEY, PAYMENT_WEBHOOK_SECRET (the endpoint's signing secret) and PUBLIC_URL (https://your-site) to switch it on.
-// Another gateway only needs its own createCheckout() and signature check; the intent / idempotency / crediting logic below stays the same.
-const stripeKey = () => cleanEnv(process.env.STRIPE_SECRET_KEY);
-const webhookSecret = () => cleanEnv(process.env.PAYMENT_WEBHOOK_SECRET);
-const publicUrl = () => cleanEnv(process.env.PUBLIC_URL).replace(/\/+$/, '');
-const paymentsEnabled = () => !!(stripeKey() && webhookSecret() && /^https:\/\//.test(publicUrl()));
-const WEBHOOK_TOLERANCE_S = 5 * 60;
-async function createCheckout(intent) {                    // returns { ref, url } from the gateway
-  const form = new URLSearchParams({
-    mode: 'payment', client_reference_id: intent.id, 'metadata[intentId]': intent.id,
-    success_url: `${publicUrl()}/uniquetrading.html?topup=success`, cancel_url: `${publicUrl()}/uniquetrading.html?topup=cancelled`,
-    'line_items[0][quantity]': '1', 'line_items[0][price_data][currency]': intent.currency,
-    'line_items[0][price_data][unit_amount]': String(intent.amountCents), 'line_items[0][price_data][product_data][name]': 'Unique Trading wallet top-up'
-  });
-  const r = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-    method: 'POST', headers: { Authorization: 'Bearer ' + stripeKey(), 'Content-Type': 'application/x-www-form-urlencoded', 'Idempotency-Key': 'topup-' + intent.id },
-    body: form, signal: AbortSignal.timeout(10000)
-  });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok || !j.id || !/^https:\/\//.test(String(j.url || ''))) throw new Error('gateway refused the checkout: ' + ((j.error && j.error.message) || r.status));
-  return { ref: String(j.id), url: String(j.url) };
-}
-// Stripe-style signature: header "t=<unix seconds>,v1=<hex hmac>[,v1=...]", hmac = HMAC_SHA256(secret, t + "." + rawBody)
-function verifyWebhookSignature(rawBody, header, secret, nowMs = Date.now()) {
-  if (!rawBody || !header || !secret) return false;
-  const parts = String(header).split(',').map(x => x.trim().split('='));
-  const t = Number((parts.find(p => p[0] === 't') || [])[1]);
-  const sigs = parts.filter(p => p[0] === 'v1' && /^[a-f0-9]{64}$/.test(p[1] || '')).map(p => p[1]);
-  if (!Number.isFinite(t) || !sigs.length || Math.abs(nowMs / 1000 - t) > WEBHOOK_TOLERANCE_S) return false;
-  const want = crypto.createHmac('sha256', secret).update(t + '.').update(rawBody).digest();
-  return sigs.some(h => { const got = Buffer.from(h, 'hex'); return got.length === want.length && crypto.timingSafeEqual(got, want); });
-}
-app.post('/api/wallet/topup', requireUser, async (req, res) => {
-  try {
-    if (!paymentsEnabled()) return res.status(503).json({ error: 'Wallet top-ups are not available yet. Payments are being set up.', topupAvailable: false });
-    if (moneyLimit(req, res, 'topup', 10, 60 * 60 * 1000)) return;
-    const amountCents = parseMoney(req.body && req.body.amount);
-    if (!(amountCents >= MIN_TOPUP * 100)) return res.status(400).json({ error: `Minimum top-up is $${MIN_TOPUP}.` });
-    if (amountCents > MAX_TOPUP * 100) return res.status(400).json({ error: `Maximum top-up is $${MAX_TOPUP}.` });
-    const open = await db.execute({ sql: "SELECT COUNT(*) AS c FROM topup_intents WHERE userId = ? AND status = 'pending' AND expiresAt > ?", args: [req.userId, Date.now()] });
-    if (Number(open.rows[0].c) >= 5) return res.status(429).json({ error: 'You have several unfinished top-ups. Finish or wait for them to expire.' });
-    const now = Date.now(), intent = { id: 'ti_' + crypto.randomBytes(12).toString('hex'), userId: req.userId, amountCents, currency: 'usd' };
-    await db.execute({ sql: "INSERT INTO topup_intents (id, userId, amountCents, currency, provider, status, createdAt, updatedAt, expiresAt) VALUES (?, ?, ?, 'usd', 'stripe', 'pending', ?, ?, ?)", args: [intent.id, req.userId, amountCents, now, now, now + 2 * 60 * 60 * 1000] });
-    let co;
-    try { co = await createCheckout(intent); }
-    catch (e) {
-      console.error('checkout creation failed:', e.message);
-      await db.execute({ sql: "UPDATE topup_intents SET status = 'failed', updatedAt = ? WHERE id = ?", args: [Date.now(), intent.id] });
-      return res.status(502).json({ error: 'The payment provider is not reachable right now. Try again later.' });
-    }
-    await db.execute({ sql: 'UPDATE topup_intents SET providerRef = ?, updatedAt = ? WHERE id = ?', args: [co.ref, Date.now(), intent.id] });
-    res.json({ checkoutUrl: co.url, intentId: intent.id });
-  } catch (e) { console.error('topup error:', e); res.status(500).json({ error: 'Top-up failed. Try again.' }); }
-});
-app.post('/api/webhooks/payments', async (req, res) => {
-  const secret = webhookSecret();
-  if (!secret) return res.status(503).json({ error: 'Payments are not configured.' });
-  if (!verifyWebhookSignature(req.rawBody, req.headers['stripe-signature'], secret)) return res.status(400).json({ error: 'Invalid signature.' });
-  const ev = req.body && typeof req.body === 'object' ? req.body : {};
-  const eventId = String(ev.id || '');
-  if (!/^[A-Za-z0-9_.:-]{3,100}$/.test(eventId)) return res.status(400).json({ error: 'Bad event.' });
-  const type = String(ev.type || '');
-  const obj = (ev.data && ev.data.object) || {};
-  const credits = type === 'checkout.session.completed' || type === 'checkout.session.async_payment_succeeded';
-  const tx = await db.transaction('write');
-  try {
-    const dup = await tx.execute({ sql: 'SELECT 1 FROM payment_events WHERE eventId = ?', args: [eventId] });
-    if (dup.rows.length) { await tx.rollback(); return res.json({ received: true, duplicate: true }); }     // already processed: acknowledge, do nothing
-    let outcome = credits ? 'ignored' : 'not-a-payment-event', intentId = String(obj.client_reference_id || '');
-    if (credits) {
-      const it = (await tx.execute({ sql: 'SELECT * FROM topup_intents WHERE id = ?', args: [intentId] })).rows[0];
-      if (!it) outcome = 'unknown-intent';
-      else if (it.status === 'completed') outcome = 'already-credited';
-      else if (obj.payment_status !== 'paid') outcome = 'not-paid-yet';
-      else if (String(it.providerRef || '') !== String(obj.id || '') || Number(obj.amount_total) !== Number(it.amountCents) || String(obj.currency || '').toLowerCase() !== String(it.currency)) {
-        outcome = 'mismatch'; console.error(`PAYMENT MISMATCH for intent ${intentId}: expected ${it.amountCents} ${it.currency} / ${it.providerRef}, got ${obj.amount_total} ${obj.currency} / ${obj.id}`);
-      } else {
-        const up = await tx.execute({ sql: "UPDATE topup_intents SET status = 'completed', updatedAt = ?, completedAt = ?, paymentIntent = ? WHERE id = ? AND status IN ('pending', 'failed')", args: [Date.now(), Date.now(), String(obj.payment_intent || '') || null, intentId] });
-        if (up.rowsAffected) {
-          await tx.execute({ sql: 'UPDATE users SET balanceCents = COALESCE(balanceCents, 0) + ?, balance = (COALESCE(balanceCents, 0) + ?) / 100.0 WHERE id = ?', args: [Number(it.amountCents), Number(it.amountCents), Number(it.userId)] });
-          outcome = 'credited';
-        } else outcome = 'already-credited';
-      }
-    }
-    // refunds and chargebacks: take the money back from the wallet (the balance may go negative = the user owes it), so it cannot be spent or withdrawn
-    const reverses = type === 'charge.refunded' || type === 'charge.dispute.created' || type === 'charge.dispute.closed';
-    if (reverses) {
-      const pi = String(obj.payment_intent || '');
-      const it = pi ? (await tx.execute({ sql: 'SELECT * FROM topup_intents WHERE paymentIntent = ?', args: [pi] })).rows[0] : null;
-      if (!it) outcome = 'unknown-payment';
-      else {
-        intentId = String(it.id);
-        const who = (await tx.execute({ sql: 'SELECT username FROM users WHERE id = ?', args: [Number(it.userId)] })).rows[0];
-        const reversed = Number(it.reversedCents) || 0;
-        let delta = 0;
-        if (type === 'charge.dispute.closed') {
-          if (obj.status === 'won') delta = -Math.min(reversed, Math.max(0, Number(obj.amount) || 0));      // the dispute was won: give the money back
-          outcome = delta ? 'dispute-won' : 'dispute-closed';
-        } else {
-          const target = Math.min(Number(it.amountCents), Math.max(0, Number(type === 'charge.refunded' ? obj.amount_refunded : obj.amount) || 0));
-          delta = Math.max(0, target - reversed);
-          outcome = delta ? (type === 'charge.refunded' ? 'refund-clawed-back' : 'chargeback-clawed-back') : 'already-reversed';
-        }
-        if (delta) {
-          await tx.execute({ sql: 'UPDATE users SET balanceCents = COALESCE(balanceCents, 0) - ?, balance = (COALESCE(balanceCents, 0) - ?) / 100.0 WHERE id = ?', args: [delta, delta, Number(it.userId)] });
-          await tx.execute({ sql: 'UPDATE topup_intents SET reversedCents = COALESCE(reversedCents, 0) + ?, updatedAt = ? WHERE id = ?', args: [delta, Date.now(), String(it.id)] });
-          res.locals.afterCommit = () => auditRaw('system', outcome, who ? String(who.username) : '#' + it.userId, `${type} for top-up ${it.id}: ${delta > 0 ? 'took back' : 'returned'} $${fromCents(Math.abs(delta)).toFixed(2)}`, fromCents(-delta));
-          console.error(`PAYMENT ${outcome}: ${who ? who.username : it.userId} ${fromCents(-delta)} (${type})`);
-        }
-      }
-    }
-    await tx.execute({ sql: 'INSERT INTO payment_events (eventId, provider, type, intentId, outcome, receivedAt) VALUES (?, ?, ?, ?, ?, ?)', args: [eventId, 'stripe', type.slice(0, 80), intentId.slice(0, 80), outcome, Date.now()] });
-    await tx.commit();
-    if (res.locals.afterCommit) await res.locals.afterCommit();
-    if (outcome === 'credited') console.log(`TOPUP credited intent ${intentId}`);
-    res.json({ received: true, outcome });
-  } catch (e) {
-    try { await tx.rollback(); } catch (_) {}
-    console.error('webhook error:', e);
-    res.status(500).json({ error: 'Webhook processing failed.' });      // the gateway retries; nothing was recorded
-  } finally { tx.close(); }
-});
 
 // admin only: add or subtract balance for any user (never goes below $0)
 app.post('/api/admin/adjust', async (req, res) => {
@@ -1772,6 +1632,8 @@ app.post('/api/deals', requireUser, async (req, res) => {
       sql: "INSERT INTO deals (buyer, seller, itemName, amount, sellerAmount, amountCents, sellerAmountCents, status, createdAt, updatedAt, itemId) VALUES (?, ?, ?, ?, ?, ?, ?, 'requested', ?, ?, ?)",
       args: [buyer, req.user, itemName, amount, round2(amount * SELLER_SHARE), amountCents, Math.round(amountCents * SELLER_SHARE), now, now, itemId || null]
     });
+    try { await addNotification(Number(b.rows[0].id), 'deal', 'Payment request received', `${req.user} sent you a payment request for “${itemName}”.`, req.userId, itemId || null); }
+    catch (e) { console.error('deal notification error:', e); }
     res.json({ ok: true });
   } catch (e) { console.error('deal create error:', e); res.status(500).json({ error: 'Server error. Try again.' }); }
 });
@@ -1803,7 +1665,16 @@ app.post('/api/deals/:id/pay', requireUser, async (req, res) => {
     const r = await tx.execute({ sql: 'SELECT balanceCents FROM users WHERE username = ?', args: [req.user] });
     return fromCents(r.rows[0].balanceCents);
   }));
-  if (out !== undefined) res.json({ balance: out });
+  if (out !== undefined) {
+    try {
+      const d = await db.execute({ sql: 'SELECT seller, buyer, itemName, itemId FROM deals WHERE id = ?', args: [id] });
+      if (d.rows.length) {
+        const seller = await db.execute({ sql: 'SELECT id FROM users WHERE username = ?', args: [d.rows[0].seller] });
+        if (seller.rows.length) await addNotification(Number(seller.rows[0].id), 'deal', 'Buyer paid', `${d.rows[0].buyer} paid for “${String(d.rows[0].itemName || 'your item').slice(0, 180)}”.`, req.userId, d.rows[0].itemId || null);
+      }
+    } catch (e) { console.error('payment notification error:', e); }
+    res.json({ balance: out });
+  }
 });
 
 // buyer confirms delivery: held money goes to the seller's balance and the sold unit leaves the listing (the listing is deleted when it was the last one)
@@ -1816,7 +1687,16 @@ app.post('/api/deals/:id/complete', requireUser, async (req, res) => {
     await finishDeal(tx, d, 'completed');
     return true;
   });
-  if (out) res.json({ ok: true });
+  if (out) {
+    try {
+      const d = await db.execute({ sql: 'SELECT seller, buyer, itemName, itemId FROM deals WHERE id = ?', args: [id] });
+      if (d.rows.length) {
+        const seller = await db.execute({ sql: 'SELECT id FROM users WHERE username = ?', args: [d.rows[0].seller] });
+        if (seller.rows.length) await addNotification(Number(seller.rows[0].id), 'sale', 'Sale completed', `${d.rows[0].buyer} confirmed delivery for “${String(d.rows[0].itemName || 'your item').slice(0, 180)}”.`, req.userId, d.rows[0].itemId || null);
+      }
+    } catch (e) { console.error('completion notification error:', e); }
+    res.json({ ok: true });
+  }
 });
 
 // simple state changes without money movement
@@ -2030,6 +1910,25 @@ app.get('/api/admin/directory', async (req, res) => {
   res.json({ users: rs.rows.map(lightAdminUser) });
 });
 
+// Persistent account notifications. Only the recipient can read or mark their notifications.
+app.get('/api/notifications', requireUser, async (req, res) => {
+  const rs = await db.execute({ sql: 'SELECT id, type, title, body, actorId, refId, createdAt, readAt FROM notifications WHERE userId = ? ORDER BY createdAt DESC, id DESC LIMIT 50', args: [req.userId] });
+  const count = await db.execute({ sql: 'SELECT COUNT(*) AS n FROM notifications WHERE userId = ? AND readAt IS NULL', args: [req.userId] });
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ notifications: rs.rows.map(n => ({ ...n, id: Number(n.id), actorId: n.actorId == null ? null : Number(n.actorId), createdAt: Number(n.createdAt), readAt: n.readAt == null ? null : Number(n.readAt) })), unread: Number(count.rows[0]?.n) || 0 });
+});
+app.post('/api/notifications/read', requireUser, async (req, res) => {
+  const now = Date.now();
+  if (req.body && req.body.all === true) {
+    await db.execute({ sql: 'UPDATE notifications SET readAt = ? WHERE userId = ? AND readAt IS NULL', args: [now, req.userId] });
+  } else {
+    const id = Number(req.body && req.body.id);
+    if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid notification.' });
+    await db.execute({ sql: 'UPDATE notifications SET readAt = ? WHERE id = ? AND userId = ? AND readAt IS NULL', args: [now, id, req.userId] });
+  }
+  res.json({ ok: true });
+});
+
 // Account-scoped shopping cart. Listing details and stock are always read from the database.
 app.get('/api/cart', requireUser, async (req, res) => {
   if (limited('cart-get:' + req.userId, 120, 60 * 1000)) return res.status(429).json({ error: 'Too many requests. Slow down.' });
@@ -2053,6 +1952,10 @@ app.post('/api/cart/items', requireUser, async (req, res) => {
   const old = await db.execute({ sql: 'SELECT quantity FROM cart_items WHERE userId = ? AND listingId = ?', args: [req.userId, id] });
   const qty = Math.min(stock, 99, (Number(old.rows[0]?.quantity) || 0) + 1);
   await db.execute({ sql: `INSERT INTO cart_items (userId, listingId, quantity, updatedAt) VALUES (?, ?, ?, ?) ON CONFLICT(userId, listingId) DO UPDATE SET quantity = excluded.quantity, updatedAt = excluded.updatedAt`, args: [req.userId, id, qty, Date.now()] });
+  if (!old.rows.length) {
+    try { await addNotification(Number(listing.ownerId), 'cart', 'Someone added your item to their cart', `${req.user} added “${String(listing.name || 'your item').slice(0, 180)}” to their shopping cart.`, req.userId, id); }
+    catch (e) { console.error('cart notification error:', e); }
+  }
   res.json({ ok: true, quantity: qty });
 });
 app.patch('/api/cart/items/:id', requireUser, async (req, res) => {
@@ -2576,7 +2479,13 @@ app.post('/api/chat/send', requireUser, async (req, res) => {
     if (offer) msg.offer = offer;
     return msg;
   });
-  if (out) res.json({ message: out });
+  if (out) {
+    try {
+      const recipientId = await userIdByName(db, to);
+      if (recipientId) await addNotification(Number(recipientId), 'message', 'New message', `${req.user} sent you a message${itemId ? ' about a listing' : ''}.`, req.userId, itemId || null);
+    } catch (e) { console.error('message notification error:', e); }
+    res.json({ message: out });
+  }
 });
 app.post('/api/chat/edit', requireUser, async (req, res) => {
   const to = String(req.body.receiver || ''), ts = Number(req.body.timestamp);
@@ -2759,7 +2668,6 @@ async function deleteUserData(uid, name) {
     ["DELETE FROM group_members WHERE userId = ?", [uid]],
     ["DELETE FROM admin_sessions WHERE userId = ?", [uid]],
     ["DELETE FROM sessions WHERE userId = ?", [uid]],
-    ["DELETE FROM topup_intents WHERE userId = ? AND status != 'completed'", [uid]],
     ["DELETE FROM tickets WHERE creator = ? OR partner = ?", [name, name]],
     ["DELETE FROM user_ips WHERE username = ?", [name]],
     ["DELETE FROM chat_clears WHERE user = ? OR other = ? OR substr(other, 1, ?) = ?", [name, name, name.length + THREAD_SEP.length, name + THREAD_SEP]],
@@ -3387,8 +3295,6 @@ async function runCleanup() {
     ['admin_sessions (orphans)', () => db.execute('DELETE FROM admin_sessions WHERE sessionHash NOT IN (SELECT id FROM sessions)')],
     ['rate_hits', () => db.execute({ sql: 'DELETE FROM rate_hits WHERE t < ?', args: [now - RATE_KEEP_MS] })],
     ['login_lockouts', () => db.execute({ sql: 'DELETE FROM login_lockouts WHERE lockedUntil < ? AND lastFailAt < ?', args: [now, now - LOCK_FORGET_MS] })],
-    ['topup_intents', () => db.execute({ sql: "DELETE FROM topup_intents WHERE status != 'completed' AND createdAt < ?", args: [now - 30 * DAY] })],
-    ['payment_events', () => db.execute({ sql: 'DELETE FROM payment_events WHERE receivedAt < ?', args: [now - 180 * DAY] })],
     ['signup_log', () => db.execute({ sql: 'DELETE FROM signup_log WHERE createdAt < ?', args: [now - 30 * DAY] })],
     ['ip_info', () => db.execute({ sql: 'DELETE FROM ip_info WHERE checkedAt < ?', args: [now - 30 * DAY] })],
     ['typing', () => db.execute({ sql: 'DELETE FROM typing WHERE ts < ?', args: [now - 60 * 1000] })],
