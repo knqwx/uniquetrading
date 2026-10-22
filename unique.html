@@ -3318,14 +3318,16 @@
 }
 .listing-search-suggestion {
   width:100%; display:flex; align-items:center; justify-content:flex-start; gap:10px;
-  padding:9px 12px; border:0; border-bottom:1px solid rgba(255,255,255,.07);
+  padding:12px 14px; min-height:68px; border:0; border-bottom:1px solid rgba(255,255,255,.07);
   background:transparent; color:#edf2fa; text-align:left; cursor:pointer; font:inherit;
 }
 .listing-search-suggestion:last-child { border-bottom:0; }
 .listing-search-suggestion:hover, .listing-search-suggestion:focus-visible { background:#383838; outline:none; }
-.listing-search-suggestion .suggestion-icon { width:34px; height:34px; flex:0 0 34px; object-fit:contain; border-radius:6px; background:#333333; }
+.listing-search-suggestion .suggestion-icon { width:44px; height:44px; flex:0 0 44px; object-fit:contain; border-radius:6px; background:#333333; }
 .listing-search-suggestion .suggestion-icon-placeholder { display:inline-block; }
-.listing-search-suggestion .suggestion-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.listing-search-suggestion .suggestion-text { display:flex; flex:1; min-width:0; flex-direction:column; align-items:flex-start; justify-content:center; gap:3px; }
+.listing-search-suggestion .suggestion-name { display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; font-weight:600; }
+.listing-search-suggestion .suggestion-seller { display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#999999; font-size:11px; font-weight:400; }
 .listing-search-suggestion .suggestion-price { color:#eaf0fa; font-size:13px; font-weight:700; white-space:nowrap; margin-left:auto; }
 .listing-search-suggestion-empty { padding:12px; color:#9aa6b8; font-size:13px; }
 @media (max-width:760px) and (orientation:portrait) {
@@ -3563,6 +3565,7 @@
 .cart-fab{position:fixed;right:20px;bottom:22px;z-index:1200;display:flex;align-items:center;gap:9px;padding:12px 16px;border:1px solid #ff9b43;border-radius:999px;background:#ff7300;color:#fff;font:700 14px Inter,sans-serif;box-shadow:0 8px 26px #0007;cursor:pointer}
 .cart-fab svg{width:20px;height:20px;flex:none}.cart-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#202020;color:#fff;font-size:12px}
 .cart-add-btn{width:100%;margin-top:10px;padding:9px 10px;border:1px solid #ff8d2b;border-radius:8px;background:rgba(255,115,0,.12);color:#ffad69;font:700 13px Inter,sans-serif;cursor:pointer}.cart-add-btn:hover{background:#ff7300;color:#fff}
+.offer-listing-btn{width:100%;margin-top:10px;padding:9px 10px;border:1px solid #ff8d2b;border-radius:8px;background:rgba(255,115,0,.12);color:#ffad69;font:700 13px Inter,sans-serif;cursor:pointer}.offer-listing-btn:hover{background:#ff7300;color:#fff}
 #cart-overlay{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.7);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .25s ease,visibility .25s ease}#cart-overlay.active{opacity:1;visibility:visible;pointer-events:auto}
 .cart-panel{width:min(620px,100%);max-height:min(82vh,760px);display:flex;flex-direction:column;overflow:hidden;border:1px solid #414141;border-radius:16px;background:#202020;color:#f4f4f4;box-shadow:0 20px 70px #0009;transform:translateY(20px);transition:transform .25s ease}.cart-overlay.active .cart-panel,#cart-overlay.active .cart-panel{transform:translateY(0)}
 .cart-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #393939}.cart-head h2{margin:0;font-size:22px}.cart-close{border:0;background:transparent;color:#bbb;font-size:28px;cursor:pointer;line-height:1}
@@ -5869,9 +5872,16 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         <div class="global-item-time" data-ts="${Number(item.id) || 0}">${escapeHtml(timeAgo)}</div>
                     </div>
                     ${item.tag === 'selling' && !(currentUser && currentUser === item.sellerUsername) ? '<button type="button" class="cart-add-btn">＋ Add to cart</button>' : ''}
+                    ${item.tag !== 'selling' && !(currentUser && currentUser === item.sellerUsername) ? '<button type="button" class="offer-listing-btn">Make an offer</button>' : ''}
                 `;
                 const cardCartBtn = card.querySelector('.cart-add-btn');
                 if (cardCartBtn) cardCartBtn.addEventListener('click', e => { e.stopPropagation(); addToCart(item); });
+                const cardOfferBtn = card.querySelector('.offer-listing-btn');
+                if (cardOfferBtn) cardOfferBtn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    if (!currentUser) { showToast('Please log in to make an offer.'); return; }
+                    openMessagesPage(item.sellerUsername || item.owner, item);
+                });
 
                 card.addEventListener('click', () => {
                     openItemDetailPage(item);
@@ -8507,10 +8517,11 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 matches = [...unique.values()].slice(0, 8);
                 suggestions.innerHTML = matches.length ? matches.map(item => {
                     const name = escapeHtml(String(item.name || ''));
+                    const seller = escapeHtml(String(item.sellerDisplayName || item.sellerUsername || item.owner || 'Unknown seller'));
                     const price = item.tag === 'selling' && item.price != null ? `<span class="suggestion-price">$${escapeHtml(String(item.price))}</span>` : '<span class="suggestion-price">Trading</span>';
                     const iconSrc = (item.game === 'Murder Mystery 2' || !item.game) ? itemImageCandidates(String(item.name || ''), item.cat || item.category || '')[0] : (item.imageUrl || item.image || item.iconUrl || item.icon || '');
                     const icon = iconSrc ? `<img class="suggestion-icon" src="${escapeHtml(String(iconSrc).replace(/\.(png|jpe?g|gif)(\?.*)?$/i, '.webp'))}" alt="" loading="lazy" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${ITEM_IMG_DIR}${itemImageFile(String(item.name || ''))}';}else{this.style.display='none';}">` : '<span class="suggestion-icon suggestion-icon-placeholder" aria-hidden="true"></span>'; 
-                    return `<button type="button" class="listing-search-suggestion" data-suggestion-name="${name}">${icon}<span class="suggestion-name">${name}</span>${price}</button>`;
+                    return `<button type="button" class="listing-search-suggestion" data-suggestion-name="${name}">${icon}<span class="suggestion-text"><span class="suggestion-name">${name}</span><span class="suggestion-seller">${seller}</span></span>${price}</button>`;
                 }).join('') : '<div class="listing-search-suggestion-empty">No matching listings found</div>';
                 suggestions.hidden = false;
                 suggestions.querySelectorAll('[data-suggestion-name]').forEach(btn => btn.addEventListener('click', () => {
