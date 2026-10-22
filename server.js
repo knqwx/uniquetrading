@@ -26,7 +26,7 @@ if (TURSO_URL.startsWith('file:')) { try { await db.execute('PRAGMA busy_timeout
 const app = express();
 // Express 4 does not catch errors thrown inside async routes: one failed database call used to crash the whole server
 // (Render then answers 502 without CORS headers, which the browser reports as a CORS error). Every handler is wrapped so errors become JSON 500s.
-for (const m of ['get', 'post', 'delete']) {
+for (const m of ['get', 'post', 'delete', 'patch']) {
   const orig = app[m].bind(app);
   app[m] = (p, ...handlers) => orig(p, ...handlers.map(h => (typeof h === 'function' && h.length < 4) ? (req, res, next) => Promise.resolve(h(req, res, next)).catch(next) : h));
 }
@@ -89,7 +89,7 @@ app.use((req, res, next) => {
   if (origin && ALLOWED_ORIGINS.has(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Session, X-UT-Page');
     res.setHeader('Access-Control-Max-Age', '600');
   }
@@ -150,8 +150,8 @@ const ipOf = (req) => {
 const ipFingerprint = (ip) => crypto.createHmac('sha256', cleanEnv(process.env.IP_HASH_SECRET || TURSO_TOKEN || 'unique-trading-ip-guard-change-me')).update(String(ip || '')).digest('hex');
 
 // ---------- small helpers used by the schema/migration code (must exist before init() runs) ----------
-// session ids and admin tokens are stored as they are (plain), as in the original version
-const skey = (v) => String(v);
+// session ids and admin tokens are stored as SHA-256 hashes
+const skey = (v) => sha256(String(v));
 const sha256 = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');
 const parseJson = (s, fallback) => { try { const v = JSON.parse(s); return v == null ? fallback : v; } catch (e) { return fallback; } };
 async function metaGet(k) { const r = await db.execute({ sql: 'SELECT v FROM meta WHERE k = ?', args: [k] }); return r.rows.length ? String(r.rows[0].v) : null; }
@@ -250,6 +250,12 @@ async function init() {
   // sessions.id is the SHA-256 of the cookie value (never the cookie itself), so a leaked database cannot be replayed as logins.
   await run(`CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, username TEXT, createdAt INTEGER, expiresAt INTEGER)`);
   await run(`ALTER TABLE sessions ADD COLUMN userId INTEGER`);
+  // one-time: old rows held raw tokens; skey() now hashes, so drop them (everyone logs in again, admins re-confirm)
+  if (!(await metaGet('sessions_hashed_v1'))) {
+    await run('DELETE FROM sessions');
+    await run('DROP TABLE IF EXISTS admin_sessions');
+    await metaSet('sessions_hashed_v1', '1');
+  }
   // admin_sessions v2: only hashes are stored. The old table held raw tokens, so it is dropped once (admins simply sign in again).
   if (!(await metaGet('admin_sessions_v2'))) {
     await run('DROP TABLE IF EXISTS admin_sessions');
@@ -330,6 +336,10 @@ async function init() {
   if (!withdrawalCols.rows.some(r => String(r.name) === 'amountCents')) {
     await run('ALTER TABLE withdrawals ADD COLUMN amountCents INTEGER NOT NULL DEFAULT 0');
     await run('UPDATE withdrawals SET amountCents = CAST(ROUND(COALESCE(amount, 0) * 100) AS INTEGER)');
+  }
+  if (!withdrawalCols.rows.some(r => String(r.name) === 'deducted')) {
+    // deducted = 1: the amount was taken from the balance when requested (refund on reject). Old pending rows stay 0.
+    await run('ALTER TABLE withdrawals ADD COLUMN deducted INTEGER NOT NULL DEFAULT 0');
   }
 
   await run(`CREATE INDEX IF NOT EXISTS withdrawals_created ON withdrawals (createdAt)`);
@@ -428,6 +438,21 @@ await init();
 // ---------- one-time data migrations (each is idempotent and safe to re-run after a crash) ----------
 async function migrate() {
   const t0 = Date.now();
+  // one-time: replace raw IP addresses already stored with keyed hashes (privacy); private/loopback addresses are dropped
+  if (!(await metaGet('ips_hashed_v1'))) {
+    const H = (v) => /^[0-9a-f]{64}$/.test(String(v)) ? String(v) : ipFingerprint(v);
+    const priv = (v) => /^(::1$|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|fc|fd|fe80)/i.test(String(v));
+    for (const r of (await db.execute('SELECT id, lastIp FROM users WHERE lastIp IS NOT NULL AND lastIp != ""')).rows)
+      await db.execute({ sql: 'UPDATE users SET lastIp = ? WHERE id = ?', args: [priv(r.lastIp) ? null : H(r.lastIp), r.id] });
+    const ui = (await db.execute('SELECT username, ip, firstSeen, lastSeen FROM user_ips')).rows;
+    await db.execute('DELETE FROM user_ips');
+    for (const r of ui) if (!priv(r.ip)) await db.execute({ sql: 'INSERT INTO user_ips (username, ip, firstSeen, lastSeen) VALUES (?, ?, ?, ?) ON CONFLICT(username, ip) DO UPDATE SET lastSeen = MAX(lastSeen, excluded.lastSeen)', args: [r.username, H(r.ip), r.firstSeen, r.lastSeen] });
+    for (const r of (await db.execute('SELECT ip FROM ip_bans')).rows) await db.execute({ sql: 'UPDATE OR REPLACE ip_bans SET ip = ? WHERE ip = ?', args: [H(r.ip), r.ip] });
+    for (const r of (await db.execute('SELECT ip FROM ip_info')).rows) await db.execute({ sql: 'UPDATE OR REPLACE ip_info SET ip = ? WHERE ip = ?', args: [H(r.ip), r.ip] });
+    await db.execute('UPDATE signup_log SET ip = NULL WHERE createdAt < ' + (Date.now() - DAY));
+    for (const r of (await db.execute('SELECT DISTINCT ip FROM signup_log WHERE ip IS NOT NULL')).rows) await db.execute({ sql: 'UPDATE signup_log SET ip = ? WHERE ip = ?', args: [H(r.ip), r.ip] });
+    await metaSet('ips_hashed_v1', '1');
+  }
   const users = await db.execute('SELECT id, username, joinedAt FROM users');
   const idOf = new Map(users.rows.map(r => [String(r.username), Number(r.id)]));
 
@@ -569,7 +594,6 @@ function limited(key, max, windowMs) {
   rateQueue.push([key, now]);
   return b.length > max;
 }
-const failCount = (key, windowMs) => { const now = Date.now(); return (buckets.get(key) || []).filter(t => now - t < windowMs).length; };
 setInterval(() => { const now = Date.now(); for (const [k, v] of buckets) if (!v.some(t => now - t < DAY)) buckets.delete(k); }, 10 * 60 * 1000);
 
 // ---------- rules (the same ones the form shows, now enforced on the server) ----------
@@ -643,11 +667,11 @@ function passwordProblems(pw) {
 async function activeIpBan(ip) {
   if (!ip) return null;
   try {
-    const rs = await db.execute({ sql: 'SELECT * FROM ip_bans WHERE ip = ?', args: [ip] });
+    const rs = await db.execute({ sql: 'SELECT * FROM ip_bans WHERE ip = ?', args: [ipFingerprint(ip)] });
     if (!rs.rows.length) return null;
     const r = rs.rows[0];
     const until = Number(r.bannedUntil);
-    if (until !== -1 && until <= Date.now()) { await db.execute({ sql: 'DELETE FROM ip_bans WHERE ip = ?', args: [ip] }); return null; }
+    if (until !== -1 && until <= Date.now()) { await db.execute({ sql: 'DELETE FROM ip_bans WHERE ip = ?', args: [ipFingerprint(ip)] }); return null; }
     return { until, reason: r.reason || '' };
   } catch (e) { return null; }
 }
@@ -686,7 +710,7 @@ function ipLookupProvider() {
 async function checkIpInfo(ip) {
   const provider = ipLookupProvider();
   if (!provider || isPrivateIp(ip) || ipPending.has(ip)) return;
-  const rs = await db.execute({ sql: 'SELECT checkedAt FROM ip_info WHERE ip = ?', args: [ip] });
+  const rs = await db.execute({ sql: 'SELECT checkedAt FROM ip_info WHERE ip = ?', args: [ipFingerprint(ip)] });
   if (rs.rows.length && Date.now() - Number(rs.rows[0].checkedAt) < 30 * DAY) return;
   if (limited('ipapi', 40, 60 * 1000) || limited('ipapi-day', provider.perDay, DAY)) return;          // stay inside the provider's quota; retried the next time the IP is seen
   ipPending.add(ip);
@@ -696,16 +720,16 @@ async function checkIpInfo(ip) {
     const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
     const out = provider.parse(await r.json());
     if (!out) return;
-    await db.execute({ sql: 'INSERT INTO ip_info (ip, proxy, hosting, checkedAt) VALUES (?, ?, ?, ?) ON CONFLICT(ip) DO UPDATE SET proxy = excluded.proxy, hosting = excluded.hosting, checkedAt = excluded.checkedAt', args: [ip, out.proxy ? 1 : 0, out.hosting ? 1 : 0, Date.now()] });
+    await db.execute({ sql: 'INSERT INTO ip_info (ip, proxy, hosting, checkedAt) VALUES (?, ?, ?, ?) ON CONFLICT(ip) DO UPDATE SET proxy = excluded.proxy, hosting = excluded.hosting, checkedAt = excluded.checkedAt', args: [ipFingerprint(ip), out.proxy ? 1 : 0, out.hosting ? 1 : 0, Date.now()] });
   } catch (e) { /* lookup failed: try again later */ }
   finally { ipPending.delete(ip); }
 }
 function trackIp(username, ip) {
-  if (!username || !ip) return;
+  if (!username || !ip || isPrivateIp(ip)) return;
   const key = username + '|' + ip, now = Date.now();
   if (now - (ipSeen.get(key) || 0) < 10 * 60 * 1000) return;     // write at most once per 10 minutes per account+IP
   ipSeen.set(key, now);
-  db.execute({ sql: 'INSERT INTO user_ips (username, ip, firstSeen, lastSeen) VALUES (?, ?, ?, ?) ON CONFLICT(username, ip) DO UPDATE SET lastSeen = excluded.lastSeen', args: [username, ip, now, now] }).catch(() => {});
+  db.execute({ sql: 'INSERT INTO user_ips (username, ip, firstSeen, lastSeen) VALUES (?, ?, ?, ?) ON CONFLICT(username, ip) DO UPDATE SET lastSeen = excluded.lastSeen', args: [username, ipFingerprint(ip), now, now] }).catch(() => {});
   checkIpInfo(ip).catch(() => {});
 }
 setInterval(() => { const cut = Date.now() - DAY; for (const [k, t] of ipSeen) if (t < cut) ipSeen.delete(k); }, 60 * 60 * 1000);
@@ -967,10 +991,10 @@ app.post('/api/signup', async (req, res) => {
     const devLast = Number(req.cookies.ut_su) || 0;
     if (devLast && now - devLast < DAY) wait = Math.max(wait, DAY - (now - devLast));
     if (ip) {
-      const a = await db.execute({ sql: 'SELECT MAX(createdAt) AS t FROM signup_log WHERE ip = ?', args: [ip] });
+      const a = await db.execute({ sql: 'SELECT MAX(createdAt) AS t FROM signup_log WHERE ip = ?', args: [ipFingerprint(ip)] });
       const t1 = Number(a.rows[0] && a.rows[0].t) || 0;
       if (t1 && now - t1 < DAY) wait = Math.max(wait, DAY - (now - t1));
-      const b = await db.execute({ sql: 'SELECT MAX(joinedAt) AS t FROM users WHERE lastIp = ?', args: [ip] });
+      const b = await db.execute({ sql: 'SELECT MAX(joinedAt) AS t FROM users WHERE lastIp = ?', args: [ipFingerprint(ip)] });
       const t2 = Number(b.rows[0] && b.rows[0].t) || 0;
       if (t2 && now - t2 < DAY) wait = Math.max(wait, DAY - (now - t2));
     }
@@ -990,7 +1014,7 @@ app.post('/api/signup', async (req, res) => {
     try {
       const ins = await tx.execute({
         sql: 'INSERT INTO users (customId, username, displayName, email, password, passwordHash, lastIp, joinedAt, balanceCents, heldBalanceCents) VALUES (CAST((SELECT COUNT(*) + 1 FROM users) AS TEXT), ?, ?, ?, ?, ?, ?, ?, 0, 0)',
-        args: [username, username, email, '', hash, ip || null, now]
+        args: [username, username, email, '', hash, ip ? ipFingerprint(ip) : null, now]
       });
       newId = Number(ins.lastInsertRowid);
       await tx.commit();
@@ -999,7 +1023,7 @@ app.post('/api/signup', async (req, res) => {
       if (String(e.message || e).toUpperCase().includes('UNIQUE')) return fail('This username is already taken.');
       throw e;
     } finally { tx.close(); }
-    if (ip) await db.execute({ sql: 'INSERT INTO signup_log (ip, createdAt) VALUES (?, ?)', args: [ip, now] });
+    if (ip) await db.execute({ sql: 'INSERT INTO signup_log (ip, createdAt) VALUES (?, ?)', args: [ipFingerprint(ip), now] });
     trackIp(username, ip);
     res.cookie('ut_su', String(now), cookieOpts(DAY));
     await startSession(res, { id: newId, username, isAdmin: false });
@@ -1020,7 +1044,7 @@ app.post('/api/login', async (req, res) => {
       const ban = await activeIpBan(ip);
       if (ban) return res.status(403).json({ error: ipBanText(ban) });
     }
-    if (ip) { try { await db.execute({ sql: 'UPDATE users SET lastIp = ? WHERE id = ?', args: [ip, Number(u.id)] }); } catch (e) {} }
+    if (ip) { try { await db.execute({ sql: 'UPDATE users SET lastIp = ? WHERE id = ?', args: [ipFingerprint(ip), Number(u.id)] }); } catch (e) {} }
     trackIp(String(u.username), ip);
     const newSid = await startSession(res, { id: Number(u.id), username: String(u.username), isAdmin });
     res.clearCookie('admin_sid', clearOpts());          // a fresh sign-in never inherits admin powers: they are granted separately, after the password is typed again
@@ -1300,7 +1324,7 @@ app.get('/api/wallet', requireUser, async (req, res) => {
   res.json({ balance: fromCents(r.rows[0].balanceCents), held: fromCents(r.rows[0].heldBalanceCents), nextWithdrawAt: last ? last + WITHDRAW_COOLDOWN : 0, escrow: await escrowFor(req.user), topupAvailable: paymentsEnabled() });
 });
 
-// Withdrawals: one per hour per account, enforced here (not in the page). The request is saved in the withdrawals table; no money is moved or deducted yet.
+// Withdrawals: one per hour per account, enforced here (not in the page). The request is saved in the withdrawals table; the amount is deducted from the balance immediately and refunded if the admin rejects it.
 const WITHDRAW_COOLDOWN = 60 * 60 * 1000;
 app.post('/api/wallet/withdraw', requireUser, async (req, res) => {
   try {
@@ -1309,26 +1333,22 @@ app.post('/api/wallet/withdraw', requireUser, async (req, res) => {
     if (!(amountCents > 0) || amountCents > 100000000) return res.status(400).json({ error: 'Please enter a valid withdrawal amount.' });
     const method = String(req.body.method || 'card');
     if (!['card', 'crypto'].includes(method)) return res.status(400).json({ error: 'Please choose a payout method.' });
-    const rs = await db.execute({ sql: 'SELECT balanceCents, lastWithdrawAt, bannedUntil FROM users WHERE username = ?', args: [req.user] });
-    if (!rs.rows.length) return res.status(401).json({ error: 'Please log in.' });
-    const u = rs.rows[0];
-    const until = Number(u.bannedUntil) || 0;
-    if (until === -1 || until > Date.now()) return res.status(403).json({ error: 'Your account is banned.' });
-    if (amountCents > (Number(u.balanceCents) || 0)) return res.status(400).json({ error: 'You do not have enough balance for this withdrawal.' });
     const now = Date.now();
-    // atomic: only one request can claim the hourly slot
-    const upd = await db.execute({ sql: 'UPDATE users SET lastWithdrawAt = ? WHERE username = ? AND COALESCE(lastWithdrawAt, 0) <= ?', args: [now, req.user, now - WITHDRAW_COOLDOWN] });
-    if (!upd.rowsAffected) {
+    const out = await withWalletLock('u:' + req.user, () => inTx(res, async (tx) => {
+      const rs = await tx.execute({ sql: 'SELECT balanceCents, lastWithdrawAt, bannedUntil FROM users WHERE username = ?', args: [req.user] });
+      if (!rs.rows.length) throw new Abort('Please log in.', 401);
+      const u = rs.rows[0];
+      const until = Number(u.bannedUntil) || 0;
+      if (until === -1 || until > Date.now()) throw new Abort('Your account is banned.', 403);
       const wait = (Number(u.lastWithdrawAt) || 0) + WITHDRAW_COOLDOWN - now;
-      return res.status(429).json({ error: `You can only withdraw once per hour. Try again in ${Math.max(1, Math.ceil(wait / 60000))} min.`, nextWithdrawAt: now + Math.max(0, wait) });
-    }
-    try {
-      await db.execute({ sql: "INSERT INTO withdrawals (username, amount, amountCents, method, status, createdAt) VALUES (?, ?, ?, ?, 'pending', ?)", args: [req.user, fromCents(amountCents), amountCents, method, now] });
-    } catch (e) {
-      // the request could not be saved: give the hourly slot back so the user can simply try again
-      await db.execute({ sql: 'UPDATE users SET lastWithdrawAt = ? WHERE username = ?', args: [Number(u.lastWithdrawAt) || 0, req.user] }).catch(() => {});
-      throw e;
-    }
+      if (wait > 0) throw new Abort(`You can only withdraw once per hour. Try again in ${Math.max(1, Math.ceil(wait / 60000))} min.`, 429);
+      // atomic: the balance is deducted in the same transaction as the request, and only if enough is left
+      const upd = await tx.execute({ sql: 'UPDATE users SET balanceCents = balanceCents - ?, balance = (balanceCents - ?) / 100.0, lastWithdrawAt = ? WHERE username = ? AND balanceCents >= ?', args: [amountCents, amountCents, now, req.user, amountCents] });
+      if (!upd.rowsAffected) throw new Abort('You do not have enough balance for this withdrawal.', 400);
+      await tx.execute({ sql: "INSERT INTO withdrawals (username, amount, amountCents, method, status, createdAt, deducted) VALUES (?, ?, ?, ?, 'pending', ?, 1)", args: [req.user, fromCents(amountCents), amountCents, method, now] });
+      return true;
+    }));
+    if (!out) return;
     console.log(`WITHDRAW request ${req.user} ${fromCents(amountCents)} ${method}`);
     res.json({ ok: true, nextWithdrawAt: now + WITHDRAW_COOLDOWN });
   } catch (e) { console.error('withdraw error:', e); res.status(500).json({ error: 'Withdrawal failed. Try again.' }); }
@@ -1342,8 +1362,22 @@ app.get('/api/admin/withdrawals', async (req, res) => {
 app.post('/api/admin/withdrawals/:id/status', async (req, res) => {
   const status = String(req.body.status || '');
   if (!['paid', 'rejected'].includes(status)) return res.status(400).json({ error: 'Invalid status.' });
-  const upd = await db.execute({ sql: "UPDATE withdrawals SET status = ?, handledBy = ?, handledAt = ? WHERE id = ? AND status = 'pending'", args: [status, req.user, Date.now(), pid(req)] });
-  if (!upd.rowsAffected) return res.status(409).json({ error: 'This request was already handled.' });
+  const done = await inTx(res, async (tx) => {
+    const wr = await tx.execute({ sql: "SELECT username, amountCents, deducted FROM withdrawals WHERE id = ? AND status = 'pending'", args: [pid(req)] });
+    if (!wr.rows.length) throw new Abort('This request was already handled.', 409);
+    const w = wr.rows[0], cents = Number(w.amountCents) || 0, deducted = Number(w.deducted) === 1;
+    const upd = await tx.execute({ sql: "UPDATE withdrawals SET status = ?, handledBy = ?, handledAt = ? WHERE id = ? AND status = 'pending'", args: [status, req.user, Date.now(), pid(req)] });
+    if (!upd.rowsAffected) throw new Abort('This request was already handled.', 409);
+    if (status === 'rejected' && deducted) {
+      await tx.execute({ sql: 'UPDATE users SET balanceCents = balanceCents + ?, balance = (balanceCents + ?) / 100.0 WHERE username = ?', args: [cents, cents, w.username] });
+    } else if (status === 'paid' && !deducted) {
+      // legacy request created before deduction existed: debit now
+      const d = await tx.execute({ sql: 'UPDATE users SET balanceCents = balanceCents - ?, balance = (balanceCents - ?) / 100.0 WHERE username = ? AND balanceCents >= ?', args: [cents, cents, w.username, cents] });
+      if (!d.rowsAffected) throw new Abort('User no longer has enough balance for this legacy request.', 409);
+    }
+    return true;
+  });
+  if (!done) return;
   auditReq(req, res, 'withdrawal-' + status, '#' + req.params.id, '', 0);
   res.json({ ok: true });
 });
@@ -1925,17 +1959,22 @@ app.get('/api/admin/directory', async (req, res) => {
 
 // Account-scoped shopping cart. Listing details and stock are always read from the database.
 app.get('/api/cart', requireUser, async (req, res) => {
-  const rs = await db.execute({ sql: `SELECT c.quantity, l.*, u.username AS owner FROM cart_items c JOIN listings l ON l.id = c.listingId JOIN users u ON u.id = l.ownerId WHERE c.userId = ? AND l.tag = 'selling' ORDER BY c.updatedAt DESC`, args: [req.userId] });
+  if (limited('cart-get:' + req.userId, 120, 60 * 1000)) return res.status(429).json({ error: 'Too many requests. Slow down.' });
+  const rs = await db.execute({ sql: `SELECT c.quantity, l.*, u.username AS owner FROM cart_items c JOIN listings l ON l.id = c.listingId JOIN users u ON u.id = l.ownerId WHERE c.userId = ? AND l.tag = 'selling' AND COALESCE(u.bannedUntil, 0) = 0 ORDER BY c.updatedAt DESC`, args: [req.userId] });
   res.setHeader('Cache-Control', 'no-store');
   res.json({ items: rs.rows.map(r => ({ ...mapListing(r), qty: Number(r.quantity) || 1 })) });
 });
 app.post('/api/cart/items', requireUser, async (req, res) => {
+  if (limited('cart-add:' + req.userId, 60, 60 * 1000)) return res.status(429).json({ error: 'Too many cart changes. Slow down.' });
   const id = Number(req.body && req.body.listingId);
   if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid listing.' });
-  const rs = await db.execute({ sql: `SELECT l.*, u.username AS owner FROM listings l JOIN users u ON u.id = l.ownerId WHERE l.id = ?`, args: [id] });
+  const rs = await db.execute({ sql: `SELECT l.*, u.username AS owner, u.bannedUntil AS ownerBan FROM listings l JOIN users u ON u.id = l.ownerId WHERE l.id = ?`, args: [id] });
   const listing = rs.rows[0];
   if (!listing || listing.tag !== 'selling') return res.status(404).json({ error: 'Listing is no longer available.' });
   if (Number(listing.ownerId) === req.userId) return res.status(400).json({ error: 'You cannot add your own listing to the cart.' });
+  { const ob = Number(listing.ownerBan) || 0; if (ob === -1 || ob > Date.now()) return res.status(409).json({ error: 'This seller is unavailable.' }); }
+  const inCart = await db.execute({ sql: 'SELECT COUNT(*) AS n FROM cart_items WHERE userId = ?', args: [req.userId] });
+  if ((Number(inCart.rows[0].n) || 0) >= 100) return res.status(409).json({ error: 'Your cart is full.' });
   const stock = Math.max(0, Number(listing.stock) || 0);
   if (stock < 1) return res.status(409).json({ error: 'This item is out of stock.' });
   const old = await db.execute({ sql: 'SELECT quantity FROM cart_items WHERE userId = ? AND listingId = ?', args: [req.userId, id] });
@@ -1944,6 +1983,7 @@ app.post('/api/cart/items', requireUser, async (req, res) => {
   res.json({ ok: true, quantity: qty });
 });
 app.patch('/api/cart/items/:id', requireUser, async (req, res) => {
+  if (limited('cart-edit:' + req.userId, 120, 60 * 1000)) return res.status(429).json({ error: 'Too many cart changes. Slow down.' });
   const id = Number(req.params.id), quantity = Number(req.body && req.body.quantity);
   if (!Number.isSafeInteger(id) || id <= 0 || !Number.isInteger(quantity) || quantity < 0 || quantity > 99) return res.status(400).json({ error: 'Invalid cart quantity.' });
   const own = await db.execute({ sql: 'SELECT c.listingId, l.stock, l.tag FROM cart_items c LEFT JOIN listings l ON l.id = c.listingId WHERE c.userId = ? AND c.listingId = ?', args: [req.userId, id] });
@@ -1958,6 +1998,7 @@ app.patch('/api/cart/items/:id', requireUser, async (req, res) => {
   res.json({ ok: true });
 });
 app.delete('/api/cart/items/:id', requireUser, async (req, res) => {
+  if (limited('cart-del:' + req.userId, 120, 60 * 1000)) return res.status(429).json({ error: 'Too many cart changes. Slow down.' });
   const id = Number(req.params.id);
   if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid listing.' });
   await db.execute({ sql: 'DELETE FROM cart_items WHERE userId = ? AND listingId = ?', args: [req.userId, id] });
@@ -3200,15 +3241,15 @@ app.get('/api/admin/flags', wrap(async (req, res) => {
     if (!perIp.get(ip).includes(name)) perIp.get(ip).push(name);
     if (!perUser.has(name)) perUser.set(name, []);
     perUser.get(name).push({ ip, lastSeen: Number(r.lastSeen) || 0 });
-    if (!isPrivateIp(ip) && !info.has(ip)) unchecked.add(ip);
+    if (!info.has(ip)) unchecked.add(ip);
   }
-  const sameIp = [...perIp].filter(([ip, names]) => !isPrivateIp(ip) && names.length >= 2)
-    .map(([ip, names]) => { const i = info.get(ip) || {}; return { ip, vpn: !!(i.proxy || i.hosting), users: names.map(brief) }; })
+  const sameIp = [...perIp].filter(([ip, names]) => names.length >= 2)
+    .map(([ip, names]) => { const i = info.get(ip) || {}; return { ip: ip.slice(0, 12), vpn: !!(i.proxy || i.hosting), users: names.map(brief) }; })
     .sort((a, b) => b.users.length - a.users.length);
   const vpn = [];
   for (const [name, list] of perUser) {
     const flagged = list.filter(x => { const i = info.get(x.ip); return i && (i.proxy || i.hosting); })
-      .map(x => ({ ip: x.ip, kind: info.get(x.ip).proxy ? 'VPN / proxy' : 'Hosting / datacenter', lastSeen: x.lastSeen }));
+      .map(x => ({ ip: x.ip.slice(0, 12), kind: info.get(x.ip).proxy ? 'VPN / proxy' : 'Hosting / datacenter', lastSeen: x.lastSeen }));
     if (flagged.length) vpn.push({ ...brief(name), ips: flagged });
   }
 

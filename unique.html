@@ -5252,7 +5252,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             })();
             try { await cartLoadPromise; } finally { cartLoadPromise = null; }
         }
-        function cartItemKey(item) { return String(item.id) + '|' + String(item.sellerUsername || item.owner || ''); }
         async function addToCart(item) {
             if (!item || item.tag !== 'selling') { showToast('Only items listed for sale can be added to the cart.'); return; }
             if (currentUser && currentUser === (item.sellerUsername || item.owner)) { showToast('You cannot add your own listing to the cart.'); return; }
@@ -5503,11 +5502,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 const icon = isAncientItem(game, g.name) ? `<img ${itemImgAttrs({ game: game, name: g.name })} alt="">` : '';
                 return `<span class="offer-chip">${icon}${escapeHtml(g.name)}${g.count > 1 ? ' &times;' + g.count : ''}</span>`;
             }).join('');
-        }
-        function wantedLineHtml(item) {
-            if (!item || item.tag !== 'specific' || !item.wanted || !Array.isArray(item.wanted.items) || !item.wanted.items.length) return '';
-            const it = groupItems(item.wanted.items).map(g => g.count > 1 ? `${g.name} x${g.count}` : g.name);
-            return `<div class="item-wanted-line">Wants: ${escapeHtml(it.slice(0, 2).join(', '))}${it.length > 2 ? ' +' + (it.length - 2) : ''}</div>`;
         }
         // src + fallback attributes for an item image. Uploaded photo wins, then the Ancient's icon, then the game thumbnail.
         function itemImgAttrs(item) {
@@ -6413,17 +6407,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function chatSig(msgs) {
-            let max = 0;
-            let offerSig = '';
-            let editSig = 0;      // changes whenever any message is edited, so the other person's screen updates by itself
-            msgs.forEach(m => {
-                if (m.timestamp > max) max = m.timestamp;
-                if (m.editedAt) editSig += Number(m.editedAt) % 1000003;
-                if (m.offer) offerSig += (m.offer.status || 'p') + (m.offer.items ? m.offer.items.join(',') : '') + ';';
-            });
-            return msgs.length + ':' + max + ':' + editSig + ':' + offerSig;
-        }
 
         function itemPriceLabel(item) {
             return item.tag === 'selling' ? `$${fmtPriceNum(item.price)}` : (item.tag === 'specific' ? 'Specific trade' : 'Looking for Offers');
@@ -8247,9 +8230,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             });
         }
 
-        async function sendDirectMessage(targetUsername, text) {
-            return await pushChatMessage({ receiver: targetUsername, text: text, itemRef: null });
-        }
 
         // ----- Ticket creation: pick the person you trade with (no middleman choice) -----
         function ticketUserName(u) {
@@ -10115,11 +10095,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 .sort((a, b) => (a.displayName || a.username).localeCompare(b.displayName || b.username));
         }
 
-        function mapGroup(r) {
-            let members = [];
-            try { members = JSON.parse(r.members || '[]'); } catch (e) {}
-            return { id: Number(r.id), name: r.name || 'Group', owner: r.owner, members, createdAt: Number(r.createdAt) || 0 };
-        }
         async function getGroup(id) {
             const r = await srv('/api/groups/' + encodeURIComponent(id));
             return r.ok ? r.data.group : null;
