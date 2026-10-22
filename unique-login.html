@@ -224,7 +224,9 @@
         .pw-rules li.ok { color: #cfcfcf; }
         .pw-rules li.ok::before { content: '\2713'; color: #2ecc71; }
         .age-check { display: flex; gap: 8px; align-items: flex-start; color: #b0b0b0; font-size: 12.5px; line-height: 1.4; }
-        .age-check input { margin-top: 2px; accent-color: #ff7300; }
+        .age-check input { appearance: none; -webkit-appearance: none; flex: 0 0 17px; width: 17px; height: 17px; margin: 1px 0 0; border: 1px solid #505050; border-radius: 4px; background: #303030; display: inline-grid; place-content: center; cursor: pointer; transition: background .18s ease, border-color .18s ease; }
+        .age-check input:checked { background: #ff7300; border-color: #ff7300; }
+        .age-check input:checked::after { content: '✓'; color: #303030; font-size: 13px; font-weight: 900; line-height: 1; }
         .age-check a { color: #8c9eff; text-decoration: none; }
 
         .terms-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; z-index: 500; padding: 16px; box-sizing: border-box; }
@@ -308,7 +310,6 @@
                     <li data-rule="upper">Uppercase letter</li>
                     <li data-rule="num">A number</li>
                     <li data-rule="sym">A symbol (!@#$...)</li>
-                    <li data-rule="max">At most 72 bytes</li>
                 </ul>
             </div>
 
@@ -494,7 +495,7 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
     })();
 
     // ===== Password strength (UX only; the server enforces the same rules) =====
-    // bcrypt on the server only reads the first 72 BYTES of a password, so longer ones are refused (emoji / accents use more than one byte)
+    // Password checks run locally for immediate feedback; the server enforces the same limits.
     const pwBytes = (pw) => new TextEncoder().encode(pw).length;
     function passwordChecks(pw) {
         return {
@@ -503,7 +504,7 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
             upper: /[A-Z]/.test(pw),
             num: /[0-9]/.test(pw),
             sym: /[^A-Za-z0-9]/.test(pw),
-            max: pw.length > 0 && pwBytes(pw) <= 72
+            max: pw.length > 0 && pwBytes(pw) <= 40
         };
     }
     function passwordScore(pw, checks) {
@@ -647,6 +648,7 @@ const SERVER_URL = 'https://unique-pdee.onrender.com';
                 const username = usernameInput.value.trim();
                 const email = mainInput.value.trim().toLowerCase();
                 if (!username || !email || !password) { showError('Please fill in all fields.'); return; }
+                if (new TextEncoder().encode(username).length > 400) { showError('The name is too long. Please choose a shorter name.'); return; }
                 if (username.length < 3) { showError('Username must be at least 3 characters long.'); return; }
                 if (!passwordOk(passwordChecks(password))) {
                     showError('Your password is too weak. Meet every requirement shown under the password box.');

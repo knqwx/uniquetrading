@@ -626,8 +626,8 @@ function checkUsername(name, opts = {}) {
   if (!opts.allowReserved && isReservedUsername(name)) return 'This username is reserved. Please choose another one.';
   return '';
 }
-// bcrypt only reads the first 72 BYTES of a password, so longer passwords would silently be cut. New passwords are limited to 72 bytes instead.
-const MAX_PASSWORD_BYTES = 72;
+// Keep password input below bcrypt’s byte limit.
+const MAX_PASSWORD_BYTES = 40;
 function passwordProblems(pw) {
   const bad = [];
   if (pw.length < 10) bad.push('at least 10 characters');
@@ -950,6 +950,7 @@ app.post('/api/signup', async (req, res) => {
     const email = String(req.body.email || '').trim().toLowerCase();
     const password = String(req.body.password || '');
     if (!username || !email || !password) return fail('Please fill in all fields.');
+    if (Buffer.byteLength(username, 'utf8') > 400) return fail('The name is too long. Please choose a shorter name.');
 
     const ban = await activeIpBan(ip);
     if (ban) return fail(ipBanText(ban), 403);
