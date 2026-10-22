@@ -147,7 +147,10 @@ const ipOf = (req) => {
   const ip = String(req.ip || '').trim().replace(/^::ffff:/i, '').toLowerCase();
   return ip && ip.length <= 64 && !/[\s,]/.test(ip) ? ip : '';
 };
-const ipFingerprint = (ip) => crypto.createHmac('sha256', cleanEnv(process.env.IP_HASH_SECRET || TURSO_TOKEN || 'unique-trading-ip-guard-change-me')).update(String(ip || '')).digest('hex');
+// Key for IP hashes and sign-in lock keys. Prefer IP_HASH_SECRET (a long random value set in Render). If it is missing, init() creates a random secret
+// and keeps it in the database (meta 'ip_secret'), so the hashes are never keyed with a value that is public in the source code.
+let IP_SECRET = cleanEnv(process.env.IP_HASH_SECRET);
+const ipFingerprint = (ip) => crypto.createHmac('sha256', IP_SECRET || 'not-ready').update(String(ip || '')).digest('hex');
 
 // ---------- small helpers used by the schema/migration code (must exist before init() runs) ----------
 // session ids and admin tokens are stored as SHA-256 hashes
@@ -247,6 +250,12 @@ async function init() {
 
   await run(`UPDATE users SET joinedAt = 0 WHERE joinedAt = 1`);
   await run(`CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)`);
+  if (!IP_SECRET) {
+    let sec = await metaGet('ip_secret');
+    if (!sec) { sec = crypto.randomBytes(32).toString('hex'); await metaSet('ip_secret', sec); }
+    IP_SECRET = sec;
+    console.warn('IP_HASH_SECRET is not set: using a random secret stored in the database. Set IP_HASH_SECRET in Render so a database leak alone cannot reverse IP hashes.');
+  }
   // sessions.id is the SHA-256 of the cookie value (never the cookie itself), so a leaked database cannot be replayed as logins.
   await run(`CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, username TEXT, createdAt INTEGER, expiresAt INTEGER)`);
   await run(`ALTER TABLE sessions ADD COLUMN userId INTEGER`);
@@ -370,6 +379,10 @@ async function init() {
   await run(`CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT, senderId INTEGER NOT NULL, receiverId INTEGER NOT NULL, itemId TEXT NOT NULL DEFAULT '',
     ts INTEGER NOT NULL, text TEXT NOT NULL DEFAULT '', itemRef TEXT, offer TEXT, imageId TEXT, caption TEXT, editedAt INTEGER, rev INTEGER NOT NULL DEFAULT 0)`);
+  // a deleted message is only hidden from the two people (deletedAt); the admin can still read it and sees that it was deleted / edited
+  await run('ALTER TABLE messages ADD COLUMN deletedAt INTEGER');
+  await run('ALTER TABLE messages ADD COLUMN deletedBy INTEGER');
+  await run('ALTER TABLE messages ADD COLUMN editLog TEXT');
   await run('CREATE UNIQUE INDEX IF NOT EXISTS messages_sender_ts ON messages (senderId, ts)');
   await run('CREATE INDEX IF NOT EXISTS messages_thread ON messages (senderId, receiverId, itemId, ts)');
   await run('CREATE INDEX IF NOT EXISTS messages_inbox ON messages (receiverId, senderId, itemId, ts)');
@@ -409,6 +422,10 @@ async function init() {
 
   // ---- wallet top-ups through an external payment gateway (card data never touches this server) ----
   await run(`CREATE TABLE IF NOT EXISTS topup_intents (id TEXT PRIMARY KEY, userId INTEGER NOT NULL, amountCents INTEGER NOT NULL, currency TEXT NOT NULL DEFAULT 'usd', provider TEXT, providerRef TEXT, status TEXT NOT NULL DEFAULT 'pending', createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, expiresAt INTEGER NOT NULL)`);
+  await run('ALTER TABLE topup_intents ADD COLUMN paymentIntent TEXT');
+  await run('ALTER TABLE topup_intents ADD COLUMN completedAt INTEGER');
+  await run('ALTER TABLE topup_intents ADD COLUMN reversedCents INTEGER NOT NULL DEFAULT 0');
+  await run('CREATE INDEX IF NOT EXISTS topup_payment_intent ON topup_intents (paymentIntent)');
   await run('CREATE UNIQUE INDEX IF NOT EXISTS topup_provider_ref ON topup_intents (provider, providerRef) WHERE providerRef IS NOT NULL');
   await run('CREATE INDEX IF NOT EXISTS topup_user ON topup_intents (userId, createdAt)');
   await run('CREATE INDEX IF NOT EXISTS topup_status ON topup_intents (status, expiresAt)');
@@ -442,7 +459,7 @@ async function migrate() {
   if (!(await metaGet('ips_hashed_v1'))) {
     const H = (v) => /^[0-9a-f]{64}$/.test(String(v)) ? String(v) : ipFingerprint(v);
     const priv = (v) => /^(::1$|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|fc|fd|fe80)/i.test(String(v));
-    for (const r of (await db.execute('SELECT id, lastIp FROM users WHERE lastIp IS NOT NULL AND lastIp != ""')).rows)
+    for (const r of (await db.execute("SELECT id, lastIp FROM users WHERE lastIp IS NOT NULL AND lastIp != ''")).rows)
       await db.execute({ sql: 'UPDATE users SET lastIp = ? WHERE id = ?', args: [priv(r.lastIp) ? null : H(r.lastIp), r.id] });
     const ui = (await db.execute('SELECT username, ip, firstSeen, lastSeen FROM user_ips')).rows;
     await db.execute('DELETE FROM user_ips');
@@ -838,8 +855,7 @@ async function verifyPassword(u, password) {
 // Somebody guessing at your account from their own IP therefore cannot lock YOU out (your IP has its own counter), and the counters survive restarts.
 // Names that do not exist are counted exactly like real ones, so the lock-out cannot be used to discover accounts.
 const LOCK_AFTER = 3, LOCK_FIRST_MS = 3 * 60 * 60 * 1000, LOCK_NEXT_MS = 24 * 60 * 60 * 1000, LOCK_FORGET_MS = 7 * DAY;
-const LOCK_SECRET = cleanEnv(process.env.IP_HASH_SECRET || TURSO_TOKEN || 'unique-trading-ip-guard-change-me');
-const lockKey = (scope, ip, account) => crypto.createHmac('sha256', LOCK_SECRET).update(`${scope}|${ip}|${String(account).toLowerCase()}`).digest('hex');
+const lockKey = (scope, ip, account) => crypto.createHmac('sha256', IP_SECRET || 'not-ready').update(`${scope}|${ip}|${String(account).toLowerCase()}`).digest('hex');
 const lockText = (ms) => { const h = Math.floor(ms / 3600000), m = Math.max(1, Math.ceil((ms % 3600000) / 60000)); return h > 0 ? `${h}h ${m}m` : `${m}m`; };
 async function lockoutStatus(key) {                 // { locked, lockedUntil, retryAfterMs }
   const r = await db.execute({ sql: 'SELECT lockedUntil FROM login_lockouts WHERE k = ?', args: [key] });
@@ -1317,11 +1333,18 @@ async function escrowFor(username) {
     timeoutDays: ESCROW_TIMEOUT_MS / DAY
   };
 }
+// Money added by card can only be withdrawn TOPUP_HOLD_DAYS (default 7) after it was added, so a stolen-card top-up cannot be cashed out before the card owner reacts.
+const TOPUP_HOLD_MS = (process.env.TOPUP_HOLD_DAYS && Number(process.env.TOPUP_HOLD_DAYS) >= 0 ? Number(process.env.TOPUP_HOLD_DAYS) : 7) * DAY;
+async function lockedTopupCents(q, userId) {
+  const r = await q.execute({ sql: "SELECT COALESCE(SUM(MAX(0, amountCents - COALESCE(reversedCents, 0))), 0) AS c FROM topup_intents WHERE userId = ? AND status = 'completed' AND COALESCE(completedAt, updatedAt) > ?", args: [userId, Date.now() - TOPUP_HOLD_MS] });
+  return Number(r.rows[0].c) || 0;
+}
 app.get('/api/wallet', requireUser, async (req, res) => {
   const r = await db.execute({ sql: 'SELECT balanceCents, heldBalanceCents, lastWithdrawAt FROM users WHERE id = ?', args: [req.userId] });
   if (!r.rows.length) return res.status(401).json({ error: 'Please log in.' });
   const last = Number(r.rows[0].lastWithdrawAt) || 0;
-  res.json({ balance: fromCents(r.rows[0].balanceCents), held: fromCents(r.rows[0].heldBalanceCents), nextWithdrawAt: last ? last + WITHDRAW_COOLDOWN : 0, escrow: await escrowFor(req.user), topupAvailable: paymentsEnabled() });
+  const locked = await lockedTopupCents(db, req.userId);
+  res.json({ balance: fromCents(r.rows[0].balanceCents), withdrawable: fromCents(Math.max(0, (Number(r.rows[0].balanceCents) || 0) - locked)), topupHoldDays: TOPUP_HOLD_MS / DAY, held: fromCents(r.rows[0].heldBalanceCents), nextWithdrawAt: last ? last + WITHDRAW_COOLDOWN : 0, escrow: await escrowFor(req.user), topupAvailable: paymentsEnabled() });
 });
 
 // Withdrawals: one per hour per account, enforced here (not in the page). The request is saved in the withdrawals table; the amount is deducted from the balance immediately and refunded if the admin rejects it.
@@ -1342,6 +1365,9 @@ app.post('/api/wallet/withdraw', requireUser, async (req, res) => {
       if (until === -1 || until > Date.now()) throw new Abort('Your account is banned.', 403);
       const wait = (Number(u.lastWithdrawAt) || 0) + WITHDRAW_COOLDOWN - now;
       if (wait > 0) throw new Abort(`You can only withdraw once per hour. Try again in ${Math.max(1, Math.ceil(wait / 60000))} min.`, 429);
+      const locked = await lockedTopupCents(tx, req.userId);
+      const free = Math.max(0, (Number(u.balanceCents) || 0) - locked);
+      if (amountCents > free) throw new Abort(locked ? `Money you added by card can be withdrawn ${TOPUP_HOLD_MS / DAY} days after it was added. You can withdraw up to $${fromCents(free).toFixed(2)} right now.` : 'You do not have enough balance for this withdrawal.', 400);
       // atomic: the balance is deducted in the same transaction as the request, and only if enough is left
       const upd = await tx.execute({ sql: 'UPDATE users SET balanceCents = balanceCents - ?, balance = (balanceCents - ?) / 100.0, lastWithdrawAt = ? WHERE username = ? AND balanceCents >= ?', args: [amountCents, amountCents, now, req.user, amountCents] });
       if (!upd.rowsAffected) throw new Abort('You do not have enough balance for this withdrawal.', 400);
@@ -1356,8 +1382,27 @@ app.post('/api/wallet/withdraw', requireUser, async (req, res) => {
 
 // admin only: saved withdrawal requests (newest first) and marking them paid / rejected
 app.get('/api/admin/withdrawals', async (req, res) => {
-  const rs = await db.execute('SELECT w.id, w.username, w.amountCents, w.method, w.status, w.createdAt, w.handledBy, w.handledAt, u.balanceCents FROM withdrawals w LEFT JOIN users u ON u.username = w.username ORDER BY w.id DESC LIMIT 200');
-  res.json({ rows: rs.rows.map(r => ({ id: Number(r.id), username: r.username, amount: fromCents(r.amountCents), method: r.method || '', status: r.status || 'pending', createdAt: Number(r.createdAt) || 0, handledBy: r.handledBy || '', handledAt: Number(r.handledAt) || 0, balance: fromCents(r.balanceCents) })) });
+  const rs = await db.execute("SELECT w.id, w.username, w.amountCents, w.method, w.status, w.createdAt, w.handledBy, w.handledAt, w.deducted, u.balanceCents, u.joinedAt, u.id AS uid FROM withdrawals w LEFT JOIN users u ON u.username = w.username ORDER BY (w.status = 'pending') DESC, w.id DESC LIMIT 200");
+  // risk summary for the people with a PENDING request, so a cash-out of stolen-card money is easy to spot before paying
+  const risk = new Map(), now = Date.now(), W14 = now - 14 * DAY;
+  for (const name of [...new Set(rs.rows.filter(r => r.status === 'pending').map(r => String(r.username)))].slice(0, 40)) {
+    const u = rs.rows.find(r => String(r.username) === name);
+    const uid = Number(u.uid) || 0;
+    const sales = (await db.execute({ sql: "SELECT COUNT(*) AS n, COALESCE(SUM(sellerAmountCents), 0) AS c, COUNT(DISTINCT buyer) AS b FROM deals WHERE seller = ? AND status IN ('completed','released') AND COALESCE(completedAt, updatedAt) > ?", args: [name, W14] })).rows[0];
+    const fresh = (await db.execute({ sql: `SELECT COALESCE(SUM(d.sellerAmountCents), 0) AS c FROM deals d WHERE d.seller = ? AND d.status IN ('completed','released') AND COALESCE(d.completedAt, d.updatedAt) > ?
+      AND EXISTS (SELECT 1 FROM topup_intents t JOIN users b ON b.id = t.userId WHERE b.username = d.buyer AND t.status = 'completed' AND COALESCE(t.completedAt, t.updatedAt) > d.createdAt - ? AND COALESCE(t.completedAt, t.updatedAt) <= COALESCE(d.paidAt, d.updatedAt))`, args: [name, W14, 14 * DAY] })).rows[0];
+    const tp = (await db.execute({ sql: "SELECT COALESCE(SUM(CASE WHEN COALESCE(completedAt, updatedAt) > ? THEN amountCents ELSE 0 END), 0) AS recent, COALESCE(SUM(reversedCents), 0) AS rev FROM topup_intents WHERE userId = ? AND status = 'completed'", args: [now - 30 * DAY, uid] })).rows[0];
+    const ageDays = u.joinedAt ? Math.floor((now - Number(u.joinedAt)) / DAY) : null;
+    const r = { accountAgeDays: ageDays, topups30d: fromCents(tp.recent), chargebacks: fromCents(tp.rev), sales14d: fromCents(sales.c), salesCount14d: Number(sales.n), buyers14d: Number(sales.b), freshBuyerSales14d: fromCents(fresh.c), flags: [] };
+    if (ageDays !== null && ageDays < 7) r.flags.push('New account (under 7 days old)');
+    if (Number(tp.rev) > 0) r.flags.push('Has had a card payment refunded or disputed');
+    if ((Number(u.balanceCents) || 0) < 0) r.flags.push('Negative balance');
+    if (Number(sales.c) > 0 && Number(fresh.c) >= Number(sales.c) * 0.5) r.flags.push('Over half of recent sales came from buyers who had just topped up by card');
+    if (Number(sales.n) >= 3 && Number(sales.b) === 1) r.flags.push('All recent sales are to one buyer');
+    if (Number(tp.recent) > 0) r.flags.push('Added money by card in the last 30 days');
+    risk.set(name, r);
+  }
+  res.json({ rows: rs.rows.map(r => ({ id: Number(r.id), username: r.username, amount: fromCents(r.amountCents), method: r.method || '', status: r.status || 'pending', createdAt: Number(r.createdAt) || 0, handledBy: r.handledBy || '', handledAt: Number(r.handledAt) || 0, balance: fromCents(r.balanceCents), deducted: Number(r.deducted) === 1, userExists: r.uid != null, risk: risk.get(String(r.username)) || null })) });
 });
 app.post('/api/admin/withdrawals/:id/status', async (req, res) => {
   const status = String(req.body.status || '');
@@ -1465,15 +1510,43 @@ app.post('/api/webhooks/payments', async (req, res) => {
       else if (String(it.providerRef || '') !== String(obj.id || '') || Number(obj.amount_total) !== Number(it.amountCents) || String(obj.currency || '').toLowerCase() !== String(it.currency)) {
         outcome = 'mismatch'; console.error(`PAYMENT MISMATCH for intent ${intentId}: expected ${it.amountCents} ${it.currency} / ${it.providerRef}, got ${obj.amount_total} ${obj.currency} / ${obj.id}`);
       } else {
-        const up = await tx.execute({ sql: "UPDATE topup_intents SET status = 'completed', updatedAt = ? WHERE id = ? AND status IN ('pending', 'failed')", args: [Date.now(), intentId] });
+        const up = await tx.execute({ sql: "UPDATE topup_intents SET status = 'completed', updatedAt = ?, completedAt = ?, paymentIntent = ? WHERE id = ? AND status IN ('pending', 'failed')", args: [Date.now(), Date.now(), String(obj.payment_intent || '') || null, intentId] });
         if (up.rowsAffected) {
           await tx.execute({ sql: 'UPDATE users SET balanceCents = COALESCE(balanceCents, 0) + ?, balance = (COALESCE(balanceCents, 0) + ?) / 100.0 WHERE id = ?', args: [Number(it.amountCents), Number(it.amountCents), Number(it.userId)] });
           outcome = 'credited';
         } else outcome = 'already-credited';
       }
     }
+    // refunds and chargebacks: take the money back from the wallet (the balance may go negative = the user owes it), so it cannot be spent or withdrawn
+    const reverses = type === 'charge.refunded' || type === 'charge.dispute.created' || type === 'charge.dispute.closed';
+    if (reverses) {
+      const pi = String(obj.payment_intent || '');
+      const it = pi ? (await tx.execute({ sql: 'SELECT * FROM topup_intents WHERE paymentIntent = ?', args: [pi] })).rows[0] : null;
+      if (!it) outcome = 'unknown-payment';
+      else {
+        intentId = String(it.id);
+        const who = (await tx.execute({ sql: 'SELECT username FROM users WHERE id = ?', args: [Number(it.userId)] })).rows[0];
+        const reversed = Number(it.reversedCents) || 0;
+        let delta = 0;
+        if (type === 'charge.dispute.closed') {
+          if (obj.status === 'won') delta = -Math.min(reversed, Math.max(0, Number(obj.amount) || 0));      // the dispute was won: give the money back
+          outcome = delta ? 'dispute-won' : 'dispute-closed';
+        } else {
+          const target = Math.min(Number(it.amountCents), Math.max(0, Number(type === 'charge.refunded' ? obj.amount_refunded : obj.amount) || 0));
+          delta = Math.max(0, target - reversed);
+          outcome = delta ? (type === 'charge.refunded' ? 'refund-clawed-back' : 'chargeback-clawed-back') : 'already-reversed';
+        }
+        if (delta) {
+          await tx.execute({ sql: 'UPDATE users SET balanceCents = COALESCE(balanceCents, 0) - ?, balance = (COALESCE(balanceCents, 0) - ?) / 100.0 WHERE id = ?', args: [delta, delta, Number(it.userId)] });
+          await tx.execute({ sql: 'UPDATE topup_intents SET reversedCents = COALESCE(reversedCents, 0) + ?, updatedAt = ? WHERE id = ?', args: [delta, Date.now(), String(it.id)] });
+          res.locals.afterCommit = () => auditRaw('system', outcome, who ? String(who.username) : '#' + it.userId, `${type} for top-up ${it.id}: ${delta > 0 ? 'took back' : 'returned'} $${fromCents(Math.abs(delta)).toFixed(2)}`, fromCents(-delta));
+          console.error(`PAYMENT ${outcome}: ${who ? who.username : it.userId} ${fromCents(-delta)} (${type})`);
+        }
+      }
+    }
     await tx.execute({ sql: 'INSERT INTO payment_events (eventId, provider, type, intentId, outcome, receivedAt) VALUES (?, ?, ?, ?, ?, ?)', args: [eventId, 'stripe', type.slice(0, 80), intentId.slice(0, 80), outcome, Date.now()] });
     await tx.commit();
+    if (res.locals.afterCommit) await res.locals.afterCommit();
     if (outcome === 'credited') console.log(`TOPUP credited intent ${intentId}`);
     res.json({ received: true, outcome });
   } catch (e) {
@@ -1609,10 +1682,10 @@ async function chatSnapshotFor(q, dl) {
   const b = idOf.get(dl.buyer), s = idOf.get(dl.seller);
   if (!b || !s) return [];
   const rs = await q.execute({
-    sql: 'SELECT senderId, text, ts FROM messages WHERE ((senderId = ? AND receiverId = ?) OR (senderId = ? AND receiverId = ?)) AND itemId = ? ORDER BY ts DESC LIMIT 500',
+    sql: 'SELECT senderId, text, ts, deletedAt FROM messages WHERE ((senderId = ? AND receiverId = ?) OR (senderId = ? AND receiverId = ?)) AND itemId = ? ORDER BY ts DESC LIMIT 500',
     args: [b, s, s, b, dl.itemId || '']
   });
-  return rs.rows.reverse().map(m => ({ sender: Number(m.senderId) === b ? dl.buyer : dl.seller, receiver: Number(m.senderId) === b ? dl.seller : dl.buyer, text: String(m.text || '').slice(0, 2000), timestamp: Number(m.ts) || 0 }));
+  return rs.rows.reverse().map(m => ({ sender: Number(m.senderId) === b ? dl.buyer : dl.seller, receiver: Number(m.senderId) === b ? dl.seller : dl.buyer, text: String(m.text || '').slice(0, 2000), timestamp: Number(m.ts) || 0, ...(m.deletedAt ? { deleted: true } : {}) }));
 }
 // held money -> the seller's balance, deal -> finalStatus, and the sold unit leaves the listing. One transaction; throws Abort when anything is off.
 async function finishDeal(tx, d, finalStatus, opts = {}) {
@@ -2075,6 +2148,10 @@ app.get('/api/media/:id', requireUser, async (req, res) => {
   if (!rs.rows.length) return res.status(404).end();
   const r = rs.rows[0];
   if (r.kind === 'chat' && Number(r.ownerId) !== req.userId && Number(r.peerId) !== req.userId && !(await isElevatedAdmin(req))) return res.status(404).end();
+  if (r.kind === 'chat' && !(await isElevatedAdmin(req))) {          // a picture from a deleted message is no longer visible to the two people
+    const gone = await db.execute({ sql: 'SELECT 1 FROM messages WHERE imageId = ? AND deletedAt IS NOT NULL LIMIT 1', args: [id] });
+    if (gone.rows.length) return res.status(404).end();
+  }
   const buf = Buffer.from(r.data);
   const real = sniffImageType(buf);
   if (!real || 'image/' + real !== String(r.mime)) return res.status(404).end();
@@ -2397,7 +2474,7 @@ app.get('/api/chat/sync', requireUser, async (req, res) => {
                    ROW_NUMBER() OVER (PARTITION BY CASE WHEN m.senderId = ?1 THEN m.receiverId ELSE m.senderId END, m.itemId ORDER BY m.ts DESC) AS rn,
                    COUNT(*) OVER (PARTITION BY CASE WHEN m.senderId = ?1 THEN m.receiverId ELSE m.senderId END, m.itemId) AS total
             FROM messages m JOIN users s ON s.id = m.senderId JOIN users r ON r.id = m.receiverId
-            WHERE m.senderId = ?1 OR m.receiverId = ?1
+            WHERE (m.senderId = ?1 OR m.receiverId = ?1) AND m.deletedAt IS NULL
           ) WHERE rn <= ?2 ORDER BY ts ASC`,
     args: [req.userId, perThread]
   });
@@ -2426,14 +2503,14 @@ app.get('/api/chat/messages', requireUser, async (req, res) => {
   const limit = clampInt(req.query.limit, 1, 200, 50), before = clampInt(req.query.before, 0, Number.MAX_SAFE_INTEGER, 0) || Number.MAX_SAFE_INTEGER;
   const cleared = (await myClears(req.user))[threadKeyOf(other, itemId)] || 0;
   const rs = await db.execute({
-    sql: `${MSG_SELECT} WHERE ((m.senderId = ? AND m.receiverId = ?) OR (m.senderId = ? AND m.receiverId = ?)) AND m.itemId = ? AND m.ts < ? AND m.ts > ? ORDER BY m.ts DESC LIMIT ?`,
+    sql: `${MSG_SELECT} WHERE ((m.senderId = ? AND m.receiverId = ?) OR (m.senderId = ? AND m.receiverId = ?)) AND m.itemId = ? AND m.deletedAt IS NULL AND m.ts < ? AND m.ts > ? ORDER BY m.ts DESC LIMIT ?`,
     args: [req.userId, otherId, otherId, req.userId, itemId, before, cleared, limit + 1]
   });
   res.json({ messages: rs.rows.slice(0, limit).reverse().map(mapMessage), hasMore: rs.rows.length > limit });
 });
 // change signal for my messages: count + newest and total revision, so edits, deletes, new messages and offer answers are ALL noticed
 async function messageSig(userId) {
-  const r = await db.execute({ sql: 'SELECT COUNT(*) AS c, COALESCE(MAX(rev), 0) AS m, COALESCE(SUM(rev), 0) AS s FROM messages WHERE senderId = ? OR receiverId = ?', args: [userId, userId] });
+  const r = await db.execute({ sql: 'SELECT COUNT(*) AS c, COALESCE(MAX(rev), 0) AS m, COALESCE(SUM(rev), 0) AS s FROM messages WHERE (senderId = ? OR receiverId = ?) AND deletedAt IS NULL', args: [userId, userId] });
   return `${Number(r.rows[0].c)}:${Number(r.rows[0].m)}:${Number(r.rows[0].s)}`;
 }
 // Lightweight poll that replaces fetching the whole profile every few seconds:
@@ -2442,7 +2519,7 @@ async function messageSig(userId) {
 app.get('/api/unread', requireUser, async (req, res) => {
   const since = clampInt(req.query.since, 0, Number.MAX_SAFE_INTEGER, 0);
   const [dm, clears, groups, msgSig, dSig, gSig, bal] = await Promise.all([
-    db.execute({ sql: 'SELECT s.username AS sender, m.itemId, m.ts FROM messages m JOIN users s ON s.id = m.senderId WHERE m.receiverId = ? AND m.ts > ? ORDER BY m.ts DESC LIMIT 1000', args: [req.userId, since] }),
+    db.execute({ sql: 'SELECT s.username AS sender, m.itemId, m.ts FROM messages m JOIN users s ON s.id = m.senderId WHERE m.receiverId = ? AND m.deletedAt IS NULL AND m.ts > ? ORDER BY m.ts DESC LIMIT 1000', args: [req.userId, since] }),
     myClears(req.user),
     db.execute({ sql: 'SELECT gmsg.groupId, gmsg.sender, gmsg.timestamp FROM group_messages gmsg JOIN group_members gm ON gm.groupId = gmsg.groupId AND gm.userId = ? WHERE gmsg.timestamp > ? AND (gmsg.senderId IS NULL OR gmsg.senderId != ?) ORDER BY gmsg.timestamp DESC LIMIT 1000', args: [req.userId, since, req.userId] }),
     messageSig(req.userId), dealsSig(req.user), groupsSig(req.userId),
@@ -2508,8 +2585,12 @@ app.post('/api/chat/edit', requireUser, async (req, res) => {
   const out = await inTx(res, async (tx) => {
     const toId = await userIdByName(tx, to);
     if (!toId) return true;
+    const row = (await tx.execute({ sql: 'SELECT id, text, editLog FROM messages WHERE senderId = ? AND receiverId = ? AND ts = ? AND offer IS NULL AND imageId IS NULL AND deletedAt IS NULL', args: [req.userId, toId, ts] })).rows[0];
+    if (!row || String(row.text) === text) return true;
+    // every earlier wording is kept for the admin (last 20), so an edit cannot erase what was really said
+    const log = parseJson(row.editLog, []); log.push({ text: String(row.text || '').slice(0, 2000), at: Date.now() });
     const rev = await bumpMeta(tx, 'msgRev');
-    await tx.execute({ sql: 'UPDATE messages SET text = ?, editedAt = ?, rev = ? WHERE senderId = ? AND receiverId = ? AND ts = ? AND offer IS NULL AND imageId IS NULL AND text != ?', args: [text, Date.now(), rev, req.userId, toId, ts, text] });
+    await tx.execute({ sql: 'UPDATE messages SET text = ?, editedAt = ?, editLog = ?, rev = ? WHERE id = ?', args: [text, Date.now(), JSON.stringify(log.slice(-20)), rev, Number(row.id)] });
     return true;
   });
   if (out) res.json({ ok: true });
@@ -2520,10 +2601,9 @@ app.post('/api/chat/delete', requireUser, async (req, res) => {
   const out = await inTx(res, async (tx) => {
     const toId = await userIdByName(tx, to);
     if (!toId) return true;
-    const m = await tx.execute({ sql: 'SELECT imageId FROM messages WHERE senderId = ? AND receiverId = ? AND ts = ?', args: [req.userId, toId, ts] });
-    if (m.rows.length && m.rows[0].imageId) await tx.execute({ sql: "DELETE FROM media WHERE id = ? AND kind = 'chat' AND ownerId = ?", args: [m.rows[0].imageId, req.userId] });
-    await tx.execute({ sql: 'DELETE FROM messages WHERE senderId = ? AND receiverId = ? AND ts = ?', args: [req.userId, toId, ts] });
-    await bumpMeta(tx, 'msgRev');
+    // soft delete: hidden for both people, kept for the admin (who sees that it was deleted)
+    const rev = await bumpMeta(tx, 'msgRev');
+    await tx.execute({ sql: 'UPDATE messages SET deletedAt = ?, deletedBy = ?, rev = ? WHERE senderId = ? AND receiverId = ? AND ts = ? AND deletedAt IS NULL', args: [Date.now(), req.userId, rev, req.userId, toId, ts] });
     return true;
   });
   if (out) res.json({ ok: true });
@@ -2536,7 +2616,7 @@ app.post('/api/chat/offer', requireUser, async (req, res) => {
   if (!sender || !receiver || sender === receiver || ![sender, receiver].includes(req.user) || !Number.isSafeInteger(ts) || ts <= 0 || !['accept', 'decline', 'add', 'update'].includes(action)) return res.status(400).json({ error: 'Bad request.' });
   const out = await inTx(res, async (tx) => {
     const sId = await userIdByName(tx, sender), rId = await userIdByName(tx, receiver);
-    const row = sId && rId ? (await tx.execute({ sql: 'SELECT id, text, offer FROM messages WHERE senderId = ? AND receiverId = ? AND ts = ? AND offer IS NOT NULL', args: [sId, rId, ts] })).rows[0] : null;
+    const row = sId && rId ? (await tx.execute({ sql: 'SELECT id, text, offer FROM messages WHERE senderId = ? AND receiverId = ? AND ts = ? AND offer IS NOT NULL AND deletedAt IS NULL', args: [sId, rId, ts] })).rows[0] : null;
     if (!row) throw new Abort('Offer not found.', 404);
     const offer = parseJson(row.offer, null);
     let text = row.text;
@@ -2585,8 +2665,8 @@ app.post('/api/chat/clear', requireUser, async (req, res) => {
     const theirVisible = otherId && theirMark >= 0 ? Number((await tx.execute({ sql: `SELECT COUNT(*) AS c FROM messages WHERE ${PAIR_SQL} AND ts > ?`, args: [...pair, theirMark] })).rows[0].c) : (otherId ? 1 : 0);
     if (theirVisible === 0) {
       if (otherId) {
-        await tx.execute({ sql: `DELETE FROM media WHERE kind = 'chat' AND id IN (SELECT imageId FROM messages WHERE ${PAIR_SQL} AND imageId IS NOT NULL)`, args: pair });
-        await tx.execute({ sql: `DELETE FROM messages WHERE ${PAIR_SQL}`, args: pair });
+        // nothing is erased: the messages are only marked deleted, so the admin can still read them (deletedBy 0 = the whole chat was deleted)
+        await tx.execute({ sql: `UPDATE messages SET deletedAt = ?, deletedBy = 0 WHERE ${PAIR_SQL} AND deletedAt IS NULL`, args: [Date.now(), ...pair] });
         await bumpMeta(tx, 'msgRev');
       }
       await tx.execute({
@@ -2641,7 +2721,12 @@ app.get('/api/admin/chat', async (req, res) => {
   auditReq(req, res, 'view-chat', `${a} / ${b}`, 'read the private chat between these two accounts', 0);
   if (!aId || !bId) return res.json({ messages: [] });
   const rs = await db.execute({ sql: `${MSG_SELECT} WHERE (m.senderId = ? AND m.receiverId = ?) OR (m.senderId = ? AND m.receiverId = ?) ORDER BY m.ts ASC LIMIT 2000`, args: [aId, bId, bId, aId] });
-  res.json({ messages: rs.rows.map(mapMessage) });
+  res.json({ messages: rs.rows.map(r => {
+    const m = mapMessage(r);
+    if (r.deletedAt) { m.deleted = true; m.deletedAt = Number(r.deletedAt); m.deletedBy = Number(r.deletedBy) && Number(r.deletedBy) === Number(r.senderId) ? 'sender' : 'chat'; }
+    const log = parseJson(r.editLog, []); if (Array.isArray(log) && log.length) m.editLog = log;
+    return m;
+  }) });
 });
 
 // admin: delete an account (never the admin itself)
@@ -2651,6 +2736,8 @@ app.post('/api/admin/delete-user', async (req, res) => {
   // never delete an account while money is held for it or from it: the admin has to resolve those deals first
   const held = await db.execute({ sql: "SELECT COUNT(*) AS c FROM deals WHERE (buyer = ? OR seller = ?) AND status IN ('paid','not_received','reported')", args: [name, name] });
   if (Number(held.rows[0].c)) return res.status(409).json({ error: 'This account has money held in unfinished deals. Resolve them in Money first.' });
+  const pendW = await db.execute({ sql: "SELECT COUNT(*) AS c FROM withdrawals WHERE username = ? AND status = 'pending'", args: [name] });
+  if (Number(pendW.rows[0].c)) return res.status(409).json({ error: 'This account has a pending withdrawal request. Pay or reject it first.' });
   const victim = await db.execute({ sql: "SELECT id FROM users WHERE username = ? AND COALESCE(customId, '') != 'knqw'", args: [name] });
   if (!victim.rows.length) return res.status(404).json({ error: 'Account not found.' });
   const uid = Number(victim.rows[0].id);

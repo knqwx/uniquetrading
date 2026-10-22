@@ -4526,6 +4526,10 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 <div class="money-board" id="money-board"></div>
             </div>
             <div class="mm-panel money-panel">
+                <div class="mm-panel-title">Withdrawal requests <span id="money-wd-count"></span></div>
+                <div class="mm-ticket-list" id="money-wd-list" style="max-height: none;"></div>
+            </div>
+            <div class="mm-panel money-panel">
                 <div class="mm-panel-title">Held transactions <span id="money-tx-count"></span></div>
                 <div class="money-filters">
                     <input type="text" class="setting-input" id="money-tx-search" placeholder="Search buyer, seller, item or #id...">
@@ -5907,7 +5911,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 renderEscrow(w.data.escrow);
                 const hint = document.getElementById('withdraw-limit-hint');
                 const next = Number(w.data.nextWithdrawAt) || 0;
-                hint.textContent = next > Date.now() ? `Limit: 1 withdrawal per hour. You can withdraw again in ${Math.ceil((next - Date.now()) / 60000)} min.` : 'Limit: 1 withdrawal per hour.';
+                let hintText = next > Date.now() ? `Limit: 1 withdrawal per hour. You can withdraw again in ${Math.ceil((next - Date.now()) / 60000)} min.` : 'Limit: 1 withdrawal per hour.';
+                if (typeof w.data.withdrawable === 'number' && w.data.withdrawable < w.data.balance) hintText += ` Withdrawable now: ${fmtMoney(w.data.withdrawable)} (money added by card can be withdrawn ${Number(w.data.topupHoldDays) || 7} days after it was added).`;
+                hint.textContent = hintText;
             } catch (e) {}
         }
         async function refreshWithdrawHint() { /* the hint is filled by loadWalletExtras() together with the escrow list */ }
@@ -8087,10 +8093,12 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             const box = document.getElementById('report-chat-scroll');
             box.innerHTML = msgs.length ? msgs.map(m => {
                 let note = '';
-                if (m.removed) note = '<div class="rp-note">Deleted after the report</div>';
-                else if (m.originalText) note = `<div class="rp-note">Edited after the report. Original: ${escapeHtml(m.originalText)}</div>`;
+                if (m.deleted) note = `<div class="rp-note"><b>DELETED</b> ${m.deletedBy === 'sender' ? 'by the sender' : '(the whole chat was deleted)'} on ${escapeHtml(getExactDate(m.deletedAt))}</div>`;
+                else if (m.removed) note = '<div class="rp-note">Deleted after the report</div>';
+                if (m.editLog && m.editLog.length) note += `<div class="rp-note"><b>EDITED</b> ${m.editLog.length} time${m.editLog.length === 1 ? '' : 's'}. Original: ${escapeHtml(m.editLog[0].text)}</div>`;
+                else if (!m.deleted && m.originalText) note += `<div class="rp-note">Edited after the report. Original: ${escapeHtml(m.originalText)}</div>`;
                 const pic = m.imageUrl ? `<a href="${escapeHtml(API_BASE + m.imageUrl)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(API_BASE + m.imageUrl)}" alt="Picture sent in chat" loading="lazy" style="display:block;max-width:100%;max-height:220px;border-radius:8px;margin:4px 0;"></a>` : '';
-                return `<div class="message-bubble ${m.sender === d.buyer ? 'outgoing' : 'incoming'} rp-bubble${m.removed ? ' removed' : ''}"><div class="rp-sender">${userLinkHtml(m.sender)} &middot; ${escapeHtml(getExactDate(m.timestamp))}</div>${pic}${escapeHtml(m.caption || m.text)}${note}</div>`;
+                return `<div class="message-bubble ${m.sender === d.buyer ? 'outgoing' : 'incoming'} rp-bubble${m.removed || m.deleted ? ' removed' : ''}"><div class="rp-sender">${userLinkHtml(m.sender)} &middot; ${escapeHtml(getExactDate(m.timestamp))}</div>${pic}${escapeHtml(m.caption || m.text)}${note}</div>`;
             }).join('') : '<div class="reports-empty">No messages between these users.</div>';
 
             bindUserLinks(box);
@@ -9735,7 +9743,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
 
         // ===== Money page (knqw only) =====
-        let moneyData = { users: [], deals: [] };
+        let moneyData = { users: [], deals: [], withdrawals: [] };
 
         function dealStatusLabel(st) {
             return ({ paid: 'Waiting for buyer', not_received: 'Items not received', reported: 'Reported' })[st] || st;
@@ -9745,8 +9753,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         async function loadMoney() {
             if (!(await isKnqw())) return;
             try {
-                const [u, d] = await Promise.all([srv('/api/admin/users'), srv('/api/admin/deals?status=held')]);
+                const [u, d, wd] = await Promise.all([srv('/api/admin/users'), srv('/api/admin/deals?status=held'), srv('/api/admin/withdrawals')]);
                 if (!u.ok || !d.ok) return;
+                moneyData.withdrawals = wd.ok ? (wd.data.rows || []) : [];
                 moneyData.users = (u.data.users || []).map(r => ({
                     username: r.username, displayName: r.displayName || r.username, customId: r.customId || '',
                     balance: Number(r.balance) || 0, held: Number(r.held) || 0, bannedUntil: Number(r.bannedUntil) || 0
@@ -9766,7 +9775,61 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             document.getElementById('money-wallets-sub').textContent = `${users.length} account${users.length === 1 ? '' : 's'}`;
             document.getElementById('money-held-sub').textContent = `${deals.length} transaction${deals.length === 1 ? '' : 's'}`;
             renderMoneyBoard();
+            renderMoneyWithdrawals();
             renderMoneyTx();
+        }
+
+        // withdrawal requests: the money was already taken from the user's balance when they asked. "Mark paid" = you sent it; "Reject" = it goes back to their balance.
+        function renderMoneyWithdrawals() {
+            const list = document.getElementById('money-wd-list');
+            const rows = moneyData.withdrawals || [];
+            const pending = rows.filter(r => r.status === 'pending');
+            document.getElementById('money-wd-count').textContent = pending.length ? `(${pending.length} pending)` : '';
+            if (!rows.length) { list.innerHTML = '<div class="reports-empty">No withdrawal requests yet.</div>'; return; }
+            list.innerHTML = rows.map(r => {
+                const rk = r.risk, isPending = r.status === 'pending';
+                const riskHtml = rk ? `<div class="money-tx-note">${rk.flags.length ? '<b>Check before paying:</b> ' + rk.flags.map(escapeHtml).join(' &middot; ') : 'No risk flags.'}<br>` +
+                    `Account age: ${rk.accountAgeDays === null ? '?' : rk.accountAgeDays + ' d'} &middot; Added by card (30 d): ${fmtMoney(rk.topups30d)} &middot; Sales (14 d): ${fmtMoney(rk.sales14d)} from ${rk.buyers14d} buyer${rk.buyers14d === 1 ? '' : 's'}` +
+                    ` &middot; From buyers who just topped up: ${fmtMoney(rk.freshBuyerSales14d)}${rk.chargebacks > 0 ? ' &middot; Refunded/disputed: ' + fmtMoney(rk.chargebacks) : ''}</div>` : '';
+                const label = ({ pending: 'Pending', paid: 'Paid', rejected: 'Rejected' })[r.status] || r.status;
+                return `<div class="mm-ticket">
+                    <div class="mm-ticket-top">
+                        <div class="mm-ticket-users">${userLinkHtml(r.username)} <span class="status-pill ${isPending ? 'warn' : (r.status === 'paid' ? 'ok' : 'banned')}" style="margin-left:8px;">${escapeHtml(label)}</span></div>
+                        <div class="mm-ticket-time" title="${escapeHtml(getExactDate(r.createdAt))}">${escapeHtml(getTimeAgo(r.createdAt))}</div>
+                    </div>
+                    <div class="mm-ticket-desc">Request #${Number(r.id)} &middot; ${escapeHtml(fmtMoney(r.amount))} via ${escapeHtml(r.method || '-')}\nBalance now: ${escapeHtml(fmtMoney(r.balance))}${r.deducted ? ' (already deducted)' : ' (older request: deducted when marked paid)'}${r.handledBy ? '\nHandled by ' + escapeHtml(r.handledBy) + ' ' + escapeHtml(getTimeAgo(r.handledAt)) : ''}</div>
+                    ${riskHtml}
+                    ${isPending ? `<div class="mm-ticket-actions">
+                        <button class="mm-ticket-btn danger" data-wd-reject="${Number(r.id)}" type="button" ${r.userExists ? '' : 'disabled style="opacity:.4;cursor:not-allowed;"'}>Reject &amp; refund</button>
+                        <button class="mm-ticket-btn primary" data-wd-paid="${Number(r.id)}" type="button">Mark as paid</button>
+                    </div>` : ''}
+                </div>`;
+            }).join('');
+            bindUserLinks(list);
+            list.querySelectorAll('[data-wd-paid]').forEach(b => b.addEventListener('click', () => adminHandleWithdrawal(Number(b.dataset.wdPaid), 'paid')));
+            list.querySelectorAll('[data-wd-reject]:not([disabled])').forEach(b => b.addEventListener('click', () => adminHandleWithdrawal(Number(b.dataset.wdReject), 'rejected')));
+        }
+        let adminWdBusy = false;
+        async function adminHandleWithdrawal(id, status) {
+            if (adminWdBusy) return;
+            if (!(await isKnqw())) { showToast('Only knqw can do this.'); return; }
+            const r = (moneyData.withdrawals || []).find(x => x.id === id);
+            if (!r || r.status !== 'pending') { showToast('This request was already handled.'); await loadMoney(); return; }
+            const paid = status === 'paid';
+            const ok = await askDealConfirm(
+                paid ? `Mark ${fmtMoney(r.amount)} for ${r.username} as paid?` : `Reject ${fmtMoney(r.amount)} for ${r.username}?`,
+                paid ? `Only do this after you really sent ${fmtMoney(r.amount)} to ${r.username} (${r.method || 'payout method'}). Their balance is not changed.`
+                     : (r.deducted ? `The ${fmtMoney(r.amount)} goes back to ${r.username}'s balance.` : `Nothing is returned (this older request was never deducted).`),
+                paid ? 'Mark as paid' : 'Reject & refund', !paid);
+            if (!ok) return;
+            adminWdBusy = true;
+            try {
+                const res = await srv('/api/admin/withdrawals/' + id + '/status', 'POST', { status });
+                if (!res.ok) { srvFail(res); await loadMoney(); return; }
+                showToast(paid ? 'Marked as paid.' : 'Rejected and refunded.');
+                await loadMoney();
+            } catch (e) { console.error('Withdrawal update error:', e); showToast('Something went wrong. Check the request and try again.'); }
+            finally { adminWdBusy = false; }
         }
 
         function renderMoneyBoard() {
