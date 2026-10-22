@@ -3313,8 +3313,8 @@
 #listing-search-field { position:relative; }
 .listing-search-suggestions {
   position:absolute; z-index:1200; top:calc(100% + 5px); left:0; right:0;
-  max-height: min(360px, 55vh); overflow:auto; border:1px solid #394454;
-  border-radius:10px; background:#171d27; box-shadow:0 12px 32px rgba(0,0,0,.45);
+  max-height: min(360px, 55vh); overflow:auto; border:1px solid #454545;
+  border-radius:10px; background:#252525; box-shadow:0 12px 32px rgba(0,0,0,.45);
 }
 .listing-search-suggestion {
   width:100%; display:flex; align-items:center; justify-content:flex-start; gap:10px;
@@ -3322,8 +3322,8 @@
   background:transparent; color:#edf2fa; text-align:left; cursor:pointer; font:inherit;
 }
 .listing-search-suggestion:last-child { border-bottom:0; }
-.listing-search-suggestion:hover, .listing-search-suggestion:focus-visible { background:#293445; outline:none; }
-.listing-search-suggestion .suggestion-icon { width:34px; height:34px; flex:0 0 34px; object-fit:contain; border-radius:6px; background:#222b38; }
+.listing-search-suggestion:hover, .listing-search-suggestion:focus-visible { background:#383838; outline:none; }
+.listing-search-suggestion .suggestion-icon { width:34px; height:34px; flex:0 0 34px; object-fit:contain; border-radius:6px; background:#333333; }
 .listing-search-suggestion .suggestion-icon-placeholder { display:inline-block; }
 .listing-search-suggestion .suggestion-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .listing-search-suggestion .suggestion-price { color:#eaf0fa; font-size:13px; font-weight:700; white-space:nowrap; margin-left:auto; }
@@ -3607,9 +3607,9 @@
         .notifications-badge{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:#ff7300;color:white;font-size:10px;font-weight:800;line-height:17px;text-align:center;box-sizing:border-box}
         #notifications-overlay{position:fixed;inset:0;z-index:80000;background:#0009;display:none;align-items:flex-start;justify-content:flex-end;padding:82px 22px 20px}
         #notifications-overlay.active{display:flex}.notifications-panel{width:min(420px,100%);max-height:min(75vh,650px);display:flex;flex-direction:column;overflow:hidden;border:1px solid #414141;border-radius:15px;background:#202020;color:#f5f5f5;box-shadow:0 18px 60px #0009}
-        .notifications-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #393939;gap:12px}.notifications-head h2{font-size:19px;margin:0}.notifications-head-actions{display:flex;align-items:center;gap:12px}.notifications-mark-all{border:0;background:transparent;color:#ffad69;font-size:12px;cursor:pointer}.notifications-close{border:0;background:transparent;color:#aaa;font-size:25px;cursor:pointer;line-height:1}
+        .notifications-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #393939;gap:12px}.notifications-head h2{font-size:19px;margin:0}.notifications-head-actions{display:flex;align-items:center;gap:12px}.notifications-close{border:0;background:transparent;color:#aaa;font-size:25px;cursor:pointer;line-height:1}
         #notifications-list{overflow:auto;padding:8px;display:flex;flex-direction:column;gap:6px}.notification-row{display:flex;gap:11px;padding:12px;border-radius:10px;background:#272727;border:1px solid #333}.notification-row.unread{border-color:#71431f;background:#30271f}.notification-icon{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#39302a;color:#ffad69;font-size:17px}.notification-copy{min-width:0;flex:1}.notification-title{font-size:13px;font-weight:800;margin-bottom:4px}.notification-body{font-size:12px;color:#c4c4c4;line-height:1.45;overflow-wrap:anywhere}.notification-time{font-size:10px;color:#888;margin-top:6px}.notifications-empty{padding:35px 12px;text-align:center;color:#999;font-size:13px}
-        @media(max-width:600px){#notifications-overlay{padding:76px 10px 12px}.notifications-btn{height:34px;min-width:34px;padding:0 7px}.notifications-btn .notifications-label{display:none}.notifications-panel{max-height:78vh}}
+        @media(max-width:600px){#notifications-overlay{padding:76px 10px 12px}.notifications-btn{height:34px;min-width:34px;padding:0 7px}.notifications-panel{max-height:78vh}}
     </style>
 </head>
 <body>
@@ -3643,7 +3643,7 @@
             <a class="top-link social-link tg-link" id="telegram-link" href="https://t.me/wuniquew" target="_blank" rel="noopener noreferrer" title="Telegram" aria-label="Telegram"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M23.9 3.6a1.3 1.3 0 00-1.8-1.2L1.4 10.4c-1 .4-1 1.8.1 2.1l5.1 1.6 2 6.2c.2.7 1.1.9 1.6.4l2.8-2.6 5.3 3.9c.7.5 1.6.1 1.8-.7l3.8-16.1zM9.5 13.4l9.3-5.8-7.4 7-.3 3.6-1.6-4.8z"/></svg></a>
             <a class="top-link social-link yt-link" id="youtube-link" href="https://www.youtube.com/" target="_blank" rel="noopener noreferrer" title="YouTube" aria-label="YouTube"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 00.5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 002.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 002.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg></a>
             <button class="notifications-btn" id="notifications-btn" type="button" aria-label="Notifications" title="Notifications" style="display:none;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="notifications-label">Notifications</span><span class="notifications-badge" id="notifications-badge" style="display:none">0</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg><span class="notifications-badge" id="notifications-badge" style="display:none">0</span>
             </button>
             <div class="auth-buttons" id="auth-container">
             <a href="unique-login.html" class="btn btn-login">Log in</a>
@@ -4342,7 +4342,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
 
     <div id="notifications-overlay" aria-hidden="true">
         <section class="notifications-panel" role="dialog" aria-modal="true" aria-labelledby="notifications-title">
-            <div class="notifications-head"><h2 id="notifications-title">Notifications</h2><div class="notifications-head-actions"><button class="notifications-mark-all" id="notifications-mark-all" type="button">Mark all read</button><button class="notifications-close" id="notifications-close" type="button" aria-label="Close notifications">×</button></div></div>
+            <div class="notifications-head"><h2 id="notifications-title">Notifications</h2><div class="notifications-head-actions"><button class="notifications-close" id="notifications-close" type="button" aria-label="Close notifications">×</button></div></div>
             <div id="notifications-list"><div class="notifications-empty">Loading notifications…</div></div>
         </section>
     </div>
@@ -4972,11 +4972,6 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
         });
         document.getElementById('notifications-close').addEventListener('click', () => { notificationsOverlay.classList.remove('active'); notificationsOverlay.setAttribute('aria-hidden', 'true'); });
         notificationsOverlay.addEventListener('click', e => { if (e.target === notificationsOverlay) { notificationsOverlay.classList.remove('active'); notificationsOverlay.setAttribute('aria-hidden', 'true'); } });
-        document.getElementById('notifications-mark-all').addEventListener('click', async () => {
-            const out = await srv('/api/notifications/read', 'POST', { all: true }, { noRedirect: true });
-            if (out.ok) { notificationRows.forEach(n => n.readAt = n.readAt || Date.now()); updateNotificationBadge(0); renderNotifications(); }
-        });
-
         function getTimeAgo(timestamp) {
             if (!timestamp) return 'Just now';
             const seconds = Math.floor((new Date() - timestamp) / 1000);
