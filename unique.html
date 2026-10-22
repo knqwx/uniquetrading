@@ -2546,7 +2546,7 @@
     
         /* ===== Side admin tabs, groups, ratings, vouches ===== */
         .side-admin-nav {
-            position: fixed; left: 0; top: 50%; transform: translateY(-50%); z-index: 30;
+            position: fixed; right: 12px; left: auto; top: calc(var(--topbar-h, 64px) + 8px); transform: none; z-index: 1200;
             display: flex; flex-direction: column; gap: 8px;
         }
         .side-admin-btn {
@@ -2556,7 +2556,7 @@
             font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
             transition: color 0.2s, background-color 0.2s, border-color 0.2s;
         }
-        .side-admin-btn { writing-mode: horizontal-tb; padding: 10px 18px; border-radius: 0 10px 10px 0; border-left: none; border-right: 1px solid #2a2a2a; }
+        .side-admin-btn { writing-mode: horizontal-tb; padding: 10px 18px; border-radius: 10px; border: 1px solid #2a2a2a; }
         .side-admin-btn:hover, .side-admin-btn.active { color: #ffffff; background-color: #262626; border-color: #ff7300; }
 
         .chats-list-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
@@ -3564,8 +3564,7 @@
 /* Shopping cart */
 .cart-fab{position:fixed;right:20px;bottom:22px;z-index:1200;display:flex;align-items:center;gap:9px;padding:12px 16px;border:1px solid #ff9b43;border-radius:999px;background:#ff7300;color:#fff;font:700 14px Inter,sans-serif;box-shadow:0 8px 26px #0007;cursor:pointer}
 .cart-fab svg{width:20px;height:20px;flex:none}.cart-count{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#202020;color:#fff;font-size:12px}
-.cart-add-btn{width:100%;margin-top:10px;padding:9px 10px;border:1px solid #ff8d2b;border-radius:8px;background:rgba(255,115,0,.12);color:#ffad69;font:700 13px Inter,sans-serif;cursor:pointer}.cart-add-btn:hover{background:#ff7300;color:#fff}
-.offer-listing-btn{width:100%;margin-top:10px;padding:9px 10px;border:1px solid #ff8d2b;border-radius:8px;background:rgba(255,115,0,.12);color:#ffad69;font:700 13px Inter,sans-serif;cursor:pointer}.offer-listing-btn:hover{background:#ff7300;color:#fff}
+.cart-add-btn,.offer-listing-btn{width:100%;min-height:36px;box-sizing:border-box;margin-top:10px;padding:9px 10px;border:1px solid #ff8d2b;border-radius:8px;background:rgba(255,115,0,.12);color:#ffad69;font:700 13px Inter,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;line-height:16px}.cart-add-btn:hover,.offer-listing-btn:hover{background:#ff7300;color:#fff}
 #cart-overlay{position:fixed;inset:0;z-index:20000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.7);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .25s ease,visibility .25s ease}#cart-overlay.active{opacity:1;visibility:visible;pointer-events:auto}
 .cart-panel{width:min(620px,100%);max-height:min(82vh,760px);display:flex;flex-direction:column;overflow:hidden;border:1px solid #414141;border-radius:16px;background:#202020;color:#f4f4f4;box-shadow:0 20px 70px #0009;transform:translateY(20px);transition:transform .25s ease}.cart-overlay.active .cart-panel,#cart-overlay.active .cart-panel{transform:translateY(0)}
 .cart-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #393939}.cart-head h2{margin:0;font-size:22px}.cart-close{border:0;background:transparent;color:#bbb;font-size:28px;cursor:pointer;line-height:1}
@@ -3605,14 +3604,15 @@
         @keyframes renderWakeSpin{to{transform:rotate(360deg)}}
         #render-wake-title{font-size:19px;font-weight:800;margin-bottom:8px}#render-wake-message{font-size:13px;line-height:1.5;color:#aaa}
         #render-wake-retry{display:none;margin-top:18px;padding:10px 18px;border:0;border-radius:9px;background:#ff8a24;color:#171717;font-weight:800;cursor:pointer}
-        .notifications-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:38px;height:38px;padding:0 9px;border:1px solid #383838;border-radius:10px;background:#202020;color:#eee;cursor:pointer;font:600 13px Inter,sans-serif;flex:0 0 auto}
-        .notifications-btn:hover{background:#2b2b2b;border-color:#555}.notifications-btn svg{width:20px;height:20px;display:block}
+        .notifications-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:44px;width:44px;height:44px;padding:0;border:1px solid #383838;border-radius:50%;background:#262626;color:#ccc;cursor:pointer;flex:0 0 auto;transition:background-color .2s}
+        .notifications-btn:hover{background:#313131;color:#fff;border-color:#383838}.notifications-btn svg{width:20px;height:20px;display:block}.notifications-btn.messages-icon-btn svg{fill:none;stroke:currentColor}
+        .notifications-btn .notifications-badge{top:-3px;right:-3px}
         .notifications-badge{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:#ff7300;color:white;font-size:10px;font-weight:800;line-height:17px;text-align:center;box-sizing:border-box}
         #notifications-overlay{position:fixed;inset:0;z-index:80000;background:#0009;display:none;align-items:flex-start;justify-content:flex-end;padding:82px 22px 20px}
         #notifications-overlay.active{display:flex}.notifications-panel{width:min(420px,100%);max-height:min(75vh,650px);display:flex;flex-direction:column;overflow:hidden;border:1px solid #414141;border-radius:15px;background:#202020;color:#f5f5f5;box-shadow:0 18px 60px #0009}
         .notifications-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #393939;gap:12px}.notifications-head h2{font-size:19px;margin:0}.notifications-head-actions{display:flex;align-items:center;gap:12px}.notifications-close{border:0;background:transparent;color:#aaa;font-size:25px;cursor:pointer;line-height:1}
         #notifications-list{overflow:auto;padding:8px;display:flex;flex-direction:column;gap:6px}.notification-row{display:flex;gap:11px;padding:12px;border-radius:10px;background:#272727;border:1px solid #333}.notification-row.unread{border-color:#71431f;background:#30271f}.notification-icon{width:34px;height:34px;flex:0 0 34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#39302a;color:#ffad69;font-size:17px}.notification-copy{min-width:0;flex:1}.notification-title{font-size:13px;font-weight:800;margin-bottom:4px}.notification-body{font-size:12px;color:#c4c4c4;line-height:1.45;overflow-wrap:anywhere}.notification-time{font-size:10px;color:#888;margin-top:6px}.notifications-empty{padding:35px 12px;text-align:center;color:#999;font-size:13px}
-        @media(max-width:600px){#notifications-overlay{padding:76px 10px 12px}.notifications-btn{height:34px;min-width:34px;padding:0 7px}.notifications-panel{max-height:78vh}}
+        @media(max-width:600px){#notifications-overlay{padding:76px 10px 12px}.notifications-btn{height:36px;min-width:36px;width:36px;padding:0}.notifications-panel{max-height:78vh}}
     </style>
 </head>
 <body>
@@ -3700,7 +3700,7 @@
     </div>
 
     <!-- Help / Copyright / Terms of Service: put your text inside the .info-modal-text blocks -->
-                <!-- Admin shortcuts (knqw), middle-left of the screen -->
+                <!-- Admin shortcut (knqw), top-right just below the top bar -->
     <div class="side-admin-nav" id="side-admin-nav">
         <button class="side-admin-btn" id="admin-nav-btn" style="display: none;">Admin</button>
     </div>
@@ -4017,7 +4017,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                 <div class="detail-time-val" id="detail-time-val" title="Click to toggle date format">Just now</div>
                 
                 <button class="buy-item-action-btn" id="buy-item-action-btn">Contact Seller</button>
-                <button class="detail-cart-btn" id="detail-cart-btn" type="button" style="display:none;">＋ Add to cart</button>
+                <button class="detail-cart-btn" id="detail-cart-btn" type="button" style="display:none;">Add to cart</button>
                 <button class="report-item-btn" id="report-item-btn" type="button" style="display:none;">Report item</button>
 
                 <div class="detail-seller-info" id="detail-seller-box" title="View Profile">
@@ -5721,6 +5721,12 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                             <button class="dropdown-item" id="dropdown-switch-btn">Manage Accounts</button>
                         </div>
                     `;
+                    // Keep notifications beside Messages and use the same round icon-button design.
+                    const headerMessagesBtn = document.getElementById('header-messages-btn');
+                    if (headerMessagesBtn && notificationsBtn) {
+                        notificationsBtn.classList.add('messages-icon-btn');
+                        authContainer.insertBefore(notificationsBtn, headerMessagesBtn);
+                    }
 
                     if (userObj.customId === 'knqw') {
                         adminNavBtn.style.display = '';
@@ -5871,7 +5877,7 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
                         <div class="global-item-price">${escapeHtml(priceText)}</div>
                         <div class="global-item-time" data-ts="${Number(item.id) || 0}">${escapeHtml(timeAgo)}</div>
                     </div>
-                    ${item.tag === 'selling' && !(currentUser && currentUser === item.sellerUsername) ? '<button type="button" class="cart-add-btn">＋ Add to cart</button>' : ''}
+                    ${item.tag === 'selling' && currentUser && currentUser !== item.sellerUsername ? '<button type="button" class="cart-add-btn">Add to cart</button>' : ''}
                     ${item.tag !== 'selling' && !(currentUser && currentUser === item.sellerUsername) ? '<button type="button" class="offer-listing-btn">Make an offer</button>' : ''}
                 `;
                 const cardCartBtn = card.querySelector('.cart-add-btn');
@@ -6257,9 +6263,9 @@ Questions or problems? Join our Discord: <a href="https://discord.gg/q95aZVCn5" 
             if (item.tag === 'selling') {
                 detailPriceVal.textContent = `$${fmtPriceNum(item.price)}`;
                 buyItemActionBtn.textContent = (currentUser && currentUser === item.sellerUsername) ? 'Edit Item' : 'Contact Seller';
-                detailCartBtn.style.display = (currentUser && currentUser === item.sellerUsername) ? 'none' : 'block';
+                detailCartBtn.style.display = (currentUser && currentUser !== item.sellerUsername) ? 'block' : 'none';
                 detailCartBtn.disabled = (item.stock === undefined || item.stock === null || item.stock === '' ? 1 : (parseInt(item.stock, 10) || 0)) < 1;
-                detailCartBtn.textContent = detailCartBtn.disabled ? 'Out of stock' : '＋ Add to cart';
+                detailCartBtn.textContent = detailCartBtn.disabled ? 'Out of stock' : 'Add to cart';
             } else {
                 detailCartBtn.style.display = 'none';
                 detailPriceVal.textContent = item.tag === 'specific' ? 'Specific trade' : 'Looking for Offers';
